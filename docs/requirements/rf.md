@@ -27,6 +27,7 @@
 ## Tabela de Requisitos Funcionais - Mobile
 
 | ID    | Descrição                                                       | Prioridade   | Plataforma | Sprint   | Status |
+|-------|-----------------------------------------------------------------|--------------|------------|----------|--------|
 | RF021 | Permitir rastreamento em tempo real dos ativos e pessoas        | Essencial    | Mobile     | Sprint 1 | ❌     |
 | RF022 | Exibir a localização em tempo real dos ativos e pessoas         | Essencial    | Mobile     | Sprint 1 | ❌     |
 | RF023 | Enviar notificações automáticas sobre localização               | Essencial    | Mobile     | Sprint 1 | ❌     |
@@ -47,7 +48,6 @@
 
 ## Tabela de Requisitos Funcionais - Backend
 
-| ID    | Descrição                                                       | Prioridade   | Plataforma | Sprint   | Status |
 | ID    | Descrição                                                       | Prioridade   | Plataforma | Sprint   | Status |
 |-------|-----------------------------------------------------------------|--------------|------------|----------|--------|
 | RF038 | Implementar algoritmos de posicionamento (trilateração ou WCL)  | Essencial    | Backend    | Sprint 2 | ❌     |

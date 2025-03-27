@@ -13,3 +13,4 @@
 | RNF008 | Realizar testes automatizados de segurança (análise estática, testes de penetração) antes de cada release em produção |
 | RNF009 | O tempo máximo para detecção e notificação automática de incidentes ou tentativas suspeitas de acesso não autorizado ao sistema não pode ultrapassar 5 minutos após o evento |
 | RNF010 | Os backups realizados devem ser armazenados em local seguro, isolado fisicamente do ambiente principal, com retenção mínima de 30 dias |
+
