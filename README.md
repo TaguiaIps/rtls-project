@@ -1,7 +1,7 @@
 # rtls-project
 
 ## Pesquisa de mercado
-Análise de requisitos funcionais que empresas competidoras se proproem a realizar
+Análise de requisitos funcionais que empresas competidoras se proproem a realizar:
 
 - **Posicionamento indoor:**  Localização em tempo real em espaços cobertos;
 - **Navegação indoor (wayfinding):** Rotas instantâneas da localização atual até destinos selecionados (orientação por texto e voz);
