@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant APIService
+    participant Database
+
+    User->>Frontend: Selects asset and time range, clicks "Generate"
+    Frontend->>APIService: GET /api/analytics/trajectory?asset_id=...&start=...&end=...
+    APIService->>Database: SELECT * FROM location_history WHERE asset_id=... AND timestamp BETWEEN ...
+    Database-->>APIService: Returns list of location points
+    APIService-->>Frontend: Returns 200 OK with JSON payload
+    Frontend->>Frontend: Renders trajectory line on map

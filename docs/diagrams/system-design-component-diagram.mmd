@@ -1,0 +1,25 @@
+graph TD
+    subgraph User Interaction
+        User[User<br>Alex / Carlos]
+    end
+
+    subgraph Infrastructure
+        Gateway[Gateways<br>Raspberry Pi / AoA]
+    end
+
+    subgraph Backend Services
+        WebApp[Web Application<br>React on Nginx]
+        APIService[API Service<br>Django REST Framework]
+        PositioningService[Positioning Service<br>Python]
+        MQTTBroker[MQTT Broker<br>Mosquitto]
+        Database[(Database<br>PostgreSQL + TimescaleDB)]
+    end
+
+    User -- HTTPS/React SPA --> WebApp
+    WebApp -- REST API (HTTPS) --> APIService
+    User -- Real-time Data (WebSockets) --> APIService
+
+    Gateway -- MQTT --> MQTTBroker
+    MQTTBroker --> PositioningService
+    PositioningService -- Writes Position Data --> Database
+    APIService -- Reads/Writes --> Database

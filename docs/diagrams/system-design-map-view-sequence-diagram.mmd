@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant Gateway
+    participant MQTTBroker
+    participant PositioningService
+    participant APIService
+    participant Frontend
+
+    Gateway->>MQTTBroker: Publishes Beacon Data (RSSI)
+    MQTTBroker->>PositioningService: Forwards Data
+    PositioningService->>PositioningService: Aggregates data (3s window)
+    PositioningService->>PositioningService: Calculates new (X,Y) position
+    PositioningService->>APIService: Publishes Position Update (e.g., via Redis)
+    APIService->>Frontend: Pushes new position via WebSocket
+    Frontend->>Frontend: Updates asset icon on map

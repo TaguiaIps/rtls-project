@@ -1,0 +1,11 @@
+graph TD
+    A[Start] --> B{User Authenticated?};
+    B -- No --> C[Login Page];
+    C -- Submits Credentials --> D[API Authenticates];
+    D -- Success --> E[Dashboard View];
+    B -- Yes --> E;
+    E -- Clicks 'View Map' --> F[Real-Time Map View];
+    F -- Selects an Asset --> G[Asset Details Panel Appears];
+    G -- Clicks 'View Trajectory' --> H[Analytics Panel];
+    H -- Selects Time Range & Runs Report --> I[Map Displays Asset Trajectory];
+    F -- Clicks 'Analytics' --> H;
