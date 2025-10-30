@@ -1,0 +1,65 @@
+erDiagram
+    users {
+        int id PK
+        varchar username "UNIQUE"
+        varchar password_hash
+        varchar role "'Administrator' or 'General User'"
+    }
+
+    assets {
+        int id PK
+        varchar tag_id "UNIQUE, e.g., MAC address"
+        varchar name
+        varchar type "e.g., 'forklift', 'waiter'"
+    }
+
+    gateways {
+        int id PK
+        varchar gateway_id "UNIQUE"
+        varchar name
+        float location_x "Coordinate on floor plan"
+        float location_y "Coordinate on floor plan"
+    }
+
+    zones {
+        int id PK
+        varchar name
+        varchar type "'geofence' or 'poi'"
+        json geometry "Polygon coordinates"
+    }
+
+    location_history {
+        timestamp timestamp "Composite PK with asset_id"
+        int asset_id FK "Composite PK"
+        float location_x
+        float location_y
+    }
+
+    raw_readings {
+        timestamp timestamp
+        int tag_id FK
+        int gateway_id FK
+        int rssi
+    }
+
+    alerts {
+        int id PK
+        int asset_id FK
+        int zone_id FK
+        timestamp timestamp
+        varchar alert_type "'enter' or 'exit'"
+    }
+
+    analytics_insights {
+        int id PK
+        timestamp timestamp
+        text insight_text
+        int related_asset_id FK "Optional"
+    }
+
+    assets ||--|{ location_history : "has"
+    assets ||--|{ raw_readings : "generates"
+    gateways ||--|{ raw_readings : "captures"
+    assets ||--|{ alerts : "triggers"
+    zones ||--|{ alerts : "involves"
+    assets |o--|{ analytics_insights : "relates_to"

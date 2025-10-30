@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant Admin
+    participant Frontend
+    participant APIService
+    participant Database
+
+    Admin->>Frontend: Fills and submits "New Asset" form
+    Frontend->>APIService: POST /api/assets with asset data
+    APIService->>APIService: Validates data (e.g., ensure tag_id is unique)
+    APIService->>Database: INSERT INTO assets (...) VALUES (...)
+    Database-->>APIService: Confirms successful insertion
+    APIService-->>Frontend: Returns 201 Created with new asset object
+    Frontend->>Admin: Displays "Asset created successfully" message
