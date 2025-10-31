@@ -2,7 +2,7 @@
 
 ## **1. Personas**
 
-Personas help us step into the shoes of our users. They guide our development decisions by focusing on user goals, motivations, and pain points.
+There are two different primary personas for the project.
 
 ### **Persona 1: The Administrator**
 
@@ -34,7 +34,10 @@ This story map organizes our features into a narrative flow, showing how users w
 
 ### **Backbone: Major User Activities**
 
-**System Setup & Configuration** `(Alex)` → **Daily Operations Monitoring** `(Carlos)` → **Deep-Dive Analysis** `(Carlos)` → **On-the-Go Location & Navigation** `(Alex & Carlos)`
+**System Setup & Configuration** `(Alex)` <br>
+→ **Daily Operations Monitoring** `(Carlos)` <br>
+→ **Deep-Dive Analysis** `(Carlos)` <br>
+→ **On-the-Go Location & Navigation** `(Alex & Carlos)`
 
 ---
 

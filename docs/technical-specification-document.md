@@ -18,6 +18,7 @@ The scope of this project includes the design and implementation of all four tie
 * **Anchors:** A network of gateways to receive beacon signals.
 * **Location Engine:** Backend services for data ingestion, positioning, and analytics.
 * **Application Layer:** A web-based dashboard for visualization and administration.
+* **Application Layer:** A mobile application for blue-dot navigation and asset tracking.
 
 The initial deployment will not include integration with external systems, but the architecture will be designed with extensible APIs to support future integrations (e.g., with security systems).
 
@@ -52,7 +53,7 @@ A hybrid gateway strategy will be adopted to balance cost, control, and accuracy
 
 ### **2.3. Tier 3: Location Engine (Backend)**
 
-The backend will be a set of containerized microservices orchestrated by Kubernetes, as proposed in the initial architecture document.
+The backend will be a set of containerized microservices orchestrated by Kubernetes.
 
 * **Communication Protocol:**
   * **Data Ingestion:** An **MQTT Broker** (e.g., Mosquitto) will serve as the entry point for all data from the gateways. This is a lightweight and scalable protocol ideal for IoT data streams.
@@ -131,5 +132,5 @@ The API will be RESTful and provide endpoints for:
 ## **5. Deployment & Operations**
 
 * **Containerization:** All backend services will be packaged as **Docker** containers.
-* **Orchestration:** **Kubernetes** will be used to manage, scale, and ensure the resilience of the containerized services. This aligns with the initial architectural plan and provides a robust, scalable production environment.
-* **Logging & Monitoring:** The **ELK Stack** (Elasticsearch, Logstash, Kibana) will be used for centralized, structured logging and system monitoring, as specified in the architecture document (RF007, RF008). This is critical for debugging and maintaining system health.
+* **Orchestration:** **Kubernetes** will be used to manage, scale, and ensure the resilience of the containerized services. This provides a robust, scalable production environment.
+* **Logging & Monitoring:** The **ELK Stack** (Elasticsearch, Logstash, Kibana) will be used for centralized, structured logging and system monitoring. This is critical for debugging and maintaining system health.

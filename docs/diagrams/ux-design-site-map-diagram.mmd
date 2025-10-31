@@ -1,0 +1,29 @@
+graph TD
+    A[Login Page] --> B{Dashboard};
+
+    subgraph Authenticated Experience
+        B --> C[Real-Time Map View];
+        B --> D[Analytics Hub];
+        B --> E[Alerts Center];
+        B --> F[Admin Panel];
+        B --> G[User Profile/Settings];
+
+        C --> C1[Asset Details Panel];
+        C --> C2[Search & Filter Controls];
+
+        D --> D1[Trajectory Analysis];
+        D --> D2[Heatmap Generation];
+        D --> D3[Dwell Time Reports];
+        D --> D4[Zone Entry/Exit Logs];
+        D --> D5[Zone Management \n Create/Edit Geofences];
+
+        E --> E1[Configure New Alert];
+        E --> E2[View Alert History];
+
+        F --> F1[Asset Management \n Add/Edit/Bulk Import];
+        F --> F2[Gateway Management \n Place/Configure];
+        F --> F3[Floor Plan Management];
+        F --> F4[System Settings \n Data Retention];
+    end
+
+    style F fill:#f9f,stroke:#333,stroke-width:2px

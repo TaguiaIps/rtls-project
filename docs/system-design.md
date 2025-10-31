@@ -4,7 +4,7 @@
 
 ### **1.1. Purpose**
 
-This document provides a comprehensive software design for the RTLS Analytics Platform. It details the system's architecture, data models, component interactions, and key implementation strategies. This document is intended for the in-house development team to guide the implementation, testing, and deployment of the system.
+This document details the system's architecture, data models, component interactions, and key implementation strategies. This document is intended for the in-house development team to guide the implementation, testing, and deployment of the system.
 
 ### **1.2. Scope**
 

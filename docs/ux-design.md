@@ -47,15 +47,15 @@ graph TD
         D --> D2[Heatmap Generation];
         D --> D3[Dwell Time Reports];
         D --> D4[Zone Entry/Exit Logs];
-        D --> D5[Zone Management (Create/Edit Geofences)];
+        D --> D5[Zone Management \n Create/Edit Geofences];
 
         E --> E1[Configure New Alert];
         E --> E2[View Alert History];
 
-        F --> F1[Asset Management (Add/Edit/Bulk Import)];
-        F --> F2[Gateway Management (Place/Configure)];
+        F --> F1[Asset Management \n Add/Edit/Bulk Import];
+        F --> F2[Gateway Management \n Place/Configure];
         F --> F3[Floor Plan Management];
-        F --> F4[System Settings (Data Retention)];
+        F --> F4[System Settings \n Data Retention];
     end
 
     style F fill:#f9f,stroke:#333,stroke-width:2px
@@ -81,8 +81,6 @@ graph TD
 
 ### **2.2. User Flows with Narrative**
 
-*Diagrams for these flows will be provided as separate mermaid files for clarity.*
-
 1. **Flow 1: Carlos Generates a Heatmap to Identify Bottlenecks.**
     * **Scenario & Mindset:** It’s Tuesday morning, and Carlos notices that the morning shift's output is down. He suspects a recurring bottleneck near the main loading bay but needs proof. He feels pressure to solve the slowdown and needs the platform to quickly validate his hunch so he can re-route traffic before the next shift.
     * **Steps:** Login → Navigate to Analytics Hub → Select Heatmap → Choose a time range (e.g., "Last 24 Hours") → Click "Generate" → View heatmap overlay on the Real-Time Map → Adjust color intensity/opacity for clarity.
@@ -102,8 +100,6 @@ graph TD
 ---
 
 ## **3. Wireframes (Low-Fidelity)**
-
-*These wireframes illustrate the layout and functional elements, not the final visual design.*
 
 ### **3.1. Web App: Main Dashboard / Real-Time Map View**
 
@@ -211,10 +207,3 @@ Error states communicate that something has gone wrong in a clear, non-technical
   * **Visual:** The specific input field causing the error will be highlighted with a red border. A small text message in red will appear directly below the field explaining the error (e.g., "This Tag ID already exists.").
 * **API/Server Error (e.g., Report Fails):**
   * **Visual:** A non-intrusive "toast" notification will appear at the top of the screen. It will have a red background, an error icon, and a simple message like: "Could not generate the report. Please try again later." It should not contain technical jargon like "Error 500." The notification should be dismissible.
-
----
-
-### **CHANGE LOG 📝**
-
-* **Rev. 2:** Added "Scenario & Mindset" narratives to all user flows in section 2.2 to improve clarity and provide context.
-* **Rev. 2:** Added a new major section, "5. UI States & Interaction Design," to improve comprehensiveness. This section defines designs for Empty States, Loading States, and Error States.
