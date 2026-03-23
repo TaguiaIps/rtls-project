@@ -14,12 +14,19 @@ erDiagram
         varchar type "e.g., 'forklift', 'waiter'"
     }
 
+    sites {
+        int id PK
+        varchar name
+        varchar type
+        varchar timezone
+    }
+
     gateways {
         int id PK
-        varchar gateway_id "UNIQUE"
         varchar name
         float location_x "Coordinate on floor plan"
         float location_y "Coordinate on floor plan"
+        int site_id FK
     }
 
     zones {
@@ -30,18 +37,25 @@ erDiagram
     }
 
     location_history {
+        int id PK
         timestamp timestamp "Composite PK with asset_id"
-        int asset_id FK "Composite PK"
         float location_x
         float location_y
+        int asset_id FK "Composite PK"
     }
 
     raw_readings {
-        timestamp timestamp
-        int tag_id FK
-        int gateway_id FK
+        int id PK
+        int message_id "UNIQUE"
+        timestamptz broker_received_timestamp
+        timestamptz gateway_timestamp
+        varchar firmware_version
         int rssi
+        jsonb readings
+        int asset_id FK
+        int gateway_id FK
     }
+
 
     alerts {
         int id PK

@@ -8,22 +8,22 @@ This document specifies the functional and non-functional requirements for the R
 
 ### **1.2. Project Scope**
 
-The project entails the development of an end-to-end indoor positioning system. The system will track BLE-enabled asset tags within defined physical spaces (e.g., shopping malls, restaurants, parking lots). The primary focus is not just on real-time tracking, but on providing a suite of analytics tools to derive business intelligence from historical location data. The system will be developed in-house and will initially operate as a standalone platform.
+The project entails the development of an end-to-end indoor positioning system optimized for **restaurants and large catering operations**, with horizontal applicability to industry. The system will employ a **Two-Tier Architecture** (Economic Tier via BLE Fingerprinting and Premium Tier via BLE AoA/UWB) to track assets within defined physical spaces. The primary focus is generating business intelligence from location data, including actionable insights like service time, Table SLAs, and round-trips. The system handles real-time tracking, deployment playbooks, and complex analytical reports.
 
 ### **1.3. Definitions, Acronyms, and Abbreviations**
 
 | Term | Definition |
 | :--- | :--- |
-| **Administrator** | A privileged user role responsible for system setup and configuration. |
-| **Asset Tag** | A BLE beacon attached to a person or object to be tracked. |
+| **Administrator** | A privileged user role responsible for system setup, calibration, and configuration. |
+| **Asset Tag** | A BLE or UWB beacon attached to a person or object to be tracked. |
 | **BLE** | Bluetooth Low Energy. |
+| **AoA** | Angle of Arrival (Direction Finding precision method). |
+| **UWB** | Ultra-Wideband (Time of Flight precision method). |
 | **Dwell Time** | The total time an asset remains within a predefined zone. |
-| **General User** | A standard user role focused on viewing data and running analytics. |
-| **Geofence** | A virtual perimeter for a real-world geographic area. |
-| **Gateway** | A fixed hardware device that scans for BLE signals and forwards data to the backend. |
-| **Heatmap** | A graphical representation of data where values are depicted by color. |
-| **RTLS** | Real-Time Location System. |
-| **UI** | User Interface. |
+| **Round Trip** | Time taken by staff/asset to travel from point A to point B and back. |
+| **General User** | A standard user role focused on operations and analytics (e.g., Restaurant Manager). |
+| **Geofence** | A virtual perimeter for a real-world geographic area or zone. |
+| **Gateway** | A fixed hardware device (Anchor/Locator) that scans for tag signals and forwards data via MQTT. |
 
 ---
 
@@ -33,8 +33,8 @@ The system shall support two distinct user roles with specific permissions:
 
 | Role | Description | Key Responsibilities |
 | :--- | :--- | :--- |
-| **Administrator** | The technical manager of the system. This user is responsible for the physical and logical setup of the tracking environment. | - Manage floor plans.<br>- Configure and calibrate the gateway network.<br>- Register and manage asset tags.<br>- Define system-wide settings. |
-| **General User** | The primary consumer of the location data and analytics. This role corresponds to the "Carlos Mendes" persona, focused on operational insights. | - View real-time asset locations.<br>- Generate and view analytics dashboards (heatmaps, reports).<br>- Configure and receive alerts.<br>- Analyze historical asset movement. |
+| **Administrator** | The technical manager. Responsible for physical rollout, infrastructure health, and logical setup. | - Manage floor plans and scales.<br>- Commission gateways/tags via QR.<br>- Run auto-calibration routines.<br>- Manage tiers and update profiles. |
+| **General User** | The primary consumer of location data and analytics. Focused on operations and restaurant SLAs. | - View real-time asset tracking with confidence scores.<br>- Generate heatmaps, dwell times, and round-trip reports.<br>- Configure threshold alerts.<br>- Monitor Table SLAs. |
 
 ---
 
@@ -44,46 +44,47 @@ The system shall support two distinct user roles with specific permissions:
 
 | ID | Requirement |
 | :--- | :--- |
-| **FR-ADM-001** | The system shall allow an Administrator to upload architectural floor plan images (format to be determined, e.g., PNG, SVG). |
-| **FR-ADM-002** | The system shall provide a UI for the Administrator to place, move, and configure gateway icons on the uploaded floor plan. |
-| **FR-ADM-003** | The system shall provide a web form for an Administrator to register a single new asset tag, including its unique ID and descriptive name/type. |
-| **FR-ADM-004** | The system shall allow an Administrator to perform a bulk import of asset tags via a CSV file upload. The CSV format will include columns for tag ID and name. |
-| **FR-ADM-005** | The system shall allow an Administrator to define a configurable data retention period for historical location data, with a range between 30 and 90 days. |
+| **FR-ADM-001** | The system shall allow an Administrator to upload floor plan images and set real-world scaling via reference points. |
+| **FR-ADM-002** | The system shall provide a UI to place gateways corresponding to the Economic or Premium tier. |
+| **FR-ADM-003** | The system shall provide an automated calibration wizard for BLE fingerprinting (radio map creation) and baseline offset calculation. |
+| **FR-ADM-004** | The system shall support provision of two hardware tiers: Economic (BLE RSSI/Fingerprinting) and Premium (BLE AoA/UWB) profiles. |
+| **FR-ADM-005** | The system shall allow bulk import of asset tags via CSV, allowing specification of update rates and battery profiles. |
 
 ### **3.2. Real-Time Tracking & Visualization (General User & Administrator)**
 
 | ID | Requirement |
 | :--- | :--- |
-| **FR-VIS-001** | The system shall display a map view with the uploaded floor plan as the background. |
-| **FR-VIS-002** | The system shall display the real-time location of all active asset tags as distinct icons on the map. |
-| **FR-VIS-003** | The system shall allow users to click on an asset icon to view its name and details. |
-| **FR-VIS-004** | The system shall provide a search function to find a specific asset by its name, which then centers the map on that asset's location. |
+| **FR-VIS-001** | The system shall display a map view with the uploaded floor plan and define specific zones (e.g., Kitchen, Dining). |
+| **FR-VIS-002** | The system shall display real-time tracking of assets, rendering new positions via WebSockets. |
+| **FR-VIS-003** | The system shall display a visual **Confidence Score** for estimated locations, falling back to zone highlighting when point-precision degrades. |
+| **FR-VIS-004** | The system shall allow users to search for specific assets and filter by asset category (e.g., Waiters, Carts). |
 
 ### **3.3. Analytics & Reporting (General User)**
 
 | ID | Requirement |
 | :--- | :--- |
-| **FR-ANL-001** | The system shall allow a user to define polygonal zones (geofences) on the map interface. |
-| **FR-ANL-002** | The system shall generate a heatmap visualization overlayed on the floor plan, showing areas of high and low asset traffic over a user-selected time period. |
-| **FR-ANL-003** | The system shall generate a "dwell time" report, calculating the total time specific assets spent within a predefined geofence over a selected period. |
-| **FR-ANL-004** | The system shall be able to display the historical movement path (trajectory) of a selected asset over a user-defined time frame. |
-| **FR-ANL-005** | The system shall generate a report detailing when a specific asset enters or exits a predefined geofence (e.g., to monitor if equipment leaves an area). |
+| **FR-ANL-001** | The system shall allow users to define polygonal geofences/zones on the map. |
+| **FR-ANL-002** | The system shall generate heatmaps showing traffic density and potential bottlenecks over selected times. |
+| **FR-ANL-003** | The system shall calculate round-trip times between defined zones (e.g., Kitchen to Dining Area) to measure staff efficiency. |
+| **FR-ANL-004** | The system shall generate a "dwell time" report for calculating time spent in specific zones. |
+| **FR-ANL-005** | The system shall display the historical movement path (trajectory) of a selected asset. |
+| **FR-ANL-006** | The system shall measure Table Service SLAs, highlighting violations when a specific operation exceeds maximum time limits. |
 
 ### **3.4. Notifications & Alerting (General User)**
 
 | ID | Requirement |
 | :--- | :--- |
-| **FR-NOT-001** | The system shall allow users to configure alerts to be triggered when an asset enters or exits a specific geofence. |
-| **FR-NOT-002** | The system shall deliver triggered alerts via the web application's UI (in-app notifications). |
-| **FR-NOT-003** | The system shall deliver triggered alerts via email to the user's registered address. |
-| **FR-NOT-004** | The system shall deliver triggered alerts via push notifications to a companion mobile application. |
+| **FR-NOT-001** | The system shall trigger alerts when predefined Table SLAs are violated (e.g., waitstaff absent from dining area for >15 mins). |
+| **FR-NOT-002** | The system shall trigger alerts when assets enter/exit unauthorized geofences. |
+| **FR-NOT-003** | The system shall deliver in-app notifications and support optional email delivery. |
 
 ### **3.5. User Management & Security**
 
 | ID | Requirement |
 | :--- | :--- |
-| **FR-SEC-001** | The system shall require all users to authenticate via a secure login mechanism (e.g., username/password). |
-| **FR-SEC-002** | The system shall enforce access control based on the user's assigned role (Administrator or General User). |
+| **FR-SEC-001** | The system shall authenticate users via secure login mechanisms (JWT). |
+| **FR-SEC-002** | The system shall enforce role-based access control. |
+| **FR-SEC-003** | The system shall provide an audit log for configuration changes, ensuring compliance and data governance (LGPD context). |
 
 ---
 
@@ -93,27 +94,27 @@ The system shall support two distinct user roles with specific permissions:
 
 | ID | Requirement |
 | :--- | :--- |
-| **NFR-PER-001** | The system shall update the position of an asset on the UI within **5 seconds** of its physical location change. |
-| **NFR-PER-002** | The system shall be capable of processing data from at least **500** concurrently active asset tags. |
-| **NFR-PER-003** | Analytics reports (e.g., heatmap, dwell time) for a 24-hour period with 100 tags shall be generated in under 15 seconds. |
+| **NFR-PER-001** | The system shall support differing update rates: **0.5–2 Hz** for the Economic Tier, and **5–20 Hz** for the Premium Tier. |
+| **NFR-PER-002** | End-to-end latency (tag to dashboard) shall be **<1-2 seconds** for typical tracking, and **<500 ms** for critical Premium alerts. |
+| **NFR-PER-003** | Analytics (heatmap, trajectory) for 100 tags over 24 hours shall generate in under 15 seconds. |
 
 ### **4.2. Security**
 
 | ID | Requirement |
 | :--- | :--- |
-| **NFR-SEC-001** | All communication between the client UI and the backend server shall be encrypted using TLS v1.3 or higher. |
-| **NFR-SEC-002** | Sensitive data stored in the database shall be encrypted at rest using the AES-256 standard. |
+| **NFR-SEC-001** | MQTT transport shall use TLS authentication (mTLS) for gateway-to-broker communication. |
+| **NFR-SEC-002** | Sensitive DB data (including user locations if classified as PII under LGPD) shall be subject to access controls and minimization. |
 
 ### **4.3. Usability**
 
 | ID | Requirement |
 | :--- | :--- |
-| **NFR-USA-001** | The UI for defining geofences shall be an interactive, point-and-click drawing tool on the map. |
-| **NFR-USA-002** | The primary dashboard shall be intuitive, allowing a new General User to find and view an asset's location with minimal training. |
+| **NFR-USA-001** | The UI for defining geofences must be a drag-and-drop/point-and-click drawing tool. |
+| **NFR-USA-002** | Commissioning workflows via mobile app must use QR scanning to reduce manual entry errors. |
 
 ### **4.4. Reliability & Availability**
 
 | ID | Requirement |
 | :--- | :--- |
-| **NFR-REL-001** | The system's core services (data ingestion, API, real-time view) shall have an uptime of 99.5%. |
-| **NFR-REL-002** | The system shall perform automated, encrypted backups of its database daily. |
+| **NFR-REL-001** | The system shall monitor infrastructure health (gateways offline, battery drops) and trigger maintenance alerts. |
+| **NFR-REL-002** | The system's core messaging broker and events engine shall support multi-node clustering for High Availability (HA). |

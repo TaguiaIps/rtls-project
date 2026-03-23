@@ -4,13 +4,14 @@ graph TD
     end
 
     subgraph Infrastructure
-        Gateway[Gateways<br>Raspberry Pi / AoA]
+        Tags[BLE Tags] --> Gateways[BLE Gateways]
+        Gateways
     end
 
     subgraph Backend Services
         WebApp[Web Application<br>React on Nginx]
         APIService[API Service<br>Django REST Framework]
-        PositioningService[Positioning Service<br>Python]
+        Positioning[Positioning Engine]
         MQTTBroker[MQTT Broker<br>Mosquitto]
         Database[(Database<br>PostgreSQL + TimescaleDB)]
     end
@@ -19,7 +20,10 @@ graph TD
     WebApp -- REST API (HTTPS) --> APIService
     User -- Real-time Data (WebSockets) --> APIService
 
-    Gateway -- MQTT --> MQTTBroker
-    MQTTBroker --> PositioningService
-    PositioningService -- Writes Position Data --> Database
-    APIService -- Reads/Writes --> Database
+    Gateways -->|MQTT QoS=1| MQTTBroker
+    MQTTBroker --> Ingest[Ingestion Service \n FastAPI]
+    Ingest --> Stream[Internal Stream \n Redis Streams or Kafka]
+    Stream --> Positioning[Positioning Engine]
+    Positioning --> Timescale[TimescaleDB]
+    Timescale --> API[API & WebSocket Service \n FastAPI]
+    API --> Dashboard[Web Dashboard / Mobile Apps]

@@ -1,0 +1,18 @@
+graph TD
+    A[Mobile Login] --> B{Role Router}
+    B -->|Administrator| C[Commissioning Home]
+    B -->|General User| D[Asset Finder]
+
+    subgraph General User Mobile
+        D --> D1[Search Results]
+        D --> D2[Asset Location Sheet]
+        D --> D3[Open in Map]
+    end
+
+    subgraph Administrator Mobile
+        C --> C1[QR Scanner]
+        C --> C2[Assign Zone / Room]
+        C --> C3[Calibration Mode]
+        C --> C4[Blue Dot Navigation]
+        C --> C5[Session Summary]
+    end

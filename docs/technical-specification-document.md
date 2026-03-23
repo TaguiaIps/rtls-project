@@ -4,133 +4,97 @@
 
 ### **1.1. Purpose**
 
-This document provides a detailed technical specification for the Real-Time Location System (RTLS) project. It outlines the system architecture, component design, data management strategies, and deployment model. This specification is intended for the in-house engineering team to guide the development, testing, and deployment of the platform.
+This document provides a detailed technical specification for the Real-Time Location System (RTLS) project. It outlines the system architecture, component design, data management strategies, and deployment model.
 
 ### **1.2. Project Goal**
 
-The primary objective is to develop an indoor positioning system that not only tracks assets in real-time but, more importantly, captures and analyzes location data to provide actionable business intelligence. The system will leverage inference models to suggest optimizations for resource allocation, workflow efficiency, and space utilization within environments like shopping malls and large restaurants.
+The primary objective is to develop a hardware-agnostic, event-driven indoor positioning system targeted at **restaurants and large catering operations**. The system captures and analyzes location data to provide actionable intelligence on service SLAs, waitstaff round-trips, and kitchen efficiency.
 
 ### **1.3. Scope**
 
-The scope of this project includes the design and implementation of all four tiers of the RTLS architecture:
+The scope employs a **Two-Tier Strategy** (Economic & Premium), covering:
 
-* **Asset Tags:** Inexpensive BLE beacons.
-* **Anchors:** A network of gateways to receive beacon signals.
-* **Location Engine:** Backend services for data ingestion, positioning, and analytics.
-* **Application Layer:** A web-based dashboard for visualization and administration.
-* **Application Layer:** A mobile application for blue-dot navigation and asset tracking.
-
-The initial deployment will not include integration with external systems, but the architecture will be designed with extensible APIs to support future integrations (e.g., with security systems).
+* **Tier 1 (Economic):** BLE Fingerprinting for SMBs (1-2m accuracy).
+* **Tier 2 (Premium):** BLE AoA or UWB for enterprise and high-precision use cases (sub-meter accuracy).
+* **Location Engine:** Backend processing combining Message Brokers (MQTT), Smoothing/Filters, and TimescaleDB storage.
+* **Interfaces:** Web Dashboard + Mobile App (for blue-dot navigation and commissioning).
 
 ---
 
 ## **2. System Architecture**
 
-The system will be designed following a modular, four-tier RTLS model. This microservices-based approach ensures scalability and maintainability, aligning with the requirements for an in-house, evolving solution.
+The system follows an agnostic, event-driven pattern connecting hardware infrastructure to an insights engine.
 
-### **2.1. Tier 1: Asset Tags**
+### **2.1. Devices (Tags & Smartphones)**
 
-* **Technology:** Bluetooth Low Energy (BLE) beacons.
-* **Recommended Hardware:** Inexpensive, commodity beacons such as **Holy-iot** or similar models.
-* **Protocol:** Tags must be configured to broadcast standard **iBeacon** or **Eddystone** packets. This ensures compatibility with a wide range of gateway hardware.
-* **Configuration:**
-  * **Broadcast Interval:** A default of **1 second (1000ms)** is recommended to balance real-time updates with battery life (RNF003).
-  * **Transmission Power:** To be calibrated during deployment to optimize for coverage and reduce signal noise.
+* **Economic Tier Tags:** Standard BLE beacons (e.g., Minew, Holy-iot). Configured for 0.5-2 Hz advertising intervals to balance responsividade and battery life.
+* **Premium Tier Tags:** UWB tags (e.g., Sewio) or CTE-enabled BLE tags for AoA (e.g., Quuppa). Configured for high-frequency updates (5-20 Hz) for critical operations.
+* **Smartphones:** Supported via Wi-Fi RTT (Android) or BLE Scanning modes as a secondary/fallback tracking mechanism, primarily for clients or management apps.
 
-### **2.2. Tier 2: Anchors (Gateways)**
+### **2.2. Infrastructure (Anchors & Gateways)**
 
-A hybrid gateway strategy will be adopted to balance cost, control, and accuracy.
+* **Economic Gateways:** Edge devices (Raspberry Pi, ESP32, or vendor BLE gateways) scanning for RSSI. They transmit raw observations (Tag ID, RSSI, Timestamp) to the broker.
+* **Premium Locators:** Antenna arrays for AoA that compute IQ samples/angles, or UWB anchors measuring Time-of-Flight (ToF). They generally forward precise coordinate telemetry.
+* **Connectivity & Health:** Devices connect via Wi-Fi/Ethernet. Device health (heartbeat, battery) is reported continuously via MQTT.
 
-* **Primary Gateway (Cost-Effective):**
-  * **Hardware:** **Raspberry Pi 4B or Zero 2 W** with a built-in or external BLE adapter. This aligns with the "Tier 2" developer-focused approach from the gateway analysis.
-  * **Software:** A custom Python script using the `bluepy` or `bleak` library will run on each Raspberry Pi.
-  * **Functionality:** The script will continuously scan for BLE advertisements, filter for known asset tags, and publish the data (Tag ID, RSSI, Gateway ID, Timestamp) to the backend via MQTT.
-  * **Deployment:** Gateways will be powered via standard USB power and connect to the network via Wi-Fi or Ethernet.
+### **2.3. Platform Services (Cloud / On-prem)**
 
-* **Optional Gateway (High-Accuracy Zones):**
-  * **Hardware:** For areas requiring sub-meter accuracy (e.g., high-value zones, checkout areas), **Holy-IOT HL-A18 (AoA Gateway)** or a similar "Tier 3" device can be deployed.
-  * **Integration:** These gateways will have their own data output format (often pre-calculated coordinates), which will be ingested by a dedicated adapter service in the backend.
+The backend is structured around microservices:
 
-### **2.3. Tier 3: Location Engine (Backend)**
+1. **MQTT Broker (e.g., Mosquitto, EMQX):** Handles edge telemetry ingestion.
+2. **Ingestion & Normalization:** Decodes raw payloads, deduplicates overlapping RSSI observations, and syncs timestamps.
+3. **Location Engine:**
+   - *Economic:* Applies **Kalman Filters** or Median smoothing to RSSI, then uses KNN/WKNN Fingerprinting to estimate position, yielding a `Confidence Score`.
+   - *Premium:* Processes AoA phase data or UWB ToF for precise (X,Y) coordinates.
+   - Constrains outputs using Geofence/Floorplan mapping to prevent "wall crossing".
+4. **Events / Rules Engine:** Evaluates positioning against business logic (Table SLAs, Zone Entry/Exit, Dwell Time) and generates Alerts.
+5. **API Service (FastAPI / Django REST):** Provides REST endpoints for CRUD and serves Analytics. Uses **WebSockets** for real-time map pushes.
 
-The backend will be a set of containerized microservices orchestrated by Kubernetes.
+### **2.4. Data Storage Model**
 
-* **Communication Protocol:**
-  * **Data Ingestion:** An **MQTT Broker** (e.g., Mosquitto) will serve as the entry point for all data from the gateways. This is a lightweight and scalable protocol ideal for IoT data streams.
-  * **Real-time Updates:** **WebSockets** will be used to push real-time location updates from the API service to the web dashboard.
-
-* **Core Services:**
-    1. **Positioning Service (Python):**
-        * Subscribes to the MQTT broker to receive raw RSSI data.
-        * Implements the positioning algorithm (see Section 3).
-        * Writes the calculated (X, Y) coordinates and the raw source data to the database.
-    2. **Analytics & Inference Service (Python):**
-        * Periodically queries the historical location database.
-        * Runs analysis models (e.g., dwell time, heatmap generation, path analysis, anomaly detection).
-        * Generates actionable suggestions and stores them in the database for retrieval by the API.
-    3. **API Service (Python/Django REST Framework):**
-        * Provides secure, RESTful endpoints for the web application (RF005, RF006).
-        * Manages assets, users, beacons, and system configuration.
-        * Serves historical and analytical data to the dashboard.
-        * Handles WebSocket connections for real-time data streaming.
-
-* **Database:**
-  * **Technology:** **PostgreSQL** with the **TimescaleDB** extension.
-  * **Rationale:** This provides a powerful solution for both time-series data (location history) and standard relational data (asset information, user roles) within a single, robust database system. It is optimized for the high-volume writes and complex time-based queries required for the analytics goal.
-
-### **2.4. Tier 4: Application Layer**
-
-* **Technology:** A **Single Page Application (SPA)** built with **React.js**, as specified in the architecture document.
-* **Key Features:**
-  * **Real-Time Map View:** Displays asset locations on an interactive floor plan (RF001, RF002).
-  * **Historical Playback:** Visualizes the movement history of selected assets (RF009).
-  * **Analytics Dashboard:** Presents heatmaps, zone traffic reports, and actionable insights generated by the backend (RF020).
-  * **Admin Panel:** Allows administrators to manage assets, configure beacons, define geofenced zones, and manage user access (RF004, RF006).
+* **PostgreSQL:** Operational Data (Users, Profiles, Sites, Floorplans, Zones, Assets).
+* **TimescaleDB:** Time-series extension mapping hyper-tables for `location_history` (x,y,z, confidence, smoothing state) and `raw_readings` (rssi, ToF).
+* *(Optional)* **ClickHouse:** OLAP database for complex, enterprise-level historical heatmap generations and aggregates.
 
 ---
 
 ## **3. Positioning Algorithm Strategy**
 
-The system will implement a multi-phase algorithm strategy to manage complexity and meet accuracy requirements (RNF001).
+### **3.1. Economic Tier: Filtered Fingerprinting**
 
-* **Phase 1: Weighted Centroid Localization (WCL):**
-  * **Description:** A simple and computationally efficient algorithm. The asset's location is calculated as the weighted average of the positions of the gateways that detect it, with the weights being derived from the RSSI values.
-  * **Advantage:** Easier to implement than trilateration and more resilient to noisy RSSI data. Provides sufficient accuracy (2-5 meters) for initial deployment.
+1. **Preprocessing & Smoothing:** RSSI data is notoriously noisy. The engine applies an **Extended Kalman Filter (EKF)** or moving average to smooth RSSI values from multiple gateways before evaluation.
+2. **Classification:** Uses K-Nearest Neighbors (KNN) to compare real-time smoothed RSSI against the calibrated radiomap.
+3. **Confidence Scoring & Fallback:** Generates a confidence metric (entropy of neighbors). If confidence drops below a threshold, the system reports the position at a "Zone-level" fallback rather than a pinpoint dot.
+4. **Map Matching:** Uses physical vectors (walls, corridors) to "snap" estimated dots to realistic pathways.
 
-* **Phase 2: Fingerprinting (Future Enhancement):**
-  * **Description:** For environments with high multipath interference (like shopping malls), a fingerprinting model will be implemented. This involves creating a radio map of the environment during a calibration phase.
-  * **Advantage:** Can significantly improve accuracy over pure RSSI-based models in complex indoor spaces.
+### **3.2. Premium Tier: Deterministic Location**
 
-* **Phase 3: Angle of Arrival (AoA) Integration:**
-  * **Description:** Data from optional AoA gateways will be processed to provide sub-meter accuracy within designated high-precision zones. The backend will be designed to accept pre-calculated coordinates from these gateways.
-
----
-
-## **4. Data Management & Communication**
-
-### **4.1. Database Schema (High-Level)**
-
-* `assets`: Information about each tracked item (ID, name, type, metadata).
-* `gateways`: Location and status of each gateway (ID, name, location_x, location_y).
-* `location_history` (TimescaleDB Hypertable): Stores calculated positions (timestamp, asset_id, location_x, location_y).
-* `raw_readings` (TimescaleDB Hypertable): Stores raw data from gateways for diagnostics and model retraining (timestamp, asset_id, gateway_id, rssi).
-* `zones`: Geofenced areas defined on the map (ID, name, polygon_coordinates).
-* `analytics_insights`: Stores actionable suggestions generated by the inference service.
-
-### **4.2. API Design**
-
-The API will be RESTful and provide endpoints for:
-
-* ` /assets `: CRUD operations for assets.
-* ` /locations/realtime `: WebSocket endpoint for live location streams.
-* ` /locations/history?asset_id=<id>&start=<ts>&end=<ts> `: Historical data queries.
-* ` /analytics/heatmaps `: Data for generating heatmaps.
-* ` /analytics/insights `: Actionable suggestions.
+1. **Telemetry Input:** Receives Phase/IQ calculations for BLE AoA or ToF data for UWB.
+2. **Positioning:** Applies trilateration/triangulation with sub-meter accuracy.
+3. **Refinement:** Overlays against Map Matching for absolute correctness.
 
 ---
 
-## **5. Deployment & Operations**
+## **4. Data Management & Integrations**
 
-* **Containerization:** All backend services will be packaged as **Docker** containers.
-* **Orchestration:** **Kubernetes** will be used to manage, scale, and ensure the resilience of the containerized services. This provides a robust, scalable production environment.
-* **Logging & Monitoring:** The **ELK Stack** (Elasticsearch, Logstash, Kibana) will be used for centralized, structured logging and system monitoring. This is critical for debugging and maintaining system health.
+### **4.1. Core Database Schema Highlights**
+
+* `site_hierarchy`: Defines Sites -> Buildings -> Floors -> Zones.
+* `asset_entities`: Links an asset to a Profile (update rate, battery spec).
+* `position_estimate` (Timescale): Timestamp, AssetID, X, Y, Z, Confidence, Method (Fingerprint/AoA).
+* `business_events`: Logs of entry/exit, SLA violations, alert triggers.
+
+### **4.2. API & Observability**
+
+* **OpenTelemetry (OTel):** Application tracing and performance monitoring across the ingestion pipeline.
+* **Prometheus + Grafana:** Infrastructure monitoring (Gateway uptime, packet rate, latencies).
+
+---
+
+## **5. Deployment, OTA & Operations**
+
+* **Containerization:** All backend services packaged via Docker, orchestrated via Kubernetes.
+* **Commissioning Playbook:** Standardized flow mapping: Site -> Floorplan -> Calibrate Scale -> Draw Zones -> Deploy Gateways.
+* **Automated Calibration:** Tools inside the app let an Admin walk the restaurant scanning signals for 15-30 minutes to auto-generate the Fingerprint map.
+* **Device Management (OTA):** Employs solutions like Eclipse hawkBit or AWS IoT to securely push firmware updates to edge gateways.
+* **Compliance:** Verification that selected hardware possesses required Anatel homologation (for Brazilian operations) and respects LGPD data-minimization practices regarding staff tracking.

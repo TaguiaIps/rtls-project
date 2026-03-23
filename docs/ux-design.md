@@ -1,209 +1,544 @@
-# **User-Experience (UX) Design Document: RTLS Analytics Platform**
+# **UX Design & User Stories: RTLS Analytics Platform**
 
 ## **1. Introduction**
 
 ### **1.1. Project Vision**
 
-To create an intuitive, powerful, and reliable Real-Time Location System (RTLS) Analytics Platform. The system will empower Operations Managers to move beyond simple asset tracking and unlock actionable business intelligence. By providing clear visualizations of operational bottlenecks and staff behavior patterns, the platform aims to enhance efficiency, improve procedural compliance, and deliver a seamless user experience that is valued for its ease of use.
+To create an intuitive, powerful, and reliable Real-Time Location System (RTLS) Analytics Platform for **restaurants and large catering operations**. The system empowers Operations Managers to move beyond simple asset tracking, unlocking actionable intelligence on service SLAs, staff round-trips, and kitchen bottlenecks.
 
-### **1.2. Target Audience**
+### **1.2. Core UX Goals**
 
-The design accommodates two primary user personas with distinct goals and needs:
-
-* **Carlos Mendes (The Operations Manager):** The primary consumer of data. Carlos needs to quickly understand operational patterns, identify inefficiencies, and audit behavior without a steep learning curve. His experience is centered on analytics and real-time monitoring.
-* **Alex (The Setup Guru):** The technical administrator. Alex is responsible for the system's integrity and accuracy. His experience is focused on setup, configuration, and maintenance. The design must provide him with precise and reliable tools.
-
-### **1.3. Core UX Goals**
-
-* **Clarity Over Clutter:** Prioritize clear data visualization and an uncluttered interface. Users should understand the state of their operations at a glance.
-* **Effortless Analytics:** Generating powerful reports (Trajectory, Heatmap, Dwell Time) should be an intuitive, step-by-step process that requires minimal training.
-* **Trust and Reliability:** The interface must feel stable, responsive, and accurate. The user's confidence in the data is paramount.
-* **Seamless Cross-Platform Experience:** Provide a consistent and intuitive experience across both the comprehensive web dashboard and the focused mobile application.
-* **Accessibility First:** Ensure the design is usable by people with the widest possible range of abilities by adhering to accessibility best practices, particularly regarding color contrast and navigation.
+* **Clarity & Confidence:** Display clear data visualization including "Confidence Scores" so users know when tracking is pinpoint accurate versus zone-level.
+* **Effortless Analytics:** Generating reports (Heatmaps, Round-Trip Times, Table SLAs) must be an intuitive, step-by-step process.
+* **Seamless Cross-Platform:** Consistent experience across the web dashboard and the mobile commissioning/navigation app.
 
 ---
 
-## **2. Information Architecture**
+## **2. Personas**
 
-### **2.1. Sitemap**
+There are two primary personas guiding the design and functionality of the project.
 
-#### **2.1.1. Web Application Sitemap**
+### **2.1. The Administrator**
+
+| **Name** | **Alex (The Setup Guru)** |
+| :--- | :--- |
+| **Role** | IT / Systems Administrator |
+| **Personality** | Meticulous, detail-oriented, and pragmatic. Alex values precision and reliability above all else. |
+| **Core Goal** | To ensure the RTLS platform is a trustworthy source of truth for restaurant and catering operations. The data must be accurate, the hardware must be reliable, and the system must be stable. |
+| **Motivations** | - Setting up a system that "just works" without constant firefighting.<br>- Empowering operational teams with data they can trust.<br>- Preventing "garbage in, garbage out" by ensuring precise calibration. |
+| **Frustrations** | - Vague setup instructions.<br>- Systems that require constant manual adjustments.<br>- Inaccurate data that undermines user confidence. |
+| **Quote** | *"If the data isn't accurate, the entire system is useless. My job is to make sure we can trust every single data point."* |
+
+### **2.2. The General User**
+
+| **Name** | **Carlos Mendes (The Operations Manager)** |
+| :--- | :--- |
+| **Role** | Operations Manager (e.g., Restaurant General Manager, Catering Operations Director) |
+| **Personality** | Strategic, results-driven, and busy. Carlos needs to see the big picture quickly but also needs the ability to investigate anomalies. |
+| **Core Goal** | To use location data to make smarter operational decisions that improve efficiency, enhance customer experience, and reduce costs. |
+| **Motivations** | - Quickly understanding staff and asset movement patterns.<br>- Tracking service SLAs, table round trips, and kitchen bottlenecks.<br>- Proactively addressing issues before they become major problems. |
+| **Frustrations** | - Drowning in raw data without clear insights.<br>- Spending too much time searching for assets or people.<br>- Not having concrete evidence to back up operational changes. |
+| **Quote** | *"Don't just show me dots on a map. Show me what it means. How can I use this information to run my business better today?"* |
+
+---
+
+## **3. User Story Map & Flows**
+
+This section organizes our features into a narrative flow, combining the user stories with real-world scenarios.
+
+### **3.1. Activity 1: System Setup & Configuration (Alex)**
+
+*As Alex, I need to set up the physical and digital environment flawlessly to ensure data accuracy.*
+
+**Narrative Flow:**
+* **Scenario:** An extension to the dining hall has been built. Alex needs to bring new BLE gateways online and establish the baseline.
+* **Steps:** App Commissioning Mode → Scans Gateway QR → Selects "Dining Extension" zone → Mounts gateway → Taps "Start Data Collection" → Walks through the new dining room for 15 minutes → App generates the radiomap offsets automatically.
+
+**Acceptance Criteria:**
+| ID | User Story | Confirmation | Priority |
+| :--- | :--- | :--- | :--- |
+| **US-ADM-01** | As **Alex**, I want to upload a floor plan image, so that I have a visual canvas for my gateway and asset layout. | User can select image; displayed as background; scale is set via reference points. | **Must-have** |
+| **US-ADM-02** | As **Alex**, I want to place and label gateway icons (Economic/Premium tier) on the map. | Drag/drop gateways; enter name/ID and tier. | **Must-have** |
+| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | App scans QR; prompts for zone/room; records rough coordinates. | **Must-have** |
+| **US-ADM-04** | As **Alex**, I want to run an automated calibration assistant that collects data to calculate offsets and build the initial radiomap. | Calibration runs in background; collects RSSI; confirms map generation. | **Must-have** |
+| **US-ADM-05** | As **Alex**, I want to bulk-import a list of asset tags from a CSV file. | Sample CSV available; successful batch import including tag profiles (update rate). | **Must-have** |
+
+### **3.2. Activity 2: Daily Operations Monitoring (Carlos)**
+
+*As Carlos, I need a high-level overview to quickly assess the current state of my operations.*
+
+**Narrative Flow:**
+* **Scenario:** A VIP table has been unvisited by waitstaff for over 15 minutes, violating the SLA.
+* **Steps:** Alert pops up in Dashboard → Carlos clicks alert → Map centers on the specific table → Shows no staff assets nearby.
+
+**Acceptance Criteria:**
+| ID | User Story | Confirmation | Priority |
+| :--- | :--- | :--- | :--- |
+| **US-GEN-01** | As **Carlos**, I want to see a high-level dashboard with key metrics (e.g., active assets, Table Service SLAs) upon login. | Displays "Active Assets", "Active Alerts", and "SLA Metrics"; auto-refreshes. | **Must-have** |
+| **US-GEN-02** | As **Carlos**, I want to see moving assets in real-time on a map with confidence scores. | Icons update live (0.5-20Hz); low confidence estimates fall back to Zone highlighting. | **Must-have** |
+| **US-GEN-03** | As **Carlos**, I want to filter the map view by asset type (e.g., "waiter," "cooking equipment") to reduce clutter. | Filter toggles asset categories on/off perfectly. | **Should-have** |
+| **US-GEN-04** | As **Carlos**, I want to receive an alert when a high-value asset or staff member exceeds a time limit in a specific zone (e.g., table SLA violation). | Alerts trigger on dwell-time thresholds; in-app and optional email notification. | **Must-have** |
+
+### **3.3. Activity 3: Deep-Dive Analysis (Carlos)**
+
+*As Carlos, I need to investigate patterns and specific incidents to find opportunities for improvement.*
+
+**Narrative Flow:**
+* **Scenario:** Service times have spiked. Carlos wants to see if the delay is in food prep or in servers picking up plates.
+* **Steps:** Analytics Hub → Heatmap (Last 4 Hours) → Sees high density at the "Pass-through Kitchen" zone → Runs a Round-Trip report for Waitstaff → Confirms the trip time is excessive.
+
+**Acceptance Criteria:**
+| ID | User Story | Confirmation | Priority |
+| :--- | :--- | :--- | :--- |
+| **US-ANL-01** | As **Carlos**, I want to view the historical trajectory of staff or a cart on the map, so I can understand their exact path and round-trips. | Trajectory drawn over set time; fast loading via TimescaleDB aggregates. | **Must-have** |
+| **US-ANL-02** | As **Carlos**, I want to define specific points of interest (POIs) such as "Pass-through Kitchen" or "Loading Dock". | Draw POI polygons on map and name them. | **Must-have** |
+| **US-ANL-03** | As **Carlos**, I want to generate a report showing round-trip times between the kitchen and dining area, to measure staff efficiency. | Select asset/zones; calculates average transition times and total trips. | **Must-have** |
+| **US-ANL-04** | As **Carlos**, I want to see a heatmap of the floor, so I can identify kitchen bottlenecks and high-traffic dining paths. | Colored overlay for traffic density; toggle visibility. | **Should-have** |
+
+### **3.4. Activity 4: On-the-Go Location & Navigation (Mobile App)**
+
+*As a user on the floor, I need to find assets quickly and calibrate the system effectively.*
+
+**Acceptance Criteria:**
+| ID | User Story | Confirmation | Priority |
+| :--- | :--- | :--- | :--- |
+| **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Autocomplete search centers map on last known location. | **Must-have** |
+| **US-MOB-02** | As **Alex**, I want to see my own location as a "blue dot" while in calibration mode, so I can accurately map signal strengths. | Calibration mode shows user location accurately; updates as user walks. | **Must-have** |
+
+---
+
+## **4. Information Architecture**
+
+### **4.1. Experience Model**
+
+The platform uses a **role-aware command-center architecture** so that each persona lands in the part of the product that matches their primary intent.
+
+| Role | Default Landing | Primary Jobs | Persistent Navigation |
+| :--- | :--- | :--- | :--- |
+| **Administrator (Alex)** | **Setup & Health Overview** | Configure floor plans, gateways, tags, calibration, tiers, and system reliability. | Overview, Live Map, Zones, Alerts, Admin, Health, Audit Log |
+| **General User (Carlos)** | **Operations Overview** | Monitor live operations, react to alerts, and run analytical investigations. | Overview, Live Map, Analytics, Alerts, Reports |
+
+Global shell elements remain consistent across web screens:
+
+* **Top bar:** Site/floor selector, time context, live connection status, alert tray, profile menu.
+* **Left rail:** Primary navigation by workflow, not by database object.
+* **Context pane/drawer:** Secondary details without forcing route changes.
+* **Map-first content model:** Map, zones, assets, alerts, and reports cross-link to the same location context.
+
+### **4.2. Web Application Sitemap**
 
 ```mermaid
 graph TD
-    A[Login Page] --> B{Dashboard};
+    A[Login] --> B{Role Router}
+    B -->|Administrator| C[Setup & Health Overview]
+    B -->|General User| D[Operations Overview]
 
-    subgraph Authenticated Experience
-        B --> C[Real-Time Map View];
-        B --> D[Analytics Hub];
-        B --> E[Alerts Center];
-        B --> F[Admin Panel];
-        B --> G[User Profile/Settings];
-
-        C --> C1[Asset Details Panel];
-        C --> C2[Search & Filter Controls];
-
-        D --> D1[Trajectory Analysis];
-        D --> D2[Heatmap Generation];
-        D --> D3[Dwell Time Reports];
-        D --> D4[Zone Entry/Exit Logs];
-        D --> D5[Zone Management \n Create/Edit Geofences];
-
-        E --> E1[Configure New Alert];
-        E --> E2[View Alert History];
-
-        F --> F1[Asset Management \n Add/Edit/Bulk Import];
-        F --> F2[Gateway Management \n Place/Configure];
-        F --> F3[Floor Plan Management];
-        F --> F4[System Settings \n Data Retention];
+    subgraph Shared Web Experience
+        C --> E[Live Map Workspace]
+        D --> E
+        D --> F[Analytics Workspace]
+        D --> G[Alerts Center]
+        C --> G
     end
 
-    style F fill:#f9f,stroke:#333,stroke-width:2px
+    subgraph Live Map Workspace
+        E --> E1[Asset Search & Filters]
+        E --> E2[Asset Details Drawer]
+        E --> E3[Zone & Table Detail Drawer]
+        E --> E4[Confidence Layer Controls]
+        E --> E5[Trajectory Replay Overlay]
+    end
+
+    subgraph Analytics Workspace
+        F --> F1[Heatmap Analysis]
+        F --> F2[Trajectory Analysis]
+        F --> F3[Round-Trip Report]
+        F --> F4[Dwell Time Report]
+        F --> F5[Table SLA Trends]
+    end
+
+    subgraph Alerts Center
+        G --> G1[SLA Violations]
+        G --> G2[Unauthorized Geofence Alerts]
+        G --> G3[Maintenance Alerts]
+        G --> G4[Notification Rules]
+        G --> G5[Alert History]
+    end
+
+    subgraph Administrator Console
+        C --> H[Admin Console]
+        H --> H1[Floor Plans & Scale]
+        H --> H2[Gateway Placement & Tier Profiles]
+        H --> H3[Asset Registry & CSV Import]
+        H --> H4[Calibration Wizard]
+        H --> H5[Zone & POI Manager]
+        H --> H6[User Access & Roles]
+        H --> H7[Infrastructure Health]
+        H --> H8[Audit Log]
+    end
 ```
 
-#### **2.1.2. Mobile Application Sitemap**
+### **4.3. Mobile Application Sitemap**
 
 ```mermaid
 graph TD
-    A[Login Screen] --> B{Real-Time Map View};
+    A[Mobile Login] --> B{Role Router}
+    B -->|Administrator| C[Commissioning Home]
+    B -->|General User| D[Asset Finder]
 
-    subgraph Mobile Experience
-        B --> C[Search Asset];
-        B --> D[Asset Details View];
-        B --> E[Alerts Feed];
-        B --> F[User Profile];
+    subgraph General User Mobile
+        D --> D1[Search Results]
+        D --> D2[Asset Location Sheet]
+        D --> D3[Open in Map]
+    end
 
-        subgraph Admin-Only
-             B --> G[Calibration Mode];
-        end
+    subgraph Administrator Mobile
+        C --> C1[QR Scanner]
+        C --> C2[Assign Zone / Room]
+        C --> C3[Calibration Mode]
+        C --> C4[Blue Dot Navigation]
+        C --> C5[Session Summary]
     end
 ```
 
-### **2.2. User Flows with Narrative**
+### **4.4. Core Content Relationships**
 
-1. **Flow 1: Carlos Generates a Heatmap to Identify Bottlenecks.**
-    * **Scenario & Mindset:** It’s Tuesday morning, and Carlos notices that the morning shift's output is down. He suspects a recurring bottleneck near the main loading bay but needs proof. He feels pressure to solve the slowdown and needs the platform to quickly validate his hunch so he can re-route traffic before the next shift.
-    * **Steps:** Login → Navigate to Analytics Hub → Select Heatmap → Choose a time range (e.g., "Last 24 Hours") → Click "Generate" → View heatmap overlay on the Real-Time Map → Adjust color intensity/opacity for clarity.
+| Object | Created In | Consumed In | Why It Matters |
+| :--- | :--- | :--- | :--- |
+| **Floor / Site** | Floor Plans & Scale | Live Map, Analytics, Mobile | Every task is spatial and starts with the correct floor context. |
+| **Zones / POIs / Tables** | Zone & POI Manager | Alerts, SLA rules, Dwell, Round-Trip, Heatmaps | Zones convert raw positions into operational meaning. |
+| **Gateways / Tier Profiles** | Gateway Placement & Tier Profiles | Health, Calibration, Live Confidence | Hardware quality directly affects confidence and alert trustworthiness. |
+| **Assets / Tags** | Asset Registry, QR Scanner, CSV Import | Live Map, Search, Alerts, Reports | Primary tracked entities for both monitoring and analysis. |
+| **Alerts** | Rules Engine / Health Monitoring | Overview, Alerts Center, Mobile handoff | Drives immediate user action and exception handling. |
+| **Reports** | Analytics Workspace | Operations review and optimization meetings | Transforms movement data into staffing and service decisions. |
+| **Audit Events** | Any admin change | Audit Log | Supports governance, traceability, and change accountability. |
 
-2. **Flow 2: Carlos Audits Staff Behavior with Trajectory.**
-    * **Scenario & Mindset:** Following a minor security incident, Carlos needs to verify that the on-duty guard completed their required patrol route. He is not trying to "catch" the employee, but rather to ensure procedural compliance and identify if the prescribed route is problematic. He needs a clear, undeniable visual record of the guard's movement.
-    * **Steps:** Login → Go to Analytics Hub → Select Trajectory Analysis → Search for and select the specific asset (guard's tag) → Define the shift time range (start/end) → Click "Generate" → The map displays the asset's path as a line → Carlos can "play back" the movement over time.
+### **4.5. User Task Flows**
 
-3. **Flow 3: Alex Sets Up a New Wing of the Facility.**
-    * **Scenario & Mindset:** The company has just opened a new wing. Alex is focused and methodical. His goal is to get the new area online flawlessly before the operations team begins using it. He values efficiency and precision; any error in setup could lead to inaccurate data, which he wants to avoid at all costs.
-    * **Steps:** Login → Navigate to Admin Panel → Floor Plan Management → Upload new floor plan image → Go to Gateway Management → Drag and place new gateway icons onto the map, assigning their IDs → Go to Asset Management → Select Bulk Import → Upload CSV of new assets.
-
-4. **Flow 4: Carlos Finds a Missing Asset Using the Mobile App.**
-    * **Scenario & Mindset:** Carlos is walking the floor when he gets a radio call that a high-value mobile scanning unit is missing. Time is critical. He is away from his desk and needs to find it immediately. He pulls out his phone, feeling a sense of urgency. He needs the app to be fast, simple, and direct.
-    * **Steps:** Open Mobile App & Login → Tap the search icon → Start typing the asset name ("Scanner-08") → Select the correct asset from the results → The map centers on the asset's real-time location → The user's own location is shown as a "blue dot," allowing him to navigate towards the asset.
-
----
-
-## **3. Wireframes (Low-Fidelity)**
-
-### **3.1. Web App: Main Dashboard / Real-Time Map View**
-
-* **1. Main Navigation:** Clear icons for Map, Analytics, Alerts, and Admin.
-* **2. Global Search:** Quickly find any asset from any screen.
-* **3. Map View:** The central component, displaying the floor plan and asset icons.
-* **4. Asset List & Filter:** A collapsible panel to see a list of all assets and filter by type (e.g., "Staff," "Equipment").
-* **5. Asset Details Panel:** Appears when an asset is clicked. Shows key info and provides shortcuts to analytics (e.g., "View Trajectory").
-* **6. Time Control:** A global control to view the map at a specific point in time or switch to live view.
-
-### **3.2. Web App: Analytics Hub**
-
-* **1. Analysis Type Selector:** Tabs to switch between Trajectory, Heatmap, Dwell Time, and Zone Reports.
-* **2. Configuration Panel:** Contextual options appear here. For a heatmap, it's the time range selector. For a trajectory, it's the asset selector and time range.
-* **3. Primary Action Button:** A clear "Generate Report" or "Run Analysis" button.
-* **4. Data Visualization Area:** The map dynamically updates to show the requested analysis (e.g., heatmap overlay, trajectory line).
-* **5. Report Export:** An option to export the report data as a CSV or PDF.
-
-### **3.3. Mobile App: Core Interface**
-
-* **1. Map-Centric View:** The map is the primary interface, taking up most of the screen.
-* **2. Prominent Search Bar:** The main way for users to interact is by searching for an asset.
-* **3. Bottom Navigation:** Simple navigation for Map, Alerts, and Profile.
-* **4. Asset Details Bottom Sheet:** When an asset is tapped, a non-intrusive panel slides up from the bottom with key details and actions.
+| User Task | Stories / Requirements | Entry Point | Ideal Flow | Completion Signal |
+| :--- | :--- | :--- | :--- | :--- |
+| **Sign in and route by role** | FR-SEC-001, FR-SEC-002 | Login | Enter credentials -> system validates role -> routes to role-specific home | Correct landing page plus visible role badge |
+| **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
+| **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> save | Gateway marker persists with tier color and status |
+| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> QR Scanner | Scan QR -> identify device -> select zone/room -> confirm placement -> sync to web | Device appears in registry and map draft layer |
+| **Run automated calibration** | US-ADM-04, FR-ADM-003, US-MOB-02 | Admin Console -> Calibration Wizard | Choose floor and gateways -> start session -> walk route with blue dot guidance -> collect signal data -> process radiomap | Wizard returns quality score, offsets, and completion summary |
+| **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
+| **See operations overview on login** | US-GEN-01 | Operations Overview | Review KPI cards, live alerts, SLA snapshot, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
+| **Monitor assets in real time** | US-GEN-02, FR-VIS-001, FR-VIS-002, FR-VIS-003 | Live Map Workspace | Choose floor -> watch live movement -> inspect confidence state -> open asset drawer | Map shows current position or zone fallback with last update time |
+| **Filter and search assets** | US-GEN-03, FR-VIS-004, US-MOB-01 | Live Map or Mobile Asset Finder | Search by name/tag/type -> apply category filters -> focus one asset or cohort | Map centers on result and clutter is reduced |
+| **Respond to SLA or geofence alerts** | US-GEN-04, FR-NOT-001, FR-NOT-002, FR-NOT-003, FR-ANL-006 | Alert tray or Alerts Center | Open alert -> map recenters on affected table/zone/asset -> inspect context -> acknowledge/escalate | Alert status changes and audit trail records action |
+| **Define zones and POIs** | US-ANL-02, FR-ANL-001, NFR-USA-001 | Admin Console -> Zone & POI Manager | Draw polygon -> name area -> assign type (table, kitchen, dock, restricted zone) -> save | New zone becomes selectable in rules and reports |
+| **Replay historical trajectory** | US-ANL-01, FR-ANL-005 | Analytics -> Trajectory | Select asset and time range -> render path -> scrub timeline -> inspect dwell moments | Path playback and event markers appear on map |
+| **Generate heatmap** | US-ANL-04, FR-ANL-002 | Analytics -> Heatmap | Select floor, asset set, and time range -> generate density layer -> compare hotspots | Heatmap overlay renders with legend and export option |
+| **Measure round-trip efficiency** | US-ANL-03, FR-ANL-003 | Analytics -> Round-Trip | Select origin zone, destination zone, and cohort -> run report -> inspect averages and outliers | Summary metrics, table, and trend chart are available |
+| **Measure dwell time** | FR-ANL-004 | Analytics -> Dwell Time | Select zone, asset type, and time range -> run report -> compare by shift or cohort | Dwell distribution and threshold breaches are visible |
+| **Monitor infrastructure health** | NFR-REL-001 | Setup & Health Overview | Review gateway status, heartbeat, battery, packet loss -> drill into failing device | Device marked healthy, degraded, or offline with next action suggested |
+| **Review configuration history** | FR-SEC-003 | Admin Console -> Audit Log | Filter by user, object, date, action type -> inspect change details | Traceable record of who changed what and when |
 
 ---
 
-## **4. Visual Design & Style Guide**
+## **5. Wireframes (Low-Fidelity)**
 
-### **4.1. Color Palette**
+### **5.1. Web App: Login & Role Routing**
 
-This palette is designed for clarity, professionalism, and high accessibility (WCAG AA compliant contrast ratios).
+**Supports:** FR-SEC-001, FR-SEC-002
 
-* **Primary (UI Backgrounds):**
-  * Dark Mode UI: `#1A1A2E` (Very Dark Blue)
-  * Light Mode UI: `#F8F9FA` (Off-White)
-* **Secondary (Containers, Panels):**
-  * Dark Mode: `#16213E` (Dark Slate Blue)
-  * Light Mode: `#FFFFFF` (White)
-* **Accent (Buttons, Links, Highlights):**
-  * `#0F3460` (Strong Blue) - Provides excellent contrast on both light and dark backgrounds.
-* **Text:**
-  * Dark Mode: `#E9F6FF` (Light Cyan)
-  * Light Mode: `#212529` (Near Black)
-* **Data Visualization:**
-  * **Heatmap Gradient:** `[#00FF00 (Low Intensity) -> #FFFF00 -> #FFA500 -> #FF0000 (High Intensity)]` - A standard, easily understood gradient.
-  * **Trajectory Line:** `#50C878` (Emerald Green) - Stands out against the map without being aggressive.
+```text
++--------------------------------------------------------------+
+| RTLS Analytics Platform                                      |
+| High-trust sign-in for operations and system administration  |
+|--------------------------------------------------------------|
+| Email ____________________                                   |
+| Password _________________        [ Sign In ]                |
+|                                                              |
+| Security notice | System status | Last successful sync       |
++--------------------------------------------------------------+
+```
 
-### **4.2. Typography**
+* On successful login, users are routed by role rather than forced into a generic home.
+* The first post-login screen includes a compact orientation panel: current site, live system state, unresolved alerts.
 
-* **Font Family:** **Inter**. A clean, highly legible sans-serif font designed for user interfaces. It's available for free via Google Fonts.
-* **Typographic Scale:**
-  * Heading 1 (H1): 32px, Bold
-  * Heading 2 (H2): 24px, Bold
-  * Heading 3 (H3): 18px, Semi-Bold
-  * Body Text: 16px, Regular
-  * Labels / UI Text: 14px, Medium
+### **5.2. Web App: Operations Overview**
 
-### **4.3. UI Components**
+**Supports:** US-GEN-01, FR-NOT-001, FR-NOT-002, NFR-REL-001
 
-* **Buttons:**
-  * **Primary:** Solid fill with Accent color (`#0F3460`), white text, rounded corners (8px).
-  * **Secondary:** Outlined with Accent color, text in Accent color, rounded corners.
-  * **State:** Hover and pressed states will have a subtle brightness change to provide feedback.
-* **Forms:**
-  * Input fields will have a clean, simple border.
-  * On focus, the border will be highlighted with the Accent color.
-  * Labels will be placed above the input fields for clarity.
-* **Icons:**
-  * Use a consistent, clean, solid-style icon set like **Feather Icons** or **Material Symbols**. This ensures visual harmony and quick recognition of functions.
+```text
++--------------------------------------------------------------------------------+
+| Top Bar: Site/Floor | Time | Live Status | Alert Tray | User                  |
+|--------------------------------------------------------------------------------|
+| KPI Strip: Active Assets | SLA At Risk | Critical Alerts | Gateways Offline    |
+|--------------------------------------------------------------------------------|
+| Live Map Preview                      | Priority Queue                         |
+| - floor snapshot                      | - SLA violation cards                  |
+| - top moving assets                   | - unauthorized zone events             |
+| - active zones                        | - maintenance warnings                 |
+|--------------------------------------------------------------------------------|
+| Trend Row: SLA by hour | kitchen dwell trend | round-trip trend               |
++--------------------------------------------------------------------------------+
+```
+
+* Designed for first-glance triage in under 10 seconds.
+* Every card has a direct action: `View on map`, `Open report`, or `Acknowledge`.
+
+### **5.3. Web App: Live Operations Map**
+
+**Supports:** US-GEN-02, US-GEN-03, US-GEN-04, FR-VIS-001, FR-VIS-002, FR-VIS-003, FR-VIS-004, US-MOB-01
+
+```text
++------------------------------------------------------------------------------------------------+
+| Search __________________  Filters: Staff Equipment Tags  Floor  Confidence  Time Context      |
+|------------------------------------------------------------------------------------------------|
+| Filter Rail               | Map Canvas                                                          |
+| - Asset types             | - Floor plan                                                        |
+| - Zones                   | - Live asset markers                                                 |
+| - Confidence threshold    | - Zone halos / restricted zones                                      |
+| - Alert state             | - Table SLA highlights                                               |
+|------------------------------------------------------------------------------------------------|
+| Event Timeline            | Details Drawer                                                      |
+| - recent updates          | - asset name / last seen / confidence / dwell / actions             |
+| - alert markers           | - jump to trajectory / alert history / related zone                 |
++------------------------------------------------------------------------------------------------+
+```
+
+* Clicking an alert or search result recenters the map and opens the contextual drawer without a full page change.
+* Confidence fallback behavior is explicit: precise point -> radius ring -> zone wash.
+
+### **5.4. Web App: Alerts Center & Rule Builder**
+
+**Supports:** US-GEN-04, FR-NOT-001, FR-NOT-002, FR-NOT-003, FR-ANL-006
+
+```text
++-----------------------------------------------------------------------------------+
+| Alert Tabs: SLA | Unauthorized Geofence | Maintenance | History                   |
+|-----------------------------------------------------------------------------------|
+| Alert List                               | Rule / Detail Panel                    |
+| - severity badge                         | - trigger condition                    |
+| - affected asset/zone/table              | - threshold or geofence                |
+| - age / owner / channel                  | - email + in-app delivery              |
+| - acknowledge / escalate                 | - action log / note / assignment       |
++-----------------------------------------------------------------------------------+
+```
+
+* Rule creation uses plain-language builders such as "If no waiter enters Table 12 zone for 15 min".
+* History keeps alert state changes visible for later review and operational learning.
+
+### **5.5. Web App: Analytics Workspace**
+
+**Supports:** US-ANL-01, US-ANL-03, US-ANL-04, FR-ANL-002, FR-ANL-003, FR-ANL-004, FR-ANL-005
+
+```text
++------------------------------------------------------------------------------------------------+
+| Report Switcher: Heatmap | Trajectory | Round-Trip | Dwell Time | SLA Trends                   |
+|------------------------------------------------------------------------------------------------|
+| Parameter Rail                         | Analysis Canvas                                             |
+| - floor / zone / cohort                | - heatmap or route map                                      |
+| - time range                           | - chart / legend / report table                             |
+| - compare by shift / daypart           | - annotation layer                                          |
+|------------------------------------------------------------------------------------------------|
+| Insight Footer: export | save preset | compare with previous period | share link                |
++------------------------------------------------------------------------------------------------+
+```
+
+* The workspace uses one mental model for all analytics: choose population, choose time, generate, compare, export.
+* Saved presets let Carlos repeat common analyses without rebuilding filters each time.
+
+### **5.6. Web App: Zone & POI Editor**
+
+**Supports:** US-ANL-02, FR-ANL-001, NFR-USA-001, FR-NOT-002
+
+```text
++-----------------------------------------------------------------------------------+
+| Tools: Select | Polygon | Vertex Edit | Duplicate | Delete                        |
+|-----------------------------------------------------------------------------------|
+| Map Canvas                                 | Properties Panel                     |
+| - floor plan                               | - name                               |
+| - existing zones                           | - type: table / kitchen / restricted |
+| - draft polygon                            | - SLA eligibility                    |
+|                                            | - alert participation                |
++-----------------------------------------------------------------------------------+
+```
+
+* The editor keeps drawing on the left and rule meaning on the right, so users do not lose spatial context while configuring alerts.
+
+### **5.7. Web App: Admin Setup Console**
+
+**Supports:** US-ADM-01, US-ADM-02, US-ADM-05, FR-ADM-001, FR-ADM-002, FR-ADM-004, FR-ADM-005
+
+```text
++------------------------------------------------------------------------------------------------+
+| Admin Tabs: Floor Plans | Gateways | Assets | Tier Profiles                                     |
+|------------------------------------------------------------------------------------------------|
+| Left: object list / CSV import / templates                                                     |
+| Right: map or form canvas                                                                      |
+| - upload floor plan                                                                            |
+| - place gateway markers                                                                        |
+| - bulk-import tags                                                                             |
+| - edit update rate / battery profile / tier                                                   |
++------------------------------------------------------------------------------------------------+
+```
+
+* One workspace supports both spatial setup and structured asset configuration.
+* Validation is inline, especially for CSV import mismatches and duplicate tag IDs.
+
+### **5.8. Web App: Calibration Wizard**
+
+**Supports:** US-ADM-04, FR-ADM-003
+
+```text
++-----------------------------------------------------------------------------------+
+| Stepper: Scope -> Device Check -> Walk Path -> Processing -> Results              |
+|-----------------------------------------------------------------------------------|
+| Main Panel                               | Right Panel                            |
+| - instructions by step                   | - gateway checklist                    |
+| - floor preview                          | - RSSI quality feed                    |
+| - collection progress                    | - elapsed time                         |
+| - completion quality score               | - retry / finish actions               |
++-----------------------------------------------------------------------------------+
+```
+
+* The wizard emphasizes trust: what is being collected, how long remains, and whether data quality is sufficient.
+
+### **5.9. Web App: Infrastructure Health & Audit Log**
+
+**Supports:** NFR-REL-001, FR-SEC-003
+
+```text
++------------------------------------------------------------------------------------------------+
+| Health Cards: Online Gateways | Battery Warnings | Packet Loss | Delayed Heartbeats            |
+|------------------------------------------------------------------------------------------------|
+| Device Table                               | Audit Log Table                                             |
+| - device status                            | - timestamp                                                  |
+| - tier / floor / uptime                    | - actor                                                      |
+| - battery / signal / packet loss           | - changed object                                             |
+| - open detail                              | - before/after summary                                       |
++------------------------------------------------------------------------------------------------+
+```
+
+* Operations reliability and governance are adjacent because the same users often diagnose both physical and configuration issues in the same session.
+
+### **5.10. Mobile App: Asset Finder**
+
+**Supports:** US-MOB-01, FR-VIS-004
+
+```text
++--------------------------------------------------------------+
+| Search asset _______________________                         |
+|--------------------------------------------------------------|
+| Result List                                                  |
+| - POS Terminal 07  | Kitchen Pass | Last seen 12s ago        |
+| - Cart 03          | Dining South | Last seen 1m ago         |
+|--------------------------------------------------------------|
+| Mini Map                                                    |
+| - highlighted destination                                   |
+| - confidence badge                                          |
+| - open full location sheet                                  |
++--------------------------------------------------------------+
+```
+
+* The mobile flow favors speed: search, identify, orient, move.
+
+### **5.11. Mobile App: Commissioning & Calibration**
+
+**Supports:** US-ADM-03, US-MOB-02, NFR-USA-002
+
+```text
++--------------------------------------------------------------+
+| QR Scanner / Calibration Session                            |
+|--------------------------------------------------------------|
+| Camera or Map View                                           |
+| - scan frame OR blue dot map                                 |
+|--------------------------------------------------------------|
+| Bottom Sheet                                                 |
+| - detected device                                             |
+| - zone selector                                               |
+| - start / pause / finish collection                           |
+| - quality and progress                                        |
++--------------------------------------------------------------+
+```
+
+* The bottom sheet keeps one-thumb actions reachable while the main canvas stays dedicated to camera or map context.
 
 ---
 
-## **5. UI States & Interaction Design**
+## **6. Visual Design & Interaction States**
 
-This section defines how the interface communicates its status to the user, ensuring a smooth and predictable experience.
+### **6.1. Suggested Theme**
 
-### **5.1. Empty States**
+**Theme Name:** **Industrial Command Deck**
 
-Empty states are shown when there is no data to display. They are an opportunity to guide and educate the user.
+**Design stance:** A restrained, high-technology operations console that feels precise and mission-critical without drifting into unreadable sci-fi HUD styling.
 
-* **No Assets Tracked (Admin View):**
-  * **Visual:** The main map area shows the floor plan but no icons. A message box in the center of the screen displays a helpful icon (e.g., a tag), a clear heading "No Assets are Being Tracked Yet," and a call-to-action button: "Add Your First Asset."
-* **Analytics Report with No Data:**
-  * **Visual:** If a user runs a report for a time range with no movement data, the map area will show a message: "No data available for the selected time range. Please try a different period."
-* **Alerts Center (No Alerts):**
-  * **Visual:** The alerts list will display a message: "You have no active alerts. Would you like to create one?" with a "Configure New Alert" button.
+**Why this direction fits:**
 
-### **5.2. Loading States**
+* The product is spatial, real-time, and data-dense, so the interface should feel like a live control surface.
+* Administrators need trust and precision more than decorative flourish.
+* Operations managers need strong contrast between normal flow, risk, and incident states.
 
-Loading states provide feedback that the system is working, which is critical for user trust, especially during data-intensive tasks.
+**Differentiation anchor:** If a screenshot is shared without branding, it should still read as a **location intelligence command surface** because of the layered floor-plan map, telemetry accents, and crisp confidence/alert treatment.
 
-* **Generating a Report (Heatmap, Trajectory):**
-  * **Interaction:** After the user clicks "Generate," the configuration panel becomes disabled to prevent further changes. The "Generate" button is replaced with a spinner and the text "Generating..."
-  * **Visual:** The map area will be overlaid with a semi-transparent layer, and a loading spinner or a pulsing animation will appear in the center. This prevents interaction with stale data while the new report is being computed.
-* **Initial Page Load:**
-  * **Visual:** Upon first loading the dashboard, "skeleton screens" will be used. These are placeholder shapes that mimic the final layout of the interface (e.g., grey boxes for the map and side panels). This makes the application feel faster and more responsive than a blank white screen.
+### **6.2. Color System & Typography**
 
-### **5.3. Error States**
+| Token Group | Use | Value |
+| :--- | :--- | :--- |
+| **Background / Base** | App chrome | `#060B14` |
+| **Background / Surface** | Cards, side rails, drawers | `#0F1724` |
+| **Background / Elevated** | Active panels, modals | `#152235` |
+| **Stroke / Subtle** | Dividers, grids, inactive map outlines | `#24364D` |
+| **Text / Primary** | Primary labels and body copy | `#EAF2FF` |
+| **Text / Secondary** | Supporting labels and metadata | `#9FB1C8` |
+| **Accent / Telemetry** | Live states, focused actions, precise locations | `#21D4FD` |
+| **Accent / Depth** | Secondary emphasis, selected tabs, charts | `#2F6BFF` |
+| **Success** | Healthy devices, completed calibration | `#22C55E` |
+| **Warning** | SLA risk, low confidence caution, battery drop | `#F59E0B` |
+| **Critical** | Violations, unauthorized geofence, offline status | `#F04438` |
+| **Info Wash** | Large translucent map overlays | `rgba(33, 212, 253, 0.14)` |
 
-Error states communicate that something has gone wrong in a clear, non-technical, and helpful way.
+**Typography system:**
 
-* **Form Validation Error (e.g., Adding an Asset):**
-  * **Interaction:** If a user submits a form with an invalid field (e.g., a duplicate Tag ID), the form will not submit.
-  * **Visual:** The specific input field causing the error will be highlighted with a red border. A small text message in red will appear directly below the field explaining the error (e.g., "This Tag ID already exists.").
-* **API/Server Error (e.g., Report Fails):**
-  * **Visual:** A non-intrusive "toast" notification will appear at the top of the screen. It will have a red background, an error icon, and a simple message like: "Could not generate the report. Please try again later." It should not contain technical jargon like "Error 500." The notification should be dismissible.
+* **Headings:** `Space Grotesk` for a technical, modern voice with enough personality for a premium product.
+* **Body/UI text:** `DM Sans` for compact readability in dense dashboard layouts.
+* **Optional utility text:** Monospaced numerals for coordinates, IDs, and timestamps only.
+
+### **6.3. Visual Language**
+
+* **Surfaces:** Dark layered panels with restrained translucency, subtle inner strokes, and soft edge glows near active data regions.
+* **Maps:** Floor plans remain neutral; system states provide color. This prevents the background from competing with operational signals.
+* **Shapes:** Rounded-rect panels with sharp internal dividers, balancing enterprise seriousness with modern polish.
+* **Iconography:** Thin-to-medium stroke technical icons, always from one set, with color used only for state and priority.
+
+### **6.4. Core Interaction States**
+
+| Element | Normal | Hover / Focus | Active / Selected | Warning / Error |
+| :--- | :--- | :--- | :--- | :--- |
+| **Asset marker** | Small filled dot in telemetry blue | Marker grows by 2px and reveals quick label | Drawer opens, marker ring pulses once | Falls back to ring or zone wash if confidence degrades |
+| **Confidence state** | Precise point with timestamp | Tooltip explains confidence | Medium confidence shows radius ring | Low confidence switches to translucent zone halo plus caution label |
+| **Zone / Table** | Thin outline | Outline brightens and label appears | Fill tint appears with details drawer | SLA-at-risk shifts to amber; violated shifts to red |
+| **Alert row** | Compact card with severity stripe | Row lift and clearer timestamp | Expanded detail panel and action buttons | Critical rows keep persistent red edge until acknowledged |
+| **Gateway / device health** | Green health dot | Tooltip with last heartbeat | Selected device shows metrics drawer | Amber for battery drop, red for offline or packet loss spike |
+| **Calibration session** | Ready state with checklist | Step highlight on hover | Active collection shows progress, path trace, and elapsed timer | Failed step shows cause, retry action, and blocked completion |
+| **Form fields** | Low-contrast stroke | Cyan focus ring and helper text | Sticky validation summary for multi-step forms | Inline error with icon, copy, and `role=alert` behavior |
+
+### **6.5. Motion & Feedback**
+
+* Motion should be sparse and purposeful, mostly in the **180-240ms** range.
+* Key animations: alert pulse on first arrival, one-time map recenter glide, calibration progress sweep, and heatmap fade-in.
+* No continuous ornamental animation on charts or maps.
+* Respect `prefers-reduced-motion` by switching pulses and glides to instant state changes.
+
+### **6.6. Empty, Loading, and Recovery States**
+
+| Scenario | UX Treatment |
+| :--- | :--- |
+| **No assets tracked yet** | Empty map with onboarding callout: "No live assets on this floor yet." Primary action: `Commission first tag`. |
+| **No alerts at this moment** | Quiet-state panel with resolved status copy and optional link to alert history. |
+| **No data for selected report range** | Preserve filters, show explanation, and suggest adjacent time ranges or broader cohorts. |
+| **Generating radiomap / analytics** | Replace blank waits with progress states: current step, elapsed time, expected remaining time, and data-quality indicator. |
+| **Gateway offline** | Show affected floor, last heartbeat, likely impact on confidence, and direct action to open Health details. |
+| **CSV import validation error** | Inline row-level errors plus downloadable error report; never fail silently. |
+
+### **6.7. Accessibility & Trust Signals**
+
+* Maintain minimum **WCAG AA** contrast for dashboard text and map labels.
+* Never rely on color alone; every alert, confidence state, and health state also has iconography or text.
+* All actionable alerts and form validation errors should be announced to assistive technology.
+* Timestamp and freshness indicators are always visible on live data so users can distinguish stale data from healthy silence.
