@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Infrastructure Health | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-panel {
+        background: rgba(27, 31, 43, 0.6);
+        backdrop-filter: blur(24px);
+      }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #3b494b; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-[#1b1f2b] dark:bg-slate-900/60 backdrop-blur-xl border-b border-[#3b494b]/15 shadow-[0_0_40px_rgba(0,219,233,0.08)]">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tighter text-[#00f0ff] font-headline">RTLS Analytics Platform</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-2 px-3 py-1 bg-primary-container/10 border border-primary-container/20 rounded-full">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="text-[10px] font-headline uppercase tracking-widest text-primary-container">Live Connection Stable</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-on-surface-variant hover:bg-[#303541] transition-colors rounded-lg">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#303541] transition-colors rounded-lg">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center overflow-hidden">
+<img alt="User Operator Profile" class="w-full h-full object-cover" data-alt="Close up of a technical operator avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYlsC1ozz3veHu3e1Ziyu7wKuBwp4T3YVgVSMlEhV2NUcGZSFUG4i8XNBSVgqkft9-Zl57fea2XVXPOSVNsAFTtYbHuqgW_ntmOehWGlDUqyYw1QVLdMeWpuFIQx5X_W4pCy_VqS7WN4ihDS_X9qNixq66qBHrr65NOqK6gz9SaAptVy-uUApHScwZ6Xzqpwoes6_NU-N1MiFVid69gJubRwNdWoXeYOnyhH8PfNDCQJSldEjm1Ihge-oDZ3gc1lw-gw3x3slwETk"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex min-h-[calc(100vh-64px)]">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 bottom-0 flex flex-col pt-8 pb-4 bg-[#1b1f2b] dark:bg-slate-900 tonal-shift-right border-r border-[#3b494b]/15 w-64 hidden md:flex z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-1">
+<span class="material-symbols-outlined text-primary-container" data-icon="hub">hub</span>
+<span class="text-primary-container font-bold font-headline uppercase tracking-wider text-sm">Dining Hall A</span>
+</div>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-[0.1em]">Restaurant Ops Cluster</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-4 px-6 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] transition-all duration-200 font-headline font-medium text-[12px] uppercase tracking-wider group" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span>Live Map</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] transition-all duration-200 font-headline font-medium text-[12px] uppercase tracking-wider group" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Operations Overview</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 bg-[#00f0ff]/10 text-[#00f0ff] border-r-4 border-[#00f0ff] font-headline font-medium text-[12px] uppercase tracking-wider group" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span>Infrastructure Health</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] transition-all duration-200 font-headline font-medium text-[12px] uppercase tracking-wider group" href="#">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+<span>Zone Editor</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant/10 pt-4">
+<a class="flex items-center gap-4 px-6 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] transition-all duration-200 font-headline font-medium text-[12px] uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] transition-all duration-200 font-headline font-medium text-[12px] uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Audit Log</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 p-6 bg-surface-dim">
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Header Stats Bento -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="col-span-1 md:col-span-2 p-6 bg-surface-container rounded-xl flex flex-col justify-between relative overflow-hidden">
+<div class="z-10">
+<h2 class="text-on-surface-variant font-headline text-[10px] uppercase tracking-widest mb-1">Platform Uptime</h2>
+<p class="text-4xl font-headline font-bold text-primary-container">99.982%</p>
+</div>
+<div class="h-16 flex items-end gap-1 mt-4 z-10">
+<!-- Uptime Graph Simulation -->
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[80%]"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[85%]"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[90%]"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[82%]"></div>
+<div class="flex-1 bg-primary-container/40 rounded-t-sm h-[95%]"></div>
+<div class="flex-1 bg-primary-container/20 rounded-t-sm h-[88%]"></div>
+<div class="flex-1 bg-primary-container/30 rounded-t-sm h-[92%]"></div>
+<div class="flex-1 bg-primary-container/10 rounded-t-sm h-[15%]"></div>
+<div class="flex-1 bg-primary-container/40 rounded-t-sm h-[98%]"></div>
+<div class="flex-1 bg-primary-container/60 rounded-t-sm h-full"></div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-5">
+<span class="material-symbols-outlined text-9xl" data-icon="query_stats">query_stats</span>
+</div>
+</div>
+<div class="p-6 bg-surface-container rounded-xl flex flex-col justify-center text-center">
+<span class="material-symbols-outlined text-primary-container mb-2 block" data-icon="router">router</span>
+<h2 class="text-on-surface-variant font-headline text-[10px] uppercase tracking-widest mb-1">Gateways</h2>
+<p class="text-3xl font-headline font-bold text-on-surface">14/14</p>
+<p class="text-[10px] text-green-400 mt-1 uppercase tracking-tighter">Operational</p>
+</div>
+<div class="p-6 bg-surface-container rounded-xl flex flex-col justify-center text-center">
+<span class="material-symbols-outlined text-tertiary-fixed-dim mb-2 block" data-icon="sensors">sensors</span>
+<h2 class="text-on-surface-variant font-headline text-[10px] uppercase tracking-widest mb-1">Active Sensors</h2>
+<p class="text-3xl font-headline font-bold text-on-surface">1,042</p>
+<p class="text-[10px] text-tertiary-fixed-dim mt-1 uppercase tracking-tighter">2 Pending Sync</p>
+</div>
+</div>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Inventory Column -->
+<div class="lg:col-span-2 space-y-6">
+<!-- Gateways Section -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline text-sm font-bold uppercase tracking-[0.15em] text-on-surface flex items-center gap-2">
+<span class="w-1 h-4 bg-primary-container"></span>
+                                    Infrastructure Gateways
+                                </h3>
+<button class="text-[10px] font-headline uppercase tracking-widest text-primary-container/60 hover:text-primary-container transition-colors">View All Gateways</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<!-- Gateway Card -->
+<div class="p-4 bg-surface-container-low rounded-lg border-l-2 border-green-500/50 hover:bg-surface-container transition-all group">
+<div class="flex justify-between items-start mb-3">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Node ID: GW-ALPHA-01</p>
+<h4 class="font-headline font-bold text-on-surface">North Wing Primary</h4>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+<span class="text-[10px] font-bold text-green-400/80 uppercase">Active</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex-1">
+<div class="flex justify-between text-[9px] uppercase mb-1">
+<span class="text-on-surface-variant">Throughput</span>
+<span class="text-primary-container">420 Mb/s</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full w-[65%]"></div>
+</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="wifi_tethering">wifi_tethering</span>
+<span class="text-[10px] font-bold">98%</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low rounded-lg border-l-2 border-green-500/50 hover:bg-surface-container transition-all group">
+<div class="flex justify-between items-start mb-3">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-widest">Node ID: GW-ALPHA-02</p>
+<h4 class="font-headline font-bold text-on-surface">Kitchen Cluster Hub</h4>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+<span class="text-[10px] font-bold text-green-400/80 uppercase">Active</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex-1">
+<div class="flex justify-between text-[9px] uppercase mb-1">
+<span class="text-on-surface-variant">Throughput</span>
+<span class="text-primary-container">892 Mb/s</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full w-[88%]"></div>
+</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" data-icon="wifi_tethering">wifi_tethering</span>
+<span class="text-[10px] font-bold">94%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Sensors Section -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline text-sm font-bold uppercase tracking-[0.15em] text-on-surface flex items-center gap-2">
+<span class="w-1 h-4 bg-tertiary-fixed-dim"></span>
+                                    Mobile Sensor Network
+                                </h3>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-surface-container-highest rounded-sm text-[10px] font-headline uppercase tracking-widest hover:bg-primary-container/20 hover:text-primary-container transition-all">Filter: Critical</button>
+<button class="px-3 py-1 bg-surface-container-highest rounded-sm text-[10px] font-headline uppercase tracking-widest">Sort: Battery</button>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg overflow-hidden border border-outline-variant/10">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-highest/50">
+<tr class="text-[10px] uppercase tracking-widest text-on-surface-variant font-headline border-b border-outline-variant/20">
+<th class="px-6 py-3">Sensor UID</th>
+<th class="px-6 py-3">Status</th>
+<th class="px-6 py-3">Battery</th>
+<th class="px-6 py-3">Signal</th>
+<th class="px-6 py-3 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-xs">
+<tr class="border-b border-outline-variant/5 hover:bg-[#303541]/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">S-8821-PX</span>
+<span class="text-[10px] text-on-surface-variant">Thermo-Dynamics V2</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-green-500/10 text-green-400 rounded-sm border border-green-500/20 text-[10px] uppercase font-bold">Stable</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-green-400" data-icon="battery_full">battery_full</span>
+<span class="text-on-surface font-mono">92%</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-end gap-[1px] h-3">
+<div class="w-[3px] bg-primary-container h-full"></div>
+<div class="w-[3px] bg-primary-container h-[80%]"></div>
+<div class="w-[3px] bg-primary-container h-[90%]"></div>
+<div class="w-[3px] bg-primary-container h-[70%]"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary-container hover:underline font-headline uppercase text-[10px] tracking-widest">Re-calibrate</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/5 hover:bg-[#303541]/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">S-4409-TR</span>
+<span class="text-[10px] text-on-surface-variant">Lidar Depth Core</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded-sm border border-amber-500/20 text-[10px] uppercase font-bold">Calibrating</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-amber-400" data-icon="battery_very_low">battery_very_low</span>
+<span class="text-on-surface font-mono">14%</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-end gap-[1px] h-3">
+<div class="w-[3px] bg-primary-container h-full"></div>
+<div class="w-[3px] bg-primary-container h-[40%]"></div>
+<div class="w-[3px] bg-surface-container-highest h-[20%]"></div>
+<div class="w-[3px] bg-surface-container-highest h-[10%]"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary-container opacity-50 cursor-not-allowed font-headline uppercase text-[10px] tracking-widest">In Progress</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant/5 hover:bg-[#303541]/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">S-1120-QZ</span>
+<span class="text-[10px] text-on-surface-variant">Acoustic Monitor</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-red-500/10 text-red-400 rounded-sm border border-red-500/20 text-[10px] uppercase font-bold">Offline</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-red-400" data-icon="battery_alert">battery_alert</span>
+<span class="text-on-surface font-mono">00%</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-end gap-[1px] h-3">
+<div class="w-[3px] bg-surface-container-highest h-[20%]"></div>
+<div class="w-[3px] bg-surface-container-highest h-[10%]"></div>
+<div class="w-[3px] bg-surface-container-highest h-[10%]"></div>
+<div class="w-[3px] bg-surface-container-highest h-[10%]"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary-container hover:underline font-headline uppercase text-[10px] tracking-widest">Re-calibrate</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 flex justify-center border-t border-outline-variant/5">
+<button class="text-[10px] font-headline uppercase tracking-widest text-primary-container/80 hover:text-primary-container transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+                                        Show More Sensor Nodes
+                                    </button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Sidebar: Diagnostic Logs -->
+<aside class="space-y-6">
+<section class="bg-surface-container rounded-xl p-5 h-[calc(100vh-280px)] flex flex-col border border-outline-variant/10 shadow-lg">
+<div class="flex items-center justify-between mb-4 pb-4 border-b border-outline-variant/20">
+<h3 class="font-headline text-xs font-bold uppercase tracking-widest text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary-container" data-icon="terminal">terminal</span>
+                                    Event Log
+                                </h3>
+<div class="flex gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 pr-2 font-mono text-[10px]">
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-primary-container/40">
+<p class="text-primary-container/60 mb-1">[14:02:44.11]</p>
+<p class="text-on-surface">GW-ALPHA-01: Packet handshake successful.</p>
+</div>
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-primary-container/40">
+<p class="text-primary-container/60 mb-1">[14:03:01.82]</p>
+<p class="text-on-surface">Sync cycle completed for 1,040 units.</p>
+</div>
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-red-500/40">
+<p class="text-red-400/60 mb-1">[14:04:12.55]</p>
+<p class="text-red-400 font-bold uppercase">Alert: S-1120-QZ signal timeout.</p>
+<p class="text-on-surface-variant italic mt-1">Initiating automatic re-poll...</p>
+</div>
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-primary-container/40">
+<p class="text-primary-container/60 mb-1">[14:05:33.19]</p>
+<p class="text-on-surface">Calibrated S-4409-TR: Offset adjusted to +0.02.</p>
+</div>
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-amber-500/40">
+<p class="text-amber-400/60 mb-1">[14:08:55.02]</p>
+<p class="text-amber-400 uppercase">Warning: Gateway 02 high throughput.</p>
+</div>
+<div class="p-2 bg-surface-container-lowest rounded border-l-2 border-primary-container/40">
+<p class="text-primary-container/60 mb-1">[14:10:01.12]</p>
+<p class="text-on-surface">System state snapshot recorded. MD5: 4f1c...</p>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/20">
+<button class="w-full py-2 bg-primary-container text-on-primary font-headline text-[10px] font-bold uppercase tracking-[0.2em] rounded hover:brightness-110 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                                    Export Session Log
+                                </button>
+</div>
+</section>
+<section class="bg-primary-container/5 rounded-xl p-5 border border-primary-container/20">
+<h4 class="text-[10px] font-headline uppercase tracking-widest text-primary-container mb-3">Hardware Advisory</h4>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">
+                                Firmware v4.8.2 is available for <span class="text-primary-container">GW-ALPHA Series</span>. Estimated update window: 45s per node.
+                            </p>
+<button class="mt-3 text-[10px] font-headline font-bold text-on-surface uppercase tracking-widest border-b border-on-surface/40 hover:border-primary-container transition-all">Schedule Maintenance</button>
+</section>
+</aside>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-10 bg-[#0e131e] dark:bg-slate-950 bg-opacity-90 backdrop-blur-md border-t border-[#3b494b]/20 shadow-2xl">
+<div class="flex items-center gap-2 text-[#00f0ff]">
+<span class="material-symbols-outlined text-sm" data-icon="query_stats">query_stats</span>
+<span class="font-headline text-[10px] font-bold uppercase tracking-widest">Tracking Healthy</span>
+</div>
+<div class="flex items-center gap-2 text-[#dee2f2]/70 hover:text-white transition-colors cursor-default">
+<span class="material-symbols-outlined text-sm" data-icon="warning">warning</span>
+<span class="font-headline text-[10px] font-bold uppercase tracking-widest">12 Active Alerts</span>
+</div>
+<div class="flex items-center gap-2 text-[#dee2f2]/70 hover:text-white transition-colors cursor-default">
+<span class="material-symbols-outlined text-sm" data-icon="wifi">wifi</span>
+<span class="font-headline text-[10px] font-bold uppercase tracking-widest">98% Signal</span>
+</div>
+</footer>
+</body></html>

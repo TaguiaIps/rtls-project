@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Asset Finder | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .industrial-gradient {
+            background: linear-gradient(135deg, #dbfcff 0%, #00f0ff 100%);
+        }
+        body {
+            background-color: #0e131e;
+            color: #dee2f2;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col pb-20 overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="bg-[#0e131e] sticky top-0 z-50 border-b border-cyan-900/20 flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#00f0ff]" data-icon="radar">radar</span>
+<div class="flex flex-col">
+<h1 class="font-['Space_Grotesk'] text-lg font-black tracking-tighter text-[#00f0ff] leading-none">ASSET FINDER</h1>
+<span class="font-['Space_Grotesk'] uppercase tracking-[0.05em] text-[10px] font-bold text-slate-500">DINING HALL A</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex flex-col items-end">
+<span class="font-['Space_Grotesk'] text-[10px] font-bold text-primary-fixed-dim uppercase">LIVE STABLE</span>
+<span class="text-[9px] text-on-surface-variant font-medium">Uptime: 99.9%</span>
+</div>
+<button class="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center hover:bg-cyan-400/20 transition-colors">
+<span class="material-symbols-outlined text-[#00f0ff]" data-icon="sensors">sensors</span>
+</button>
+</div>
+</header>
+<main class="flex-1 px-6 pt-6 flex flex-col gap-8 max-w-2xl mx-auto w-full">
+<!-- Live Status Strip -->
+<section class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-2 rounded-lg border-l-2 border-primary-container min-w-fit">
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="check_circle">check_circle</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-wider text-on-surface">LIVE STABLE</span>
+</div>
+<div class="flex items-center gap-2 bg-error-container/20 px-3 py-2 rounded-lg border-l-2 border-error min-w-fit">
+<span class="material-symbols-outlined text-[16px] text-error" data-icon="warning">warning</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-wider text-error">12 Active Alerts</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-2 rounded-lg border-l-2 border-secondary min-w-fit">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="lan">lan</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-wider text-on-surface">Floor: Dining Hall A</span>
+</div>
+</section>
+<!-- Search Section -->
+<section class="flex flex-col gap-4">
+<div class="relative group">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-primary-container/60 group-focus-within:text-primary-container transition-colors" data-icon="search">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 text-on-surface placeholder:text-slate-600 font-['Space_Grotesk'] text-base py-5 pl-12 pr-4 transition-all rounded-t-xl" placeholder="Search asset, table, zone, or tag ID" type="text"/>
+<div class="absolute inset-y-0 right-4 flex items-center">
+<button class="material-symbols-outlined text-slate-500 hover:text-primary-container" data-icon="barcode_scanner">barcode_scanner</button>
+</div>
+</div>
+</section>
+<!-- Suggested / Critical Assets -->
+<section class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h2 class="font-['Space_Grotesk'] text-xs font-bold uppercase tracking-widest text-on-surface-variant flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-primary-container rounded-full"></span>
+                    Suggested Assets
+                </h2>
+</div>
+<div class="grid grid-cols-1 gap-3">
+<!-- Critical Asset -->
+<div class="surface-container rounded-xl p-4 flex items-center justify-between border-l-4 border-error hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+</div>
+<div class="flex flex-col">
+<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">CRITICAL: TRAY CART 01</span>
+<span class="text-[11px] text-error/80 font-medium uppercase tracking-tighter">Restricted Storage • Unauthorized entry</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary-container transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Warning Asset -->
+<div class="surface-container rounded-xl p-4 flex items-center justify-between border-l-4 border-tertiary-fixed-dim hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-tertiary-fixed-dim/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" data-icon="local_shipping" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+</div>
+<div class="flex flex-col">
+<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">WARNING: TRAY CART 09</span>
+<span class="text-[11px] text-tertiary-fixed-dim/80 font-medium uppercase tracking-tighter">Low Battery • Charging Station 2</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary-container transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Recent Searches -->
+<section class="flex flex-col gap-4">
+<h2 class="font-['Space_Grotesk'] text-xs font-bold uppercase tracking-widest text-on-surface-variant">Recent Searches</h2>
+<div class="flex flex-col bg-surface-container-low rounded-xl overflow-hidden divide-y divide-white/5">
+<button class="flex items-center gap-4 p-4 hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-slate-500 group-hover:text-primary-container" data-icon="history">history</span>
+<span class="font-['Space_Grotesk'] text-sm font-medium flex-1 text-left">TAG_0812</span>
+<span class="text-[10px] font-bold text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded">ZONE_B</span>
+</button>
+<button class="flex items-center gap-4 p-4 hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-slate-500 group-hover:text-primary-container" data-icon="history">history</span>
+<span class="font-['Space_Grotesk'] text-sm font-medium flex-1 text-left">Tray Cart 42</span>
+<span class="text-[10px] font-bold text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded">LEVEL_01</span>
+</button>
+<button class="flex items-center gap-4 p-4 hover:bg-surface-container-high transition-colors group">
+<span class="material-symbols-outlined text-slate-500 group-hover:text-primary-container" data-icon="history">history</span>
+<span class="font-['Space_Grotesk'] text-sm font-medium flex-1 text-left">ZONE_B</span>
+<span class="text-[10px] font-bold text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded">GATE_7</span>
+</button>
+</div>
+</section>
+<!-- Visual Map Context (Small) -->
+<section class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h2 class="font-['Space_Grotesk'] text-xs font-bold uppercase tracking-widest text-on-surface-variant">Floor Activity</h2>
+<span class="text-[10px] font-bold text-primary-container uppercase">Dining Hall A</span>
+</div>
+<div class="relative h-40 rounded-xl overflow-hidden bg-surface-container-lowest border border-white/5">
+<img alt="Warehouse Floor Map" class="w-full h-full object-cover opacity-40 mix-blend-screen" data-alt="top-down digital blueprint of an industrial warehouse floor with glowing blue signal heatmaps and green asset tracking dots" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-sry4TWXNoTLP4QHG7lNXE11HpG45zDJ8SjLBc9Z35w8pSHWxdboY_2Vq-T5dd-wvCdtvjXms0kXk68v-fXrRbvlBnPneJqXTO3RgOYHE_2A4N_aaDffO9Tpb1FGIOWemTUMMsDP_SdmJP5lMhHnJerzzpWHevjB9nTAp_bmTrQhepWlEqwhvsGsd3WnWAw8BGGxMlgX7sqU75_xQ7XEM9c-UwNaZJNVjMrv_rTWuJGd6pYbyxcrN9sxQsZR9nmxGENC1pzrysFM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
+<!-- HUD Overlays -->
+<div class="absolute top-3 left-3 flex flex-col gap-1">
+<div class="bg-[#1b1f2b]/80 backdrop-blur px-2 py-1 rounded border border-cyan-400/20">
+<span class="font-['Space_Grotesk'] text-[9px] font-black text-primary-container tracking-widest">LOCATOR ACTIVE</span>
+</div>
+</div>
+<!-- Center Pointer -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-12 h-12 rounded-full border border-primary-container/40 flex items-center justify-center">
+<div class="w-2 h-2 bg-primary-container rounded-full animate-pulse"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 pb-safe px-4 bg-[#1b1f2b] border-t border-white/5">
+<!-- FINDER: Active -->
+<a class="flex flex-col items-center justify-center text-[#00f0ff] bg-cyan-400/10 rounded-md py-1 px-3" href="#">
+<span class="material-symbols-outlined" data-icon="search" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest mt-1">FINDER</span>
+</a>
+<!-- ASSETS -->
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 px-3 hover:text-cyan-200" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest mt-1">ASSETS</span>
+</a>
+<!-- ALERTS -->
+<a class="relative flex flex-col items-center justify-center text-slate-500 py-1 px-3 hover:text-cyan-200" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest mt-1">ALERTS</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border-2 border-[#1b1f2b]"></span>
+</a>
+<!-- SYSTEM -->
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 px-3 hover:text-cyan-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase font-bold tracking-widest mt-1">SYSTEM</span>
+</a>
+</nav>
+<!-- FAB for Quick Find -->
+<div class="fixed bottom-24 right-6 z-40">
+<button class="industrial-gradient w-14 h-14 rounded-2xl shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-primary text-3xl font-bold" data-icon="near_me">near_me</span>
+</button>
+</div>
+</body></html>

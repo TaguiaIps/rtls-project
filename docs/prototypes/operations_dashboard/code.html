@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Operations Overview | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.6);
+            backdrop-filter: blur(24px);
+        }
+        .inner-glow-primary {
+            box-shadow: inset 0 0 4px rgba(0, 240, 255, 0.3);
+        }
+        .milled-border {
+            border: 1px solid rgba(59, 73, 75, 0.15);
+        }
+        .scanline-overlay {
+            background: linear-gradient(to bottom, rgba(0, 240, 255, 0.03) 50%, transparent 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 h-16 sticky top-0 z-50 bg-[#1b1f2b] dark:bg-slate-900/60 backdrop-blur-xl border-b border-[#3b494b]/15 shadow-[0_0_40px_rgba(0,219,233,0.08)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#00f0ff] font-headline">RTLS Analytics Platform</span>
+<nav class="hidden md:flex items-center gap-6 font-['Space_Grotesk'] uppercase tracking-[0.05em] text-sm">
+<!-- Navigation Links are Empty in JSON, but following style_inactive_navigation for structure if added -->
+<div class="flex items-center gap-2 text-[#00f0ff] border-b-2 border-[#00f0ff] py-5">
+<span class="material-symbols-outlined text-sm">dashboard</span>
+<span>Overview</span>
+</div>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center gap-2 px-3 py-1 bg-surface-container-lowest border border-outline-variant/20 rounded-lg">
+<span class="w-2 h-2 bg-primary-container rounded-full animate-pulse"></span>
+<span class="font-headline text-[10px] uppercase tracking-widest text-[#00f0ff]">Live Connection Stable</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-[#dee2f2]/60 hover:bg-[#303541] transition-colors rounded-lg">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#dee2f2]/60 hover:bg-[#303541] transition-colors rounded-lg">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-[#00f0ff]/30">
+<img alt="User Operator Profile" class="w-full h-full object-cover" data-alt="Close up portrait of a male operator" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLpjYCuDFSu4qlmraPFyrwz03vr6Ksag659OwaxsUQLCo6IoD7Qun7GFmR0O_N3VSPX48QpZBeg-1Vl5TERYABZgbt31hJO4aqyzjqxPSVPM42y7lqwY92wtV2_a1d7-kd0Y7AWuc1boxxCDDO2yBJFpSOkseOl-ZkPSt18kc_eYvxcS-RzTTbh0ZYNmE35U-xZ8ux10Rf7QlBYBIhkjqhW2C3TV6GcOo32xqWXMq8yalLBkDRsnvkkUew5V-crnvdE1Ju71Tgnu0"/>
+</div>
+</div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 bottom-0 flex flex-col pt-8 pb-4 bg-[#1b1f2b] dark:bg-slate-900 w-64 border-r border-[#3b494b]/15 transition-all duration-200 ease-in-out">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-highest flex items-center justify-center rounded-xl inner-glow-primary">
+<span class="material-symbols-outlined text-primary-container">control_point</span>
+</div>
+<div>
+<h3 class="text-[#00f0ff] font-bold font-headline text-sm tracking-tight">Dining Hall A</h3>
+<p class="text-[10px] uppercase tracking-widest text-[#dee2f2]/40">Restaurant Ops Cluster</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider group transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span>Live Map</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#00f0ff]/10 text-[#00f0ff] border-r-4 border-[#00f0ff] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider group transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Operations Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider group transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span>Infrastructure Health</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#dee2f2]/40 hover:bg-[#303541] hover:text-[#dee2f2] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider group transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+<span>Zone Editor</span>
+</a>
+</nav>
+<div class="px-4 pt-4 border-t border-[#3b494b]/15 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-[#dee2f2]/40 hover:bg-[#303541] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#dee2f2]/40 hover:bg-[#303541] font-['Space_Grotesk'] font-medium text-[12px] uppercase tracking-wider transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Audit Log</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 pb-20 p-8 overflow-y-auto">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h1 class="font-headline text-3xl font-bold tracking-tight text-on-surface mb-1">Operations Overview</h1>
+<p class="font-label text-sm uppercase tracking-[0.2em] text-on-surface-variant">Real-time Service &amp; Flow Monitor</p>
+</div>
+<div class="flex items-center gap-3 font-headline text-xs">
+<span class="text-on-surface-variant">LAST UPDATED:</span>
+<span class="text-[#00f0ff] font-bold">14:32:01 UTC</span>
+</div>
+</div>
+<!-- Bento Grid KPI Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- KPI 1 -->
+<div class="bg-surface-container-low p-6 rounded-xl milled-border relative overflow-hidden group">
+<div class="relative z-10">
+<p class="font-label text-[10px] uppercase tracking-[0.15em] text-on-surface-variant mb-4">Avg Staff Transit Time</p>
+<div class="flex items-baseline gap-2">
+<h2 class="font-headline text-4xl font-extrabold text-primary-container">02:45</h2>
+<span class="text-xs text-error font-bold">-12%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[65%]"></div>
+</div>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl">timer</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-low p-6 rounded-xl milled-border relative overflow-hidden group">
+<div class="relative z-10">
+<p class="font-label text-[10px] uppercase tracking-[0.15em] text-on-surface-variant mb-4">Peak Hour Occupancy</p>
+<div class="flex items-baseline gap-2">
+<h2 class="font-headline text-4xl font-extrabold text-on-surface">94.2%</h2>
+<span class="text-xs text-primary-container font-bold">+4.1%</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[94%]"></div>
+</div>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl">groups</span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-low p-6 rounded-xl milled-border relative overflow-hidden group">
+<div class="relative z-10">
+<p class="font-label text-[10px] uppercase tracking-[0.15em] text-on-surface-variant mb-4">Flow Efficiency Score</p>
+<div class="flex items-baseline gap-2">
+<h2 class="font-headline text-4xl font-extrabold text-primary-container">88/100</h2>
+<span class="text-xs text-primary-container font-bold">OPTIMAL</span>
+</div>
+<div class="mt-4 h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[88%]"></div>
+</div>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl">bolt</span>
+</div>
+</div>
+<!-- KPI 4 - Warning State -->
+<div class="bg-error-container/20 p-6 rounded-xl border border-error/30 relative overflow-hidden group">
+<div class="relative z-10">
+<p class="font-label text-[10px] uppercase tracking-[0.15em] text-error mb-4">Active Congestion Points</p>
+<div class="flex items-baseline gap-2">
+<h2 class="font-headline text-4xl font-extrabold text-error">12</h2>
+<span class="text-xs text-error font-bold">CRITICAL</span>
+</div>
+<div class="mt-4 flex gap-1">
+<div class="h-1 flex-1 bg-error"></div>
+<div class="h-1 flex-1 bg-error"></div>
+<div class="h-1 flex-1 bg-error"></div>
+<div class="h-1 flex-1 bg-surface-container-highest"></div>
+</div>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-8xl">warning</span>
+</div>
+</div>
+</div>
+<!-- Visualization Layer -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Facility Activity Heatmap (Asymmetric Large) -->
+<div class="lg:col-span-2 bg-surface-container p-6 rounded-xl milled-border">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-sm font-bold uppercase tracking-widest text-on-surface">Facility Activity Heatmap</h3>
+<div class="flex gap-2">
+<button class="text-[10px] font-bold px-3 py-1 bg-surface-container-highest rounded-sm border border-outline-variant/30 text-[#00f0ff]">L1 FLOOR</button>
+<button class="text-[10px] font-bold px-3 py-1 text-on-surface-variant hover:text-white transition-colors">L2 FLOOR</button>
+</div>
+</div>
+<div class="aspect-video relative rounded-lg overflow-hidden bg-surface-container-lowest border border-outline-variant/10">
+<img alt="Heatmap map visualization" class="w-full h-full object-cover opacity-60" data-alt="Overhead architectural blueprint with glowing cyan and orange thermal hotspots" data-location="Chicago" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFjyxMX9S7OAW2tteDu_5PTjtzO_ZC0sycTVoDrtViqVXgkZ8_csLaAeGJrzrnxQrCxZGAuPt6gHbXe8qy_Wn2bcFtAPO4TuOTAicyot6dcxoD9vu2bXgfrqEDHQWXHadFs-urUv8-KlZyzJWK5fns-tmiEYp6e8Qdgl2TZEf2pqWDMykGCANBPwQGLA0uC19FqKpy7PKeaoy9_oEPMQYOwehPIOsc5xRYqu7lgLbYiwY1WHv1E0JfW8zzzhJS9wAaRRREewq3gpk"/>
+<div class="absolute inset-0 scanline-overlay"></div>
+<!-- UI Overlays for Map -->
+<div class="absolute top-4 left-4 flex flex-col gap-2">
+<div class="glass-panel p-2 rounded border border-white/5 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<span class="text-[10px] font-bold">Zone 4: High Congestion</span>
+</div>
+<div class="glass-panel p-2 rounded border border-white/5 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary-container"></div>
+<span class="text-[10px] font-bold">Zone 1: Active Flow</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Pathing Flow Diagram / Sankey Style Readout -->
+<div class="bg-surface-container-low p-6 rounded-xl milled-border flex flex-col">
+<h3 class="font-headline text-sm font-bold uppercase tracking-widest text-on-surface mb-6">Node Traffic Flow</h3>
+<div class="flex-1 space-y-6">
+<!-- Flow Item 1 -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
+<span class="text-on-surface-variant">Entrance A → Station 4</span>
+<span class="text-primary-container">420/HR</span>
+</div>
+<div class="h-4 bg-surface-container-lowest flex rounded-sm overflow-hidden border border-outline-variant/10">
+<div class="h-full bg-primary-container/80 w-[70%]"></div>
+<div class="h-full bg-primary-container/40 w-[20%]"></div>
+</div>
+</div>
+<!-- Flow Item 2 -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
+<span class="text-on-surface-variant">Station 4 → Main Exit</span>
+<span class="text-primary-container">380/HR</span>
+</div>
+<div class="h-4 bg-surface-container-lowest flex rounded-sm overflow-hidden border border-outline-variant/10">
+<div class="h-full bg-primary-container/80 w-[60%]"></div>
+<div class="h-full bg-primary-container/40 w-[30%]"></div>
+</div>
+</div>
+<!-- Flow Item 3 - Warning -->
+<div class="space-y-2">
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-tighter">
+<span class="text-error">Cold Storage → Service Corridor</span>
+<span class="text-error">BOTTLE NECK</span>
+</div>
+<div class="h-4 bg-surface-container-lowest flex rounded-sm overflow-hidden border border-outline-variant/10">
+<div class="h-full bg-error/90 w-[95%]"></div>
+</div>
+</div>
+</div>
+<button class="mt-8 w-full py-3 bg-primary-container text-on-primary font-headline font-bold text-xs uppercase tracking-widest rounded-xl hover:brightness-110 transition-all active:scale-95 inner-glow-primary">
+                        OPTIMIZE PATHING
+                    </button>
+</div>
+</div>
+<!-- Historical Efficiency Data Table -->
+<div class="mt-8 bg-surface-container p-6 rounded-xl milled-border">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-sm font-bold uppercase tracking-widest text-on-surface">Efficiency Log [24H]</h3>
+<div class="flex items-center gap-4 text-[10px] font-bold text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-primary-container rounded-full"></span> LIVE STABLE</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 bg-error rounded-full"></span> REQUIRES ATTENTION</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest border-b border-outline-variant/20">
+<tr>
+<th class="py-4 px-4 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Timestamp</th>
+<th class="py-4 px-4 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Zone</th>
+<th class="py-4 px-4 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Efficiency</th>
+<th class="py-4 px-4 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Throughput</th>
+<th class="py-4 px-4 font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="py-4 px-4 font-headline text-xs text-on-surface">14:30:00</td>
+<td class="py-4 px-4 font-label text-xs">LOGISTICS_HUB_ALPHA</td>
+<td class="py-4 px-4 font-headline text-xs text-primary-container">98.2%</td>
+<td class="py-4 px-4 font-label text-xs">1,240 U/H</td>
+<td class="py-4 px-4">
+<span class="px-2 py-0.5 rounded-sm bg-primary-container/10 text-primary-container text-[10px] font-bold border border-primary-container/20">STABLE</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="py-4 px-4 font-headline text-xs text-on-surface">14:15:00</td>
+<td class="py-4 px-4 font-label text-xs">CENTRAL_STORAGE_02</td>
+<td class="py-4 px-4 font-headline text-xs text-error">42.5%</td>
+<td class="py-4 px-4 font-label text-xs">520 U/H</td>
+<td class="py-4 px-4">
+<span class="px-2 py-0.5 rounded-sm bg-error/10 text-error text-[10px] font-bold border border-error/20">CRITICAL</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="py-4 px-4 font-headline text-xs text-on-surface">14:00:00</td>
+<td class="py-4 px-4 font-label text-xs">WEST_WING_RETAIL</td>
+<td class="py-4 px-4 font-headline text-xs text-primary-container">89.1%</td>
+<td class="py-4 px-4 font-label text-xs">3,120 U/H</td>
+<td class="py-4 px-4">
+<span class="px-2 py-0.5 rounded-sm bg-primary-container/10 text-primary-container text-[10px] font-bold border border-primary-container/20">STABLE</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 h-10 flex justify-around items-center px-4 bg-[#0e131e] dark:bg-slate-950 bg-opacity-90 backdrop-blur-md border-t border-[#3b494b]/20">
+<div class="flex items-center gap-2 text-[#00f0ff] font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-widest cursor-default">
+<span class="material-symbols-outlined text-sm" data-icon="query_stats">query_stats</span>
+<span>Tracking Healthy</span>
+</div>
+<div class="flex items-center gap-2 text-error font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-widest cursor-default">
+<span class="material-symbols-outlined text-sm" data-icon="warning">warning</span>
+<span>12 Active Alerts</span>
+</div>
+<div class="flex items-center gap-2 text-[#dee2f2]/70 hover:text-white font-['Space_Grotesk'] text-[10px] font-bold uppercase tracking-widest cursor-default transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="wifi">wifi</span>
+<span>98% Signal</span>
+</div>
+</footer>
+</body></html>

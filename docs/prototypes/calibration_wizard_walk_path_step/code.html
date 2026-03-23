@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Calibration Wizard | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.6);
+            backdrop-filter: blur(24px);
+        }
+        .path-active {
+            stroke-dasharray: 8;
+            animation: dash 20s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-slate-950/60 backdrop-blur-xl border-b border-cyan-900/30 shadow-[0_0_20px_rgba(0,219,233,0.08)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-bold tracking-tighter text-cyan-400 font-headline uppercase">RTLS Analytics Platform</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-headline uppercase tracking-wider text-sm text-slate-400 hover:text-cyan-200 transition-colors" href="#">OVERVIEW</a>
+<a class="font-headline uppercase tracking-wider text-sm text-slate-400 hover:text-cyan-200 transition-colors" href="#">ADMIN</a>
+<a class="font-headline uppercase tracking-wider text-sm text-cyan-400 border-b-2 border-cyan-400 pb-1" href="#">CALIBRATION</a>
+<a class="font-headline uppercase tracking-wider text-sm text-slate-400 hover:text-cyan-200 transition-colors" href="#">HEALTH</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1 rounded-lg border border-outline-variant/20">
+<div class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></div>
+<span class="text-[10px] font-headline tracking-widest text-primary-container uppercase">LIVE CONNECTION STABLE</span>
+</div>
+<button class="p-2 text-slate-400 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all rounded-lg">
+<span class="material-symbols-outlined">notifications_active</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-cyan-400/10 hover:text-cyan-400 transition-all rounded-lg">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-cyan-400/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a male systems engineer with a focused expression, clean lighting against a technical office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDicKmoev4HALHBTMcAGiRkDhcK9CVx9sgW79acHtHPGHNqRZisNWfQ84vgl_8akYhTcFsaTXFg6fSmgeBBwFKc8V19RQKfZyGLWwGvv1ltiDL234y41LgcYDJ0NcjabXRMZwV2wi4JaA-r8P1hqlsrgYzVZ6vhfVGIMXnOtcmWY2FoAop4KZsHjIllwYGbSc_AW-f4A0f-5lhk08V2pO286Pjx6HYHd9GhAovZZf_XyEVmxh55M-IPH_QLA96-OL6-wPpVwfb9jYE"/>
+</div>
+</div>
+</header>
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] z-40 flex flex-col items-center py-4 bg-slate-900 w-20 border-r border-cyan-900/20">
+<div class="mb-6 flex flex-col items-center">
+<div class="w-10 h-10 bg-surface-container-highest rounded flex items-center justify-center border border-outline-variant/30 mb-2">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">router</span>
+</div>
+<span class="text-[8px] font-headline text-slate-500 uppercase tracking-tighter">DINING HALL A</span>
+</div>
+<nav class="flex flex-col gap-2 w-full flex-1">
+<button class="text-slate-500 hover:bg-slate-800 hover:text-cyan-300 transition-all duration-150 flex flex-col items-center py-4 w-full group">
+<span class="material-symbols-outlined text-2xl mb-1">grid_view</span>
+<span class="text-[8px] font-headline uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Dashboard</span>
+</button>
+<button class="text-slate-500 hover:bg-slate-800 hover:text-cyan-300 transition-all duration-150 flex flex-col items-center py-4 w-full group">
+<span class="material-symbols-outlined text-2xl mb-1">map</span>
+<span class="text-[8px] font-headline uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Map</span>
+</button>
+<button class="bg-cyan-400/10 text-cyan-400 border-r-2 border-cyan-400 flex flex-col items-center py-4 w-full">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">settings_input_component</span>
+<span class="text-[8px] font-headline uppercase tracking-widest">Wizard</span>
+</button>
+<button class="text-slate-500 hover:bg-slate-800 hover:text-cyan-300 transition-all duration-150 flex flex-col items-center py-4 w-full group">
+<span class="material-symbols-outlined text-2xl mb-1">terminal</span>
+<span class="text-[8px] font-headline uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Audit</span>
+</button>
+</nav>
+<div class="mt-auto flex flex-col gap-2 w-full pt-4 border-t border-cyan-900/10">
+<button class="text-slate-500 hover:text-cyan-300 flex flex-col items-center py-2 w-full">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+<button class="text-slate-500 hover:text-error flex flex-col items-center py-2 w-full">
+<span class="material-symbols-outlined text-xl">emergency_home</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-20 mt-16 p-8 min-h-[calc(100vh-64px)] bg-surface text-on-surface">
+<!-- Wizard Stepper -->
+<div class="max-w-7xl mx-auto mb-8">
+<div class="flex items-center justify-between w-full max-w-4xl mx-auto">
+<!-- Step 1 -->
+<div class="flex flex-col items-center gap-2 group">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-primary-container text-on-primary font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<span class="text-[10px] font-headline uppercase tracking-widest text-primary-container">Scope</span>
+</div>
+<div class="flex-1 h-[2px] mx-4 bg-primary-container/40"></div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-primary-container text-on-primary font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+<span class="material-symbols-outlined text-xl">check</span>
+</div>
+<span class="text-[10px] font-headline uppercase tracking-widest text-primary-container">Device Check</span>
+</div>
+<div class="flex-1 h-[2px] mx-4 bg-primary-container shadow-[0_0_10px_rgba(0,240,255,0.4)]"></div>
+<!-- Step 3 (Active) -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full flex items-center justify-center border-2 border-primary-container bg-surface-container-high text-primary-container font-bold relative">
+<div class="absolute inset-0 rounded-full border border-primary-container animate-ping opacity-20"></div>
+<span class="material-symbols-outlined text-2xl">directions_walk</span>
+</div>
+<span class="text-[10px] font-headline uppercase tracking-widest text-primary-container font-bold">Walk Path</span>
+</div>
+<div class="flex-1 h-[2px] mx-4 bg-surface-container-highest"></div>
+<!-- Step 4 -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-slate-500 font-bold border border-outline-variant/20">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</div>
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-500">Processing</span>
+</div>
+<div class="flex-1 h-[2px] mx-4 bg-surface-container-highest"></div>
+<!-- Step 5 -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-slate-500 font-bold border border-outline-variant/20">
+<span class="material-symbols-outlined text-xl">flag</span>
+</div>
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-500">Results</span>
+</div>
+</div>
+</div>
+<div class="max-w-7xl mx-auto grid grid-cols-10 gap-6 h-full items-stretch">
+<!-- Left Panel: Main Interaction -->
+<div class="col-span-10 lg:col-span-7 flex flex-col gap-6">
+<!-- Header -->
+<div class="flex flex-col gap-1">
+<h1 class="text-3xl font-headline font-bold tracking-tight text-on-surface">Calibration Walk Path: <span class="text-primary-container">Dining Hall A</span></h1>
+<p class="text-on-surface-variant font-body">Follow the prescribed route to collect radio signal baseline. Avoid high-velocity movements for optimal accuracy.</p>
+</div>
+<!-- Canvas Area -->
+<div class="relative flex-1 bg-surface-container rounded-xl border border-outline-variant/10 overflow-hidden min-h-[500px] shadow-inner">
+<!-- Floor Plan Background -->
+<div class="absolute inset-0 opacity-20 pointer-events-none">
+<img class="w-full h-full object-cover grayscale mix-blend-screen" data-alt="Technical architectural blueprint floor plan with grid lines, schematic symbols, and industrial layout details in monochrome cyan tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtKvQfOFJrpXMjm52iZplfxt4jYVE0_fwyv_7GKsUUA3Wx-Uh0a9RQD4JIWGqZJQ1kOADyQ568xgPnq7bW3bShxc39PQltBnB79athTjp55i8M_6loaKgRxeUgJpWVDqN1C24jWIspM2u096tqAHrNHbwHe3QD2huYKbBMudz3F-joq1B3Bbp22jELuxrQBmC2bRWrOBoT9BPC0JntF9F8pfE5gpWbvREje0eZ6NRT0sktHkeIu6yTxJF3jEVb46BBa4brtOu8DMA"/>
+</div>
+<!-- SVG Overlay for Walk Path -->
+<svg class="absolute inset-0 w-full h-full" viewbox="0 0 1000 600">
+<!-- Path Line -->
+<path class="path-active opacity-60" d="M 100 100 L 400 100 L 400 300 L 700 300 L 700 500 L 200 500 L 200 300" fill="none" stroke="#00f0ff" stroke-dasharray="10 10" stroke-width="4"></path>
+<!-- Completed Section -->
+<path class="shadow-lg" d="M 100 100 L 400 100 L 400 300 L 600 300" fill="none" stroke="#00f0ff" stroke-width="6"></path>
+<!-- Waypoints -->
+<circle cx="100" cy="100" fill="#00f0ff" r="8"></circle>
+<circle cx="400" cy="100" fill="#00f0ff" r="8"></circle>
+<circle cx="400" cy="300" fill="#00f0ff" r="8"></circle>
+<circle class="opacity-30" cx="700" cy="300" fill="#00f0ff" r="8"></circle>
+<!-- User Position Indicator -->
+<g transform="translate(600, 300)">
+<circle class="animate-ping opacity-20" fill="#00f0ff" r="20"></circle>
+<circle fill="#00f0ff" r="10"></circle>
+<path d="M -5 -5 L 5 5 M 5 -5 L -5 5" stroke="#00363a" stroke-width="2"></path>
+</g>
+</svg>
+<!-- HUD Overlays -->
+<div class="absolute top-4 left-4 flex flex-col gap-2">
+<div class="glass-panel px-3 py-2 rounded border border-cyan-400/20 text-[10px] font-headline tracking-widest text-primary-container uppercase">
+                            FLOOR: DINING HALL A
+                        </div>
+<div class="glass-panel px-3 py-2 rounded border border-white/5 text-[10px] font-headline tracking-widest text-slate-400 uppercase">
+                            SCALE: 1:200m
+                        </div>
+</div>
+<div class="absolute bottom-6 right-6 flex items-center gap-4">
+<button class="bg-surface-container-highest/80 backdrop-blur text-on-surface px-6 py-3 rounded-xl border border-outline-variant/30 font-headline font-bold uppercase tracking-widest hover:bg-surface-variant transition-all">
+                            Pause Collection
+                        </button>
+<button class="bg-primary-container text-on-primary px-8 py-3 rounded-xl font-headline font-bold uppercase tracking-widest shadow-[0_0_25px_rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 transition-all">
+                            Complete Segment
+                        </button>
+</div>
+</div>
+<!-- Telemetry Footer -->
+<div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/10 flex items-center justify-between">
+<div class="flex-1 max-w-md">
+<div class="flex justify-between items-end mb-2">
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-400">Total Progress</span>
+<span class="text-2xl font-headline font-bold text-primary-container">68%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-highest rounded-full overflow-hidden border border-outline-variant/20">
+<div class="h-full bg-gradient-to-r from-primary-fixed-dim to-primary-container shadow-[0_0_10px_rgba(0,240,255,0.4)]" style="width: 68%"></div>
+</div>
+</div>
+<div class="flex gap-12 ml-12">
+<div class="flex flex-col">
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-400 mb-1">Points Collected</span>
+<span class="text-xl font-headline font-semibold text-on-surface">142<span class="text-slate-500 text-sm ml-1">/ 210</span></span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-400 mb-1">Elapsed Time</span>
+<span class="text-xl font-headline font-semibold text-on-surface">04:22</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-headline uppercase tracking-widest text-slate-400 mb-1">Active Device</span>
+<span class="text-xl font-headline font-semibold text-secondary-fixed-dim">WAND_X4</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Panel: Support & Diagnostics -->
+<div class="col-span-10 lg:col-span-3 flex flex-col gap-6">
+<!-- Signal Quality Gauge -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/10 flex flex-col items-center">
+<h3 class="w-full text-[10px] font-headline uppercase tracking-widest text-slate-400 mb-6">Calibration Quality</h3>
+<div class="relative w-40 h-40 flex items-center justify-center">
+<!-- Custom Telemetry Gauge -->
+<svg class="w-full h-full -rotate-90">
+<circle class="text-surface-container-highest" cx="80" cy="80" fill="none" r="70" stroke="currentColor" stroke-width="2"></circle>
+<circle class="text-primary-container" cx="80" cy="80" fill="none" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="26" stroke-linecap="round" stroke-width="4"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-3xl font-headline font-bold text-on-surface">94%</span>
+<span class="text-[8px] font-headline uppercase tracking-widest text-primary-container bg-primary-container/10 px-2 py-0.5 rounded">High Confidence</span>
+</div>
+</div>
+</div>
+<!-- Gateway Checklist -->
+<div class="bg-surface-container rounded-xl p-6 border border-outline-variant/10 flex-1 flex flex-col">
+<h3 class="text-[10px] font-headline uppercase tracking-widest text-slate-400 mb-4">Gateway Diagnostics</h3>
+<div class="flex flex-col gap-3">
+<!-- Gateway Item -->
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/10 flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-xs font-headline font-medium text-on-surface">GTW-ALPHA-01</span>
+<span class="text-[8px] font-headline uppercase tracking-widest text-primary-container">ACTIVE</span>
+</div>
+<div class="flex items-center gap-1 h-1.5">
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full opacity-30"></div>
+<span class="text-[9px] font-headline text-slate-500 ml-2">-64dBm</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/10 flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-xs font-headline font-medium text-on-surface">GTW-BETA-02</span>
+<span class="text-[8px] font-headline uppercase tracking-widest text-primary-container">ACTIVE</span>
+</div>
+<div class="flex items-center gap-1 h-1.5">
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full opacity-30"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full opacity-30"></div>
+<span class="text-[9px] font-headline text-slate-500 ml-2">-78dBm</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/10 flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-xs font-headline font-medium text-on-surface">GTW-GAMMA-01</span>
+<span class="text-[8px] font-headline uppercase tracking-widest text-primary-container">ACTIVE</span>
+</div>
+<div class="flex items-center gap-1 h-1.5">
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<div class="flex-1 bg-primary-container h-full rounded-full"></div>
+<span class="text-[9px] font-headline text-slate-500 ml-2">-42dBm</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/10 flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<span class="text-xs font-headline font-medium text-on-surface">GTW-DELTA-04</span>
+<span class="text-[8px] font-headline uppercase tracking-widest text-slate-500">STANDBY</span>
+</div>
+<div class="flex items-center gap-1 h-1.5">
+<div class="flex-1 bg-surface-container-highest h-full rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest h-full rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest h-full rounded-full"></div>
+<div class="flex-1 bg-surface-container-highest h-full rounded-full"></div>
+<span class="text-[9px] font-headline text-slate-500 ml-2">N/A</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Warning Notice -->
+<div class="bg-surface-container-highest/30 rounded-xl p-4 border-l-4 border-tertiary-fixed-dim">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary-fixed-dim">warning</span>
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-headline uppercase tracking-widest text-tertiary-fixed-dim font-bold">Signal Warning</span>
+<p class="text-xs text-on-surface-variant">Weak signal in Kitchen Line 2. Maintain dwell time of 10s near Gateway 42.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Indicator for Mobile (Hidden on Desktop) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-slate-900 px-6 py-4 border-t border-cyan-900/30 flex justify-around z-50">
+<button class="text-primary-container flex flex-col items-center">
+<span class="material-symbols-outlined">directions_walk</span>
+<span class="text-[8px] font-headline uppercase mt-1">Walk</span>
+</button>
+<button class="text-slate-500 flex flex-col items-center">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[8px] font-headline uppercase mt-1">Stats</span>
+</button>
+<button class="text-slate-500 flex flex-col items-center">
+<span class="material-symbols-outlined">map</span>
+<span class="text-[8px] font-headline uppercase mt-1">Map</span>
+</button>
+</nav>
+</body></html>

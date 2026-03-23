@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Floor Plan &amp; Scale Setup | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.6);
+            backdrop-filter: blur(24px);
+        }
+        .milled-effect {
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .grid-overlay {
+            background-image: radial-gradient(circle, #3b494b 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        .blueprint-tint {
+            filter: hue-rotate(180deg) brightness(0.6) contrast(1.2) saturate(0.8);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="bg-[#0e131e] docked full-width top-0 z-50 flex justify-between items-center w-full px-6 h-16 shadow-none">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-[#00f0ff] tracking-tighter font-headline">RTLS Analytics Platform</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="font-['Space_Grotesk'] uppercase tracking-[0.05em] text-sm text-[#dee2f2]/60 hover:text-[#00f0ff] transition-colors duration-200 cursor-pointer active:scale-95">DASHBOARD</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-[0.05em] text-sm text-[#00f0ff] border-b-2 border-[#00f0ff] pb-1 cursor-pointer active:scale-95">FLOOR PLANS</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-[0.05em] text-sm text-[#dee2f2]/60 hover:text-[#00f0ff] transition-colors duration-200 cursor-pointer active:scale-95">LIVE MAP</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-[0.05em] text-sm text-[#dee2f2]/60 hover:text-[#00f0ff] transition-colors duration-200 cursor-pointer active:scale-95">AUDIT LOG</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#dee2f2]/60 hover:text-[#00f0ff] transition-colors">notifications</button>
+<button class="material-symbols-outlined text-[#dee2f2]/60 hover:text-[#00f0ff] transition-colors">settings</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant overflow-hidden">
+<img alt="Admin User Profile" data-alt="Close up portrait of a professional man with short dark hair and a neutral expression in high-key studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBs38BJ174TdYKRY9NlVry0TpP3tgXbPn0aGYcp45aWdQkXQuFdVnuW2wMot8Jm_Adm_RmSES71UBTmOCkN5ie4J_bLbfBBBJTtjY3vDKVC4pVvfEUTns79my3c_f6afU8b31LDDEDFRaaMGPNYW9ffK5dy-8uPmVwNKb9X1Qr1I_pVLeEXrFbosJi1ilHkZ8lmxQW37clJ1QNBiZQm3jIVDkZC6ilRRAH3zEROIrnjOUNxuFUvIvcCsPcWEkpv4lrHSG5ObkdEf-w"/>
+</div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- Side Navigation Bar -->
+<aside class="bg-[#1b1f2b] docked vertical left-0 h-full w-64 border-r border-[#3b494b]/15 shadow-[40px_0_40px_-40px_rgba(0,219,233,0.08)] flex flex-col py-4 z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container/10 flex items-center justify-center rounded-lg border border-primary-container/20">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<div class="text-[#00f0ff] font-black font-headline text-sm tracking-tighter">Floor Setup</div>
+<div class="text-[#dee2f2]/40 text-[10px] font-headline tracking-[0.1em]">Admin Workflow</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="px-6 py-2 flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] hover:bg-[#303541] transition-all duration-150 ease-in-out cursor-pointer">
+<span class="material-symbols-outlined">layers</span>
+<span>SETUP WIZARD</span>
+</div>
+<div class="px-6 py-2 flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase bg-[#303541] text-[#00f0ff] border-l-4 border-[#00f0ff] shadow-[inset_0_0_10px_rgba(0,240,255,0.1)] duration-150 ease-in-out cursor-pointer">
+<span class="material-symbols-outlined">straighten</span>
+<span>SCALE SETUP</span>
+</div>
+<div class="px-6 py-2 flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] hover:bg-[#303541] transition-all duration-150 ease-in-out cursor-pointer">
+<span class="material-symbols-outlined">grid_view</span>
+<span>ZONE EDITOR</span>
+</div>
+<div class="px-6 py-2 flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] hover:bg-[#303541] transition-all duration-150 ease-in-out cursor-pointer">
+<span class="material-symbols-outlined">location_on</span>
+<span>TABLE &amp; POI MAPPING</span>
+</div>
+<div class="px-6 py-2 flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] hover:bg-[#303541] transition-all duration-150 ease-in-out cursor-pointer">
+<span class="material-symbols-outlined">settings_input_component</span>
+<span>CALIBRATION</span>
+</div>
+</nav>
+<div class="mt-auto px-6 border-t border-outline-variant/10 pt-4 pb-2 space-y-4">
+<button class="w-full bg-primary-container text-on-primary font-headline font-bold text-xs py-3 rounded-xl tracking-widest hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+                    SAVE &amp; CONTINUE
+                </button>
+<div class="space-y-1">
+<div class="flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] transition-all cursor-pointer">
+<span class="material-symbols-outlined">help_outline</span>
+<span>HELP</span>
+</div>
+<div class="flex items-center gap-4 font-['Space_Grotesk'] font-medium text-[11px] tracking-widest uppercase text-[#dee2f2]/40 hover:text-[#dbfcff] transition-all cursor-pointer">
+<span class="material-symbols-outlined">logout</span>
+<span>LOG_OUT</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Sidebar (Control Panel) -->
+<section class="w-96 bg-surface-container border-r border-outline-variant/20 flex flex-col">
+<div class="p-6 border-b border-outline-variant/10">
+<h2 class="font-headline font-bold text-lg text-primary tracking-tight">Floor Plan &amp; Scale Setup</h2>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<!-- Floor Plan Upload Section -->
+<div class="space-y-4">
+<label class="font-headline font-semibold text-[11px] tracking-widest uppercase text-on-surface-variant">Floor Plan Upload</label>
+<div class="relative group cursor-pointer overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest milled-effect p-2">
+<img alt="Main architectural floor plan preview" class="w-full h-32 object-cover rounded-lg opacity-60" data-alt="Technical blueprint of a modern office building layout with blue architectural lines on a dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2nZWnMleqpQpgRIHGpEnh_57enbcN1GqhFj9ubyIlCjhwuUYj8tfsmXCjdDk59AnBx-2AyiBmvjB5-CMt5kPN3keuSvmbopndoQWpbdGtxLLgp-CmGh4M5wTIqzI6jANKuaFlNpz_rsJxDl58d9VyIQ7_QwCBCQRMoG5PgLh0CHj8ZSn9YPlUIYoidGoTQQp4Gr4hfb4dh-IccTxYTQ5eegkZWdvDHsN8zomIyglPVu-DSd01YErgjXJyUqUIFPrrYpMuvQnFFr4"/>
+<div class="absolute inset-0 flex items-center justify-center bg-surface-container-highest/60 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-primary text-on-primary font-headline font-bold text-xs py-2 px-4 rounded-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                                    REPLACE
+                                </button>
+</div>
+</div>
+</div>
+<!-- Scale Configuration Section -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<label class="font-headline font-semibold text-[11px] tracking-widest uppercase text-on-surface-variant">Scale Configuration</label>
+<span class="flex h-2 w-2 rounded-full bg-primary-fixed-dim animate-pulse"></span>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10 space-y-4">
+<p class="text-xs text-on-surface/70 leading-relaxed font-light">
+                                Place two reference points on the floor plan to define a known distance.
+                            </p>
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-container-lowest border border-primary-container/20">
+<span class="material-symbols-outlined text-primary-container text-lg">check_circle</span>
+<span class="text-[11px] font-headline font-medium tracking-wide text-primary">Reference Points Placed (A, B)</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-baseline">
+<span class="text-[10px] font-headline tracking-widest uppercase text-on-surface-variant/60">Real-world Distance</span>
+<span class="text-[10px] font-headline text-primary-container">METERS</span>
+</div>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-0 border-b-2 border-outline-variant focus:border-primary-container transition-colors font-headline text-xl text-primary p-2 focus:ring-0" type="text" value="12.5"/>
+</div>
+</div>
+<div class="p-3 rounded-lg bg-primary-container/5 border border-primary-container/10">
+<p class="text-[11px] text-primary-container font-headline tracking-wide">
+                                    Scale calibrated successfully: <span class="font-bold">1px = 0.05m</span>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="p-6 bg-surface-container-high border-t border-outline-variant/10">
+<button class="w-full flex items-center justify-center gap-3 bg-gradient-to-br from-[#dbfcff] to-[#00f0ff] text-on-primary font-headline font-bold text-xs py-4 rounded-xl tracking-widest uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_10px_30px_-10px_rgba(0,240,255,0.3)]">
+                        Continue to Gateway Placement
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Right Canvas (Floor Preview) -->
+<section class="flex-1 relative bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 grid-overlay opacity-30"></div>
+<!-- Main Viewport -->
+<div class="relative w-[90%] h-[85%] bg-surface-container-low rounded-2xl shadow-2xl border border-outline-variant/10 overflow-hidden flex items-center justify-center">
+<!-- Floor Plan Image -->
+<div class="relative w-full h-full p-8 flex items-center justify-center">
+<img alt="Technical blueprint active calibration view" class="max-w-full max-h-full object-contain blueprint-tint" data-alt="Monochrome blue tinted architectural drawing of an office complex with precise lines and structural details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6WPgkfENYaWZa4sjTFWFC6MTSxDXB2dSj1QJFH4xn1D0279dRgj8UBKwVurqSbvWSlz5OQ77_V8j_m_QA5PD-MhKlQAWI4EEsq4V9r13QMvz8j_Jd_H8CD9EI22KhAfA-DDwyiAiI-w09z1Ib9AfTW7wvxBgtBiXEUjVpfpF_A5aNHh5FiM_7uirYepLkDi_nY-WKFzLuc5-_A3jVE2dNpvOWxa6hYL44pDbZMVZWmIHMPYYISIxfvPUxFtMqLBVgWwEjPvKIkPQ"/>
+<!-- Measurement Overlay -->
+<div class="absolute inset-0 pointer-events-none">
+<!-- Point A -->
+<div class="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full border-2 border-primary-container flex items-center justify-center bg-primary-container/20 backdrop-blur-sm pointer-events-auto cursor-move">
+<div class="w-1.5 h-1.5 bg-primary-container rounded-full"></div>
+</div>
+<span class="mt-2 px-2 py-0.5 bg-primary-container text-on-primary font-headline font-bold text-[10px] rounded">POINT_A</span>
+</div>
+<!-- Point B -->
+<div class="absolute bottom-1/3 right-1/4 translate-x-1/2 translate-y-1/2 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full border-2 border-primary-container flex items-center justify-center bg-primary-container/20 backdrop-blur-sm pointer-events-auto cursor-move">
+<div class="w-1.5 h-1.5 bg-primary-container rounded-full"></div>
+</div>
+<span class="mt-2 px-2 py-0.5 bg-primary-container text-on-primary font-headline font-bold text-[10px] rounded">POINT_B</span>
+</div>
+<!-- Connecting Line -->
+<svg class="absolute inset-0 w-full h-full">
+<line stroke="#00f0ff" stroke-dasharray="8,4" stroke-width="2" x1="25%" x2="75%" y1="25%" y2="66.6%"></line>
+</svg>
+<!-- Distance Label -->
+<div class="absolute top-[45.8%] left-[50%] -translate-x-1/2 -translate-y-1/2">
+<div class="bg-surface-container-highest/90 backdrop-blur border border-primary-container/40 px-3 py-1 rounded shadow-lg">
+<span class="text-primary-container font-headline font-bold text-xs tracking-wider">12.5m</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Zoom/Pan Controls -->
+<div class="absolute bottom-6 right-6 flex flex-col gap-2">
+<div class="bg-surface-container-highest/80 backdrop-blur border border-outline-variant/20 rounded-xl overflow-hidden shadow-xl flex flex-col">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-primary-container/20 transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-2"></div>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:bg-primary-container/20 transition-colors">
+<span class="material-symbols-outlined text-lg">remove</span>
+</button>
+</div>
+<button class="w-10 h-10 bg-surface-container-highest/80 backdrop-blur border border-outline-variant/20 rounded-xl flex items-center justify-center text-on-surface hover:bg-primary-container/20 transition-colors shadow-xl">
+<span class="material-symbols-outlined text-lg">open_in_full</span>
+</button>
+</div>
+<!-- Canvas Stats HUD -->
+<div class="absolute top-6 left-6 flex gap-4">
+<div class="bg-surface-container-lowest/80 backdrop-blur border border-outline-variant/30 px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg">
+<span class="material-symbols-outlined text-primary-container text-sm">grid_on</span>
+<div class="flex flex-col">
+<span class="text-[9px] font-headline text-on-surface-variant uppercase tracking-[0.1em]">Grid Density</span>
+<span class="text-xs font-headline font-bold text-primary">1.0m / Unit</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest/80 backdrop-blur border border-outline-variant/30 px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg">
+<span class="material-symbols-outlined text-primary-container text-sm">aspect_ratio</span>
+<div class="flex flex-col">
+<span class="text-[9px] font-headline text-on-surface-variant uppercase tracking-[0.1em]">Aspect Ratio</span>
+<span class="text-xs font-headline font-bold text-primary">16:9 FIXED</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Heatmap Analysis | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .heatmap-gradient {
+            background: radial-gradient(circle, rgba(255, 180, 171, 0.4) 0%, rgba(0, 240, 255, 0.1) 60%, transparent 100%);
+        }
+        .glass-panel {
+            backdrop-filter: blur(24px);
+            background: rgba(27, 31, 43, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body overflow-hidden">
+<!-- TopNavBar (JSON Immutable Implementation) -->
+<header class="flex justify-between items-center w-full px-6 h-16 bg-[#1b1f2b] border-b border-[#3b494b]/20 fixed top-0 z-50">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black tracking-tighter text-[#00f0ff] font-headline">RTLS Analytics Platform</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-['Space_Grotesk'] uppercase tracking-wider text-xs font-bold text-[#00f0ff] border-b-2 border-[#00f0ff] pb-1" href="#">Heatmap</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-wider text-xs font-bold text-[#dee2f2]/60 hover:text-[#dee2f2] transition-colors duration-200" href="#">Trajectory</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-wider text-xs font-bold text-[#dee2f2]/60 hover:text-[#dee2f2] transition-colors duration-200" href="#">Round-Trip</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-wider text-xs font-bold text-[#dee2f2]/60 hover:text-[#dee2f2] transition-colors duration-200" href="#">Dwell Time</a>
+<a class="font-['Space_Grotesk'] uppercase tracking-wider text-xs font-bold text-[#dee2f2]/60 hover:text-[#dee2f2] transition-colors duration-200" href="#">SLA Trends</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#dee2f2]/60 hover:bg-[#303541] rounded-lg transition-all"><span class="material-symbols-outlined">notifications</span></button>
+<button class="p-2 text-[#dee2f2]/60 hover:bg-[#303541] rounded-lg transition-all"><span class="material-symbols-outlined">terminal</span></button>
+<button class="p-2 text-[#dee2f2]/60 hover:bg-[#303541] rounded-lg transition-all"><span class="material-symbols-outlined">settings</span></button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30">
+<img class="w-full h-full object-cover" data-alt="Portrait of a command operator in low light with technical monitors reflecting on face" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnIDrs-6GfAtTF-Jewx5pJvHOEOW8ZirghLi3XV7yg_xpn6ndXJ5cg6HvveDXME473qrdu4Y0hy2Bs6oklBbq3gVr4v9dFNM4rKxcFFY7T5DRJAtq8hKNwieRAIRlUREPZQSpTXkTfkBPOwFGTpjkdA0p2P2Zf4KKlt78ox4tUmqqgdUrDF41wN7lK0WhtCQBL6eqruh6V_OJQkjX-lxrnSPK_1jYA7LJF1O3QXiQQWxT_rXkqfYFq7xKrtP7pCbN58t7Sc1DkWPU"/>
+</div>
+</div>
+</header>
+<div class="flex pt-16 h-screen">
+<!-- SideNavBar (JSON Immutable Implementation) -->
+<aside class="flex flex-col h-screen fixed left-0 top-16 z-40 bg-[#171b27] border-r border-[#3b494b]/10 w-64">
+<div class="p-6 border-b border-[#3b494b]/10">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-8 h-8 bg-primary-container/20 rounded-lg flex items-center justify-center border border-primary-container/30">
+<span class="material-symbols-outlined text-[#00f0ff] text-sm" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div>
+<p class="font-headline text-[10px] uppercase font-medium tracking-[0.05em] text-[#00f0ff]">REPORT FILTERS</p>
+<p class="font-headline text-[8px] text-[#dee2f2]/40">Dining Hall A</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 py-4 overflow-y-auto">
+<div class="space-y-1">
+<div class="group cursor-pointer bg-[#1b1f2b] text-[#00f0ff] border-l-4 border-[#00f0ff] flex items-center gap-3 px-4 py-3">
+<span class="material-symbols-outlined text-lg">layers</span>
+<span class="font-headline text-[10px] uppercase font-medium tracking-[0.05em]">Floor Select</span>
+</div>
+<div class="group cursor-pointer text-[#dee2f2]/40 px-4 py-3 hover:bg-[#1b1f2b] hover:text-[#dee2f2] flex items-center gap-3 transition-all">
+<span class="material-symbols-outlined text-lg">precision_manufacturing</span>
+<span class="font-headline text-[10px] uppercase font-medium tracking-[0.05em]">Asset Cohorts</span>
+</div>
+<div class="group cursor-pointer text-[#dee2f2]/40 px-4 py-3 hover:bg-[#1b1f2b] hover:text-[#dee2f2] flex items-center gap-3 transition-all">
+<span class="material-symbols-outlined text-lg">history_toggle_off</span>
+<span class="font-headline text-[10px] uppercase font-medium tracking-[0.05em]">Time Range</span>
+</div>
+<div class="group cursor-pointer text-[#dee2f2]/40 px-4 py-3 hover:bg-[#1b1f2b] hover:text-[#dee2f2] flex items-center gap-3 transition-all">
+<span class="material-symbols-outlined text-lg">stacks</span>
+<span class="font-headline text-[10px] uppercase font-medium tracking-[0.05em]">Shift Comparison</span>
+</div>
+</div>
+<!-- Parameter Form (Industrial Style) -->
+<div class="px-4 mt-6 space-y-4">
+<div class="space-y-1">
+<label class="font-headline text-[9px] text-[#dee2f2]/60 uppercase tracking-widest">Active Level</label>
+<div class="bg-surface-container-lowest border-b-2 border-outline-variant p-2 flex justify-between items-center cursor-pointer">
+<span class="text-[11px] text-on-surface">Dining Hall A</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="font-headline text-[9px] text-[#dee2f2]/60 uppercase tracking-widest">Asset Category</label>
+<div class="bg-surface-container-lowest border-b-2 border-outline-variant p-2 flex justify-between items-center cursor-pointer">
+<span class="text-[11px] text-on-surface">Staff, carts, tags</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+</div>
+</div>
+</nav>
+<div class="p-4 border-t border-[#3b494b]/10">
+<button class="w-full bg-primary-container text-on-primary font-headline text-xs font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+                    GENERATE REPORT
+                </button>
+<div class="mt-4 space-y-2">
+<div class="flex items-center gap-3 px-2 py-1 text-[#dee2f2]/40 hover:text-[#dee2f2] cursor-pointer">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span class="font-headline text-[10px] uppercase">Audit Log</span>
+</div>
+<div class="flex items-center gap-3 px-2 py-1 text-[#dee2f2]/40 hover:text-[#dee2f2] cursor-pointer">
+<span class="material-symbols-outlined text-sm">analytics</span>
+<span class="font-headline text-[10px] uppercase">Diagnostics</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex flex-col p-6 overflow-hidden">
+<!-- Summary Metrics (KPI Row) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+<div class="bg-surface-container p-4 border-b-2 border-primary-container/30 relative overflow-hidden">
+<div class="relative z-10">
+<p class="font-headline text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Peak Occupancy</p>
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline text-4xl font-bold text-on-surface">142</h3>
+<span class="text-xs text-[#00f0ff]">+12.4%</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-7xl" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 border-b-2 border-secondary/30 relative overflow-hidden">
+<div class="relative z-10">
+<p class="font-headline text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Avg Dwell Time</p>
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline text-4xl font-bold text-on-surface">18.4 <span class="text-xl font-light">min</span></h3>
+<span class="text-xs text-error">-4.2%</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-7xl" style="font-variation-settings: 'FILL' 1;">timer</span>
+</div>
+</div>
+<div class="bg-surface-container p-4 border-b-2 border-tertiary-fixed-dim/30 relative overflow-hidden">
+<div class="relative z-10">
+<p class="font-headline text-[10px] text-on-surface-variant uppercase tracking-widest mb-1">Congestion Score</p>
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline text-4xl font-bold text-on-surface">74<span class="text-xl font-light">/100</span></h3>
+<span class="bg-error/10 text-error px-2 py-0.5 rounded text-[10px] font-bold">CRITICAL</span>
+</div>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-7xl" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+</div>
+<div class="flex-1 flex gap-6 min-h-0">
+<!-- Analysis Canvas (Heatmap Map) -->
+<div class="flex-1 bg-surface-container-lowest rounded-lg border border-outline-variant/10 relative overflow-hidden">
+<div class="absolute top-4 left-4 z-20 flex gap-2">
+<div class="glass-panel px-3 py-1.5 rounded-full border border-outline-variant/30 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-[#00f0ff] animate-pulse"></div>
+<span class="text-[10px] font-headline font-bold uppercase tracking-tighter">Live Tracking Data</span>
+</div>
+<div class="glass-panel px-3 py-1.5 rounded-full border border-outline-variant/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs">zoom_in</span>
+<span class="text-[10px] font-headline font-bold uppercase tracking-tighter">120% Zoom</span>
+</div>
+</div>
+<!-- Map/Heatmap Overlay Mockup -->
+<div class="w-full h-full relative" data-location="Chicago" style="">
+<img class="w-full h-full object-cover mix-blend-luminosity opacity-40" data-alt="High-angle blueprint floor plan of a modern industrial restaurant facility with sleek dark flooring and technical architectural lines" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbE8K2_kVSb-Xul1UTaRjbY9CgrZYYi6mzUywJZGw6jffKpWSOESAwZ_esQGShARKdX1ET8dOPXzu8_YRs2iL9TwaBuryYvPSJFqzRQWjLyAyXlrZOG4gjjRmx5ETRDVZ7OkSsg9f58aoPGORf2S216-QNWhvTc5VCacL8pauWCeA8y5luUKWVcEbv-PI8w7Dye4JuofgPl0QT5-kP8_OeMxqOR7gPESBA86UW3lSLRBM9rrblVaPBTZxnveCYh2CsEn6FuiQzOzw"/>
+<!-- Heatmap Blobs -->
+<div class="absolute top-[30%] left-[20%] w-64 h-64 heatmap-gradient rounded-full blur-3xl"></div>
+<div class="absolute top-[50%] left-[45%] w-48 h-48 bg-error/20 rounded-full blur-3xl"></div>
+<div class="absolute top-[20%] left-[60%] w-80 h-80 bg-tertiary-fixed-dim/10 rounded-full blur-3xl"></div>
+<div class="absolute bottom-[20%] right-[10%] w-56 h-56 heatmap-gradient rounded-full blur-3xl"></div>
+<!-- Technical Grid Overlay -->
+<div class="absolute inset-0 bg-[linear-gradient(to_right,#3b494b10_1px,transparent_1px),linear-gradient(to_bottom,#3b494b10_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+<!-- Zone Markers -->
+<div class="absolute top-[48%] left-[44%] border-2 border-error border-dashed px-4 py-8 pointer-events-none">
+<div class="absolute -top-6 left-0 bg-error text-on-error font-headline text-[10px] font-bold px-2 py-0.5">DINING WEST: BOTTLENECK</div>
+</div>
+</div>
+<!-- Map Legend -->
+<div class="absolute bottom-4 left-4 glass-panel p-3 border border-outline-variant/30">
+<p class="text-[9px] font-headline uppercase mb-2 text-on-surface-variant tracking-widest">Intensity Legend</p>
+<div class="flex items-center gap-1">
+<span class="text-[8px] text-on-surface-variant">LOW</span>
+<div class="h-2 w-32 bg-gradient-to-right from-[#00f0ff] via-tertiary-fixed-dim to-error rounded-full"></div>
+<span class="text-[8px] text-on-surface-variant">HIGH</span>
+</div>
+</div>
+</div>
+<!-- Insight & Actions Side Panel -->
+<div class="w-80 flex flex-col gap-6">
+<!-- Insight Panel -->
+<div class="bg-surface-container-high border-l-4 border-primary-container p-5 flex flex-col gap-3">
+<div class="flex items-center gap-2 text-primary-container">
+<span class="material-symbols-outlined text-lg">psychology</span>
+<span class="font-headline text-xs font-bold uppercase tracking-wider">System Insight</span>
+</div>
+<p class="text-sm leading-relaxed text-on-surface/90">
+                            Bottleneck detected in <span class="text-primary-container font-bold">Dining West</span> during lunch rush (12:00 - 13:30). High dwell time observed for service carts.
+                        </p>
+<div class="pt-2 border-t border-outline-variant/20">
+<p class="text-[10px] text-on-surface-variant italic">Recommend: Re-route staff to the service corridor during peak lunch traffic.</p>
+</div>
+</div>
+<!-- Data Breakdown List -->
+<div class="flex-1 bg-surface-container overflow-hidden flex flex-col">
+<div class="p-4 border-b border-outline-variant/10">
+<h4 class="font-headline text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Zone Performance</h4>
+</div>
+<div class="flex-1 overflow-y-auto">
+<div class="p-4 space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface">Main Kitchen</p>
+<p class="text-[10px] text-on-surface-variant">42 Assets active</p>
+</div>
+<span class="text-xs font-headline text-primary-fixed-dim">STABLE</span>
+</div>
+<div class="flex items-center justify-between bg-surface-container-highest -mx-4 px-4 py-2">
+<div>
+<p class="text-xs font-bold text-on-surface">Cold Storage</p>
+<p class="text-[10px] text-on-surface-variant">12 Assets active</p>
+</div>
+<span class="text-xs font-headline text-error">CONGESTED</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface">Service Corridor</p>
+<p class="text-[10px] text-on-surface-variant">08 Assets active</p>
+</div>
+<span class="text-xs font-headline text-[#dee2f2]/40">IDLE</span>
+</div>
+<div class="flex items-center justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface">Kitchen Pass</p>
+<p class="text-[10px] text-on-surface-variant">29 Assets active</p>
+</div>
+<span class="text-xs font-headline text-tertiary-fixed-dim">CAUTION</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-2 py-2 border border-outline-variant/40 hover:bg-surface-container-highest transition-all rounded text-[10px] font-headline font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-sm">download</span>
+                                Export CSV
+                            </button>
+<button class="flex items-center justify-center gap-2 py-2 border border-outline-variant/40 hover:bg-surface-container-highest transition-all rounded text-[10px] font-headline font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-sm">bookmark</span>
+                                Save Preset
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

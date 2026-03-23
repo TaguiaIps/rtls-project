@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Alerts Center | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .severity-glow-red { box-shadow: inset 4px 0 0 0 #ffb4ab, 0 0 15px rgba(255, 180, 171, 0.1); }
+        .severity-glow-amber { box-shadow: inset 4px 0 0 0 #ffb95f, 0 0 15px rgba(255, 185, 95, 0.1); }
+        .severity-glow-cyan { box-shadow: inset 4px 0 0 0 #00f0ff, 0 0 15px rgba(0, 240, 255, 0.1); }
+        
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0e131e; }
+        ::-webkit-scrollbar-thumb { background: #3b494b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0e131e]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-[#00f0ff] uppercase font-headline">RTLS Analytics Platform</div>
+<div class="hidden md:flex items-center gap-2 px-3 py-1 bg-surface-container rounded-lg border border-outline-variant/30">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed-dim" data-icon="location_on">location_on</span>
+<span class="text-[10px] font-headline tracking-widest uppercase opacity-70">Dining Hall A</span>
+<span class="material-symbols-outlined text-[14px] opacity-40" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-4 px-4 h-10 bg-surface-container-lowest border-b-2 border-primary-container">
+<span class="material-symbols-outlined text-primary-container text-[20px]" data-icon="search">search</span>
+<input class="bg-transparent border-none outline-none text-[11px] font-headline tracking-widest placeholder:opacity-30 w-48 uppercase" placeholder="SEARCH ALERTS..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full animate-pulse"></span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant/30 mx-1"></div>
+<div class="flex items-center gap-3 pl-2">
+<div class="text-right hidden sm:block">
+<div class="text-[10px] font-headline font-bold tracking-tighter leading-none">CARLOS MENDES</div>
+<div class="text-[9px] opacity-50 tracking-widest uppercase leading-none mt-1">OPERATIONS MANAGER</div>
+</div>
+<img class="w-8 h-8 rounded-full border border-primary-container/30 object-cover" data-alt="Operator Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGTIczsnQMand4u-MGlSgGBkBS7y944x2zolXOvIivQZajTelp50nv9eXVfXaShlh1HXRTfMSNCzJlsmn6bj-b11RxUBHW38eTdkyd9Mut6h9Cu6ApnAeyd34XsFVMZ5eSiZRdzCY9l88jyJlsc_2BPgCdpl6kNLXHG6An1GuDVWBjPqNqTxpr_m7lTnJMEvUtkTdwK8kATgbTjUNgGFikEcF5zP2-pik8fc7EinOMoV3uCuY2G0b-HyLUVR9HfGUMqcIAOxeAo-4"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Side Navigation Rail -->
+<nav class="fixed left-0 top-16 h-[calc(100vh-64px)] w-20 flex flex-col items-center py-4 z-40 bg-[#1b1f2b] shadow-[1px_0_0_0_rgba(59,73,75,0.15)]">
+<div class="flex flex-col items-center gap-6 w-full">
+<!-- Dashboard Tab -->
+<a class="group flex flex-col items-center gap-1 w-full text-dee2f2 opacity-50 hover:bg-[#303541] hover:opacity-100 transition-all duration-200 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Dash</span>
+</a>
+<!-- Live Map Tab -->
+<a class="group flex flex-col items-center gap-1 w-full text-dee2f2 opacity-50 hover:bg-[#303541] hover:opacity-100 transition-all duration-200 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Live</span>
+</a>
+<!-- Alerts Tab (ACTIVE) -->
+<a class="group flex flex-col items-center gap-1 w-full bg-[#303541] text-[#00f0ff] shadow-[inset_0_0_8px_rgba(0,240,255,0.2)] transition-all duration-200 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Alerts</span>
+</a>
+<!-- Geofencing Tab -->
+<a class="group flex flex-col items-center gap-1 w-full text-dee2f2 opacity-50 hover:bg-[#303541] hover:opacity-100 transition-all duration-200 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="layers">layers</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Zones</span>
+</a>
+<!-- Assets Tab -->
+<a class="group flex flex-col items-center gap-1 w-full text-dee2f2 opacity-50 hover:bg-[#303541] hover:opacity-100 transition-all duration-200 py-2" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Assets</span>
+</a>
+</div>
+<div class="mt-auto w-full">
+<a class="group flex flex-col items-center gap-1 w-full text-dee2f2 opacity-50 hover:bg-error/10 hover:text-error hover:opacity-100 transition-all duration-200 py-4" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-['Space_Grotesk'] uppercase text-[10px] tracking-[0.05em]">Exit</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-20 mt-16 p-8 min-h-[calc(100vh-64px)]">
+<!-- Dashboard Content Container -->
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Page Header & Tab System -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-outline-variant/20">
+<div>
+<h1 class="text-3xl font-headline font-bold tracking-tighter text-on-surface uppercase mb-1">Alerts Center</h1>
+<p class="text-xs font-label uppercase tracking-widest text-on-surface-variant">Real-time operational alerts and tracking events</p>
+</div>
+<div class="flex gap-1 bg-surface-container-low p-1 rounded-lg">
+<button class="px-6 py-2 text-[11px] font-headline font-bold tracking-widest uppercase rounded-md bg-surface-container-highest text-primary shadow-sm">SLA</button>
+<button class="px-6 py-2 text-[11px] font-headline font-bold tracking-widest uppercase rounded-md hover:bg-surface-container-highest transition-colors opacity-60 hover:opacity-100">Unauthorized Geofence</button>
+<button class="px-6 py-2 text-[11px] font-headline font-bold tracking-widest uppercase rounded-md hover:bg-surface-container-highest transition-colors opacity-60 hover:opacity-100">Maintenance</button>
+<button class="px-6 py-2 text-[11px] font-headline font-bold tracking-widest uppercase rounded-md hover:bg-surface-container-highest transition-colors opacity-60 hover:opacity-100">History</button>
+</div>
+</div>
+<!-- Filter Row -->
+<div class="flex flex-wrap items-center gap-4 bg-surface-container-low/40 p-4 rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-2 group">
+<label class="text-[10px] font-headline font-bold uppercase opacity-40">Severity:</label>
+<select class="bg-surface-container-highest text-on-surface text-[11px] font-headline font-bold tracking-widest uppercase border-none focus:ring-1 focus:ring-primary rounded py-1 px-3">
+<option>All Severities</option>
+<option>Critical</option>
+<option>Warning</option>
+<option>Information</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<label class="text-[10px] font-headline font-bold uppercase opacity-40">Timeframe:</label>
+<select class="bg-surface-container-highest text-on-surface text-[11px] font-headline font-bold tracking-widest uppercase border-none focus:ring-1 focus:ring-primary rounded py-1 px-3">
+<option>Last 1 Hour</option>
+<option>Last 24 Hours</option>
+<option>Custom Range</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<label class="text-[10px] font-headline font-bold uppercase opacity-40">Asset Type:</label>
+<select class="bg-surface-container-highest text-on-surface text-[11px] font-headline font-bold tracking-widest uppercase border-none focus:ring-1 focus:ring-primary rounded py-1 px-3">
+<option>All Assets</option>
+<option>Staff Tags</option>
+<option>Gateways</option>
+<option>Carts / Equipment</option>
+</select>
+</div>
+<div class="flex-grow"></div>
+<div class="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-4 py-2 w-full md:w-64">
+<span class="material-symbols-outlined text-[18px] opacity-40" data-icon="search">search</span>
+<input class="bg-transparent border-none outline-none text-[11px] font-headline tracking-widest placeholder:opacity-30 w-full uppercase" placeholder="FILTER LOGS..." type="text"/>
+</div>
+</div>
+<!-- Alerts List (Bento Grid Style for density but list logic) -->
+<div class="space-y-3">
+<!-- 1. Critical SLA Alert -->
+<div class="group flex items-center bg-surface-container rounded-lg overflow-hidden border border-outline-variant/5 hover:border-error/30 transition-all severity-glow-red">
+<div class="w-1.5 h-16 bg-error self-stretch"></div>
+<div class="px-6 py-4 flex items-center gap-6 w-full">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-error-container text-error">
+<span class="material-symbols-outlined" data-icon="error" style="font-variation-settings: 'FILL' 1;">error</span>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div>
+<div class="text-[10px] font-headline font-bold uppercase text-error opacity-80 mb-0.5">SLA Breach</div>
+<div class="font-headline font-bold text-sm tracking-tight text-on-surface">SLA BREACH: TABLE 22</div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Affected Object</div>
+<div class="text-xs font-medium text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="restaurant">restaurant</span>
+                                    TABLE_22_SERVICE_ZONE
+                                </div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Context</div>
+<div class="text-xs text-on-surface-variant italic">Order delay detected</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-[11px] font-headline font-bold uppercase">2m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container hover:bg-primary-fixed text-on-primary px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase transition-colors">View</button>
+<button class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase border border-outline-variant/30 transition-colors">Acknowledge</button>
+<button class="w-8 h-8 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 2. Unauthorized Geofence Alert -->
+<div class="group flex items-center bg-surface-container rounded-lg overflow-hidden border border-outline-variant/5 hover:border-error/30 transition-all severity-glow-red">
+<div class="w-1.5 h-16 bg-error self-stretch"></div>
+<div class="px-6 py-4 flex items-center gap-6 w-full">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-error-container text-error">
+<span class="material-symbols-outlined" data-icon="gpp_maybe" style="font-variation-settings: 'FILL' 1;">gpp_maybe</span>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div>
+<div class="text-[10px] font-headline font-bold uppercase text-error opacity-80 mb-0.5">Security Violation</div>
+<div class="font-headline font-bold text-sm tracking-tight text-on-surface uppercase">RESTRICTED AREA ENTRY</div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Affected Object</div>
+<div class="text-xs font-medium text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="local_shipping">local_shipping</span>
+                                    TRAY CART 09 [RESTRICTED STORAGE]
+                                </div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Context</div>
+<div class="text-xs text-on-surface-variant italic">Asset entered high-risk zone</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-[11px] font-headline font-bold uppercase">8m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container hover:bg-primary-fixed text-on-primary px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase transition-colors">View</button>
+<button class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase border border-outline-variant/30 transition-colors">Acknowledge</button>
+<button class="w-8 h-8 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 3. Maintenance Alert -->
+<div class="group flex items-center bg-surface-container rounded-lg overflow-hidden border border-outline-variant/5 hover:border-tertiary-fixed-dim/30 transition-all severity-glow-amber">
+<div class="w-1.5 h-16 bg-tertiary-fixed-dim self-stretch"></div>
+<div class="px-6 py-4 flex items-center gap-6 w-full">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-fixed-dim/10 text-tertiary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="router" style="font-variation-settings: 'FILL' 1;">router</span>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div>
+<div class="text-[10px] font-headline font-bold uppercase text-tertiary-fixed-dim opacity-80 mb-0.5">Infrastructure</div>
+<div class="font-headline font-bold text-sm tracking-tight text-on-surface uppercase">GATEWAY OFFLINE</div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Affected Object</div>
+<div class="text-xs font-medium text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="hub">hub</span>
+                                    GTW-ALPHA-04
+                                </div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Context</div>
+<div class="text-xs text-on-surface-variant italic">Signal loss detected</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-[11px] font-headline font-bold uppercase">15m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container hover:bg-primary-fixed text-on-primary px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase transition-colors">View</button>
+<button class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase border border-outline-variant/30 transition-colors">Acknowledge</button>
+<button class="w-8 h-8 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 4. Battery Warning -->
+<div class="group flex items-center bg-surface-container rounded-lg overflow-hidden border border-outline-variant/5 hover:border-tertiary-fixed-dim/30 transition-all severity-glow-amber">
+<div class="w-1.5 h-16 bg-tertiary-fixed-dim self-stretch"></div>
+<div class="px-6 py-4 flex items-center gap-6 w-full">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-fixed-dim/10 text-tertiary-fixed-dim">
+<span class="material-symbols-outlined" data-icon="battery_2_bar" style="font-variation-settings: 'FILL' 1;">battery_2_bar</span>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div>
+<div class="text-[10px] font-headline font-bold uppercase text-tertiary-fixed-dim opacity-80 mb-0.5">Hardware Health</div>
+<div class="font-headline font-bold text-sm tracking-tight text-on-surface uppercase">LOW BATTERY</div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Affected Object</div>
+<div class="text-xs font-medium text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="badge">badge</span>
+                                    Staff Tag 102
+                                </div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Context</div>
+<div class="text-xs text-on-surface-variant italic">12% remaining - recharge req.</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-[11px] font-headline font-bold uppercase">32m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container hover:bg-primary-fixed text-on-primary px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase transition-colors">View</button>
+<button class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase border border-outline-variant/30 transition-colors">Acknowledge</button>
+<button class="w-8 h-8 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 5. Info Alert (Standard Info) -->
+<div class="group flex items-center bg-surface-container rounded-lg overflow-hidden border border-outline-variant/5 hover:border-primary-container/30 transition-all severity-glow-cyan">
+<div class="w-1.5 h-16 bg-primary-container self-stretch"></div>
+<div class="px-6 py-4 flex items-center gap-6 w-full">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary-container/10 text-primary-container">
+<span class="material-symbols-outlined" data-icon="info" style="font-variation-settings: 'FILL' 1;">info</span>
+</div>
+<div class="flex-grow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+<div>
+<div class="text-[10px] font-headline font-bold uppercase text-primary-container opacity-80 mb-0.5">System Event</div>
+<div class="font-headline font-bold text-sm tracking-tight text-on-surface uppercase">SHIFT START SYNC</div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Affected Object</div>
+<div class="text-xs font-medium text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="cloud_sync">cloud_sync</span>
+                                    ALL_GATEWAYS
+                                </div>
+</div>
+<div>
+<div class="text-[10px] font-headline font-bold uppercase opacity-30 mb-0.5">Context</div>
+<div class="text-xs text-on-surface-variant italic">Alert synced for lunch shift</div>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-[11px] font-headline font-bold uppercase">45m ago</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary-container hover:bg-primary-fixed text-on-primary px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase transition-colors">View</button>
+<button class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-4 py-1.5 rounded text-[10px] font-headline font-bold tracking-widest uppercase border border-outline-variant/30 transition-colors">Acknowledge</button>
+<button class="w-8 h-8 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Footer Status Bar (Inner Content) -->
+<div class="flex items-center justify-between py-4 px-6 bg-surface-container-lowest border-t border-outline-variant/10 rounded-xl">
+<div class="flex gap-8">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="text-[10px] font-headline font-bold tracking-widest uppercase opacity-60">2 Critical Alerts</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary-fixed-dim"></span>
+<span class="text-[10px] font-headline font-bold tracking-widest uppercase opacity-60">12 Warnings</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<span class="text-[10px] font-headline font-bold tracking-widest uppercase opacity-60">System Stable</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-headline font-bold tracking-widest opacity-40">
+<span class="uppercase">Last Refresh: 14:05:22 GMT</span>
+<button class="flex items-center gap-1 hover:text-primary transition-colors uppercase">
+<span class="material-symbols-outlined text-[14px]" data-icon="refresh">refresh</span>
+                        Manual Force
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Map Overlay Hint (Industrial Design Detail) -->
+<div class="fixed bottom-6 right-6 z-50">
+<div class="glass-panel p-3 rounded-xl border border-outline-variant/30 flex items-center gap-4 shadow-2xl">
+<div class="w-12 h-12 rounded bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover opacity-50 grayscale contrast-125" data-alt="Satellite radar overview" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWH3jEbNYCN8qc8bpLHzOi9kePAowVWVcj6-Yb4t9gMLRqk6cpmVB-sMxACNX0ZO5EuACfGwbFASZFy-4RSsGBTvTNBWF4sel8bkvIfgT6SAMxKBANR3C1r8GKAr_sStJtTlisOd0-SsLs9T8ai5KiNnL088exrXx8aCwhaX_hsPFEaXpwmqJiNm182B5JTV1LCnZrmKbE43fDW_DzaCVTn-1vc0LjZ4Ku1JiZMYu0BBLUs4gp8VAmv3Iv82T-CYJtUXBcijlZvgs"/>
+</div>
+<div>
+<div class="text-[9px] font-headline font-bold uppercase opacity-50 mb-0.5 tracking-tighter">Live Map Sync</div>
+<div class="text-[11px] font-headline font-bold uppercase text-primary tracking-widest">Zone Overlay Ready</div>
+</div>
+<button class="bg-primary-container/20 hover:bg-primary-container/40 p-2 rounded transition-colors group">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform" data-icon="open_in_full">open_in_full</span>
+</button>
+</div>
+</div>
+</body></html>

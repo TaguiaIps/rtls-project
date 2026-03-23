@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Live Map | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #3b494b; border-radius: 10px; }
+    .glass-panel {
+      background: rgba(23, 27, 39, 0.6);
+      backdrop-filter: blur(24px);
+    }
+    .milled-effect {
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .tech-grid {
+      background-image: radial-gradient(circle, #3b494b 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body overflow-hidden h-screen w-screen">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-slate-900/60 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full shadow-[0_0_15px_rgba(0,219,233,0.1)]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-cyan-400 font-headline">RTLS Analytics Platform</div>
+<nav class="hidden md:flex gap-6 font-['Space_Grotesk'] tracking-wider uppercase text-xs">
+<a class="text-slate-400 hover:text-cyan-200 transition-colors" href="#">Overview</a>
+<a class="text-cyan-400 border-b-2 border-cyan-400 pb-1" href="#">Live Map</a>
+<a class="text-slate-400 hover:text-cyan-200 transition-colors" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-400 cursor-pointer transition-all active:scale-95 duration-100">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary-container rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-cyan-400 cursor-pointer transition-all active:scale-95 duration-100">settings</span>
+</div>
+</header>
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-20 hover:w-64 transition-all duration-300 z-[60] bg-slate-900 border-r border-slate-800/50 flex flex-col h-full py-20 group">
+<div class="flex flex-col gap-4 px-4 h-full justify-between">
+<div class="flex flex-col gap-2">
+<!-- Dashboard (Inactive) -->
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Overview</span>
+</div>
+<!-- Live Map (Active) -->
+<div class="flex items-center gap-4 p-3 rounded-xl bg-cyan-500/10 text-cyan-400 border-r-4 border-cyan-400 cursor-pointer transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Live Map</span>
+</div>
+<!-- Assets -->
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Assets</span>
+</div>
+<!-- Alerts -->
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Alerts</span>
+</div>
+<!-- System -->
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">terminal</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Health</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 border-t border-slate-800/50 pt-4">
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">help</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Support</span>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-xl text-slate-500 items-center justify-center hover:bg-slate-800 hover:text-cyan-200 cursor-pointer transition-all">
+<span class="material-symbols-outlined">history</span>
+<span class="font-['Space_Grotesk'] font-medium antialiased hidden group-hover:block whitespace-nowrap">Audit Log</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-20 mt-16 h-[calc(100vh-64px)] w-[calc(100%-80px)] relative bg-surface-container-lowest tech-grid overflow-hidden">
+<!-- Map Interface -->
+<div class="absolute inset-0 z-0">
+<img alt="Industrial Map" class="w-full h-full object-cover opacity-40 mix-blend-screen" data-alt="high-resolution architectural blueprint floor plan of a massive industrial manufacturing facility with glowing blue infrastructure lines on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmvst5nxNVFzBLoVN9LEfMfvxlme4r-n0K8SpitWIebnDzobT4xBymn8zFfv-imobcTsHhHweNSlEwGDuLUDm0K_dSoKSnWVf7N06AQgLIo9l6ttccJJs1Q4KpX13ijhbe99UCCQfM0BwrlZF-PC6h49tpQL3OoA8yIzVutSRG7ZocTBnLEt529_TFGYA8Jur9sPsxvO-Qq2_S3CdPh8GzFa6H4_-_K-FMHvb4hvz5DqZWWQCOxVYelPsWHWAMjAkEHVTltM0VKYg"/>
+<!-- Live Markers -->
+<div class="absolute top-[40%] left-[35%] z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-12 h-12 bg-primary/20 rounded-full animate-ping"></div>
+<div class="absolute w-8 h-8 bg-primary/40 rounded-full border border-primary-container"></div>
+<div class="relative bg-primary-container text-on-primary p-1.5 rounded-lg shadow-[0_0_20px_#00f0ff]">
+<span class="material-symbols-outlined text-base">local_shipping</span>
+</div>
+<div class="absolute top-10 whitespace-nowrap bg-surface-container-highest px-2 py-1 rounded text-[10px] font-bold tracking-widest text-primary-container border border-primary/20">
+            Tray Cart 09
+          </div>
+</div>
+</div>
+<!-- Secondary Markers (Generic) -->
+<div class="absolute top-[20%] left-[65%] z-10 opacity-60">
+<div class="bg-secondary-container text-on-secondary p-1 rounded-md">
+<span class="material-symbols-outlined text-sm">local_shipping</span>
+</div>
+</div>
+<div class="absolute top-[70%] left-[20%] z-10 opacity-60">
+<div class="bg-secondary-container text-on-secondary p-1 rounded-md">
+<span class="material-symbols-outlined text-sm">local_shipping</span>
+</div>
+</div>
+</div>
+<!-- Right Asset Detail Drawer -->
+<div class="absolute right-0 top-0 h-full w-[420px] glass-panel border-l border-outline-variant/20 z-20 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col">
+<!-- Drawer Header -->
+<div class="p-6 border-b border-outline-variant/10">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="w-2 h-2 rounded-full bg-primary-container shadow-[0_0_8px_#00f0ff]"></span>
+<span class="text-[10px] font-bold tracking-[0.2em] text-primary-container uppercase">System Active</span>
+</div>
+<h2 class="text-2xl font-headline font-bold text-on-surface tracking-tight">Tray Cart 09</h2>
+<p class="text-on-surface-variant text-sm font-medium">Service cart</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest milled-effect p-3 rounded-xl border border-outline-variant/5">
+<p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Tag ID</p>
+<p class="font-headline text-on-surface">TAG_8829-X</p>
+</div>
+<div class="bg-surface-container-lowest milled-effect p-3 rounded-xl border border-outline-variant/5">
+<p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Confidence</p>
+<p class="font-headline text-primary-container">98% <span class="text-[10px] text-on-surface-variant ml-1">(High)</span></p>
+</div>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+<!-- Location Telemetry -->
+<section>
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">location_on</span>
+            Location Details
+          </h3>
+<div class="space-y-3">
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/5">
+<span class="text-sm text-on-surface-variant">Current Floor</span>
+<span class="text-sm font-bold text-on-surface font-headline">Dining Hall A</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/5">
+<span class="text-sm text-on-surface-variant">Active Zone</span>
+<span class="text-sm font-bold text-on-surface font-headline">Kitchen Pass</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant/5">
+<span class="text-sm text-on-surface-variant">Profile</span>
+<span class="text-sm font-bold text-on-surface font-headline">Service Cart Profile</span>
+</div>
+<div class="flex justify-between items-center py-2">
+<span class="text-sm text-on-surface-variant">Last Signal</span>
+<span class="text-sm font-bold text-primary-container font-headline">2s ago</span>
+</div>
+</div>
+</section>
+<!-- Status Metrics -->
+<section>
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">analytics</span>
+            Operational Metrics
+          </h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<div class="flex items-center justify-between mb-2">
+<span class="material-symbols-outlined text-secondary text-lg">timer</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase">Dwell Time</span>
+</div>
+<p class="text-xl font-headline font-bold text-on-surface">04:22</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10">
+<div class="flex items-center justify-between mb-2">
+<span class="material-symbols-outlined text-primary-container text-lg">battery_horiz_075</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase">Battery</span>
+</div>
+<p class="text-xl font-headline font-bold text-on-surface">72%</p>
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-gradient-to-r from-primary-container to-secondary w-[72%] h-full rounded-full shadow-[0_0_8px_rgba(0,240,255,0.4)]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Technical Log (Asymmetric Layer) -->
+<section class="bg-surface-container-highest/40 p-4 rounded-xl border border-primary/5">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[10px] font-bold uppercase tracking-widest text-primary-container">System Feed</h3>
+<span class="text-[9px] font-mono text-on-surface-variant">UTC 14:02:44</span>
+</div>
+<div class="font-mono text-[11px] space-y-2 opacity-80">
+<div class="flex gap-2 text-primary-container">
+<span class="shrink-0">[OK]</span>
+<span>RF_TAG CONNECTION STABLE (RSSI: -64dBm)</span>
+</div>
+<div class="flex gap-2 text-on-surface">
+<span class="shrink-0">[INF]</span>
+<span>TRANSITIONED FROM PREP LINE TO KITCHEN PASS</span>
+</div>
+<div class="flex gap-2 text-on-surface">
+<span class="shrink-0">[INF]</span>
+<span>ENTITY MAPPED TO SERVICE_CART_PROFILE</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Action Footer -->
+<div class="p-6 bg-surface-container-low border-t border-outline-variant/10">
+<div class="grid grid-cols-1 gap-3">
+<button class="w-full bg-primary-container text-on-primary font-headline font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_15px_rgba(0,240,255,0.2)]">
+<span class="material-symbols-outlined text-lg">route</span>
+            VIEW TRAJECTORY
+          </button>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-surface-container-highest text-on-surface border border-outline-variant/20 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-surface-bright transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">my_location</span>
+              CENTER
+            </button>
+<button class="bg-surface-container-highest text-on-surface border border-outline-variant/20 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-surface-bright transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">history_toggle_off</span>
+              ALERTS
+            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- HUD Elements Overlay -->
+<div class="absolute bottom-6 left-6 z-20 flex gap-4">
+<div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-slate-700/50 flex items-center gap-4">
+<div class="w-10 h-10 rounded-full border-2 border-cyan-400 flex items-center justify-center text-cyan-400">
+<span class="material-symbols-outlined">sensors</span>
+</div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Environment Stability</p>
+<p class="text-lg font-headline font-bold text-white">OPTIMAL</p>
+</div>
+</div>
+<div class="bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-slate-700/50 flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-slate-800 bg-slate-700 flex items-center justify-center text-[10px] font-bold">OP</div>
+<div class="w-8 h-8 rounded-full border-2 border-slate-800 bg-slate-700 flex items-center justify-center text-[10px] font-bold">SY</div>
+</div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Active Staff</p>
+<p class="text-lg font-headline font-bold text-white">04 Staff</p>
+</div>
+</div>
+</div>
+<!-- Zoom Controls -->
+<div class="absolute bottom-6 right-[444px] z-20 flex flex-col gap-2">
+<button class="bg-slate-900/80 backdrop-blur-md w-10 h-10 rounded-lg border border-slate-700/50 flex items-center justify-center text-white hover:text-cyan-400">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="bg-slate-900/80 backdrop-blur-md w-10 h-10 rounded-lg border border-slate-700/50 flex items-center justify-center text-white hover:text-cyan-400">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="bg-slate-900/80 backdrop-blur-md w-10 h-10 rounded-lg border border-slate-700/50 flex items-center justify-center text-white hover:text-cyan-400">
+<span class="material-symbols-outlined">layers</span>
+</button>
+</div>
+</main>
+</body></html>

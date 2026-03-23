@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Live Map | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0e131e;
+            color: #dee2f2;
+            overflow: hidden;
+        }
+        .font-headline { font-family: 'Space Grotesk', sans-serif; }
+        .glass-panel {
+            background: rgba(27, 31, 43, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .scanline {
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 240, 255, 0.02) 50%);
+            background-size: 100% 4px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-[#1b1f2b] dark:bg-slate-900 shadow-[0_0_15px_rgba(0,219,233,0.08)] border-b border-[#3b494b]/20 z-[60] fixed top-0 w-full px-6 h-16 flex justify-between items-center">
+<div class="flex items-center gap-8">
+<span class="font-['Space_Grotesk'] font-bold text-[#00f0ff] tracking-widest text-lg">RTLS Analytics Platform</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="font-['Space_Grotesk'] tracking-tight text-sm uppercase text-[#dee2f2]/60 hover:bg-[#303541] hover:text-[#00f0ff] transition-colors px-2 py-1" href="#">Kitchen Level</a>
+<a class="font-['Space_Grotesk'] tracking-tight text-sm uppercase text-[#00f0ff] border-b-2 border-[#00f0ff] pb-1" href="#">Dining Hall A</a>
+<a class="font-['Space_Grotesk'] tracking-tight text-sm uppercase text-[#dee2f2]/60 hover:bg-[#303541] hover:text-[#00f0ff] transition-colors px-2 py-1" href="#">Service Floor</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary-container/10 border border-primary-container/30 text-primary-container px-4 py-1.5 rounded-xl font-headline text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+                Live Connection Stable
+            </button>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container p-2">notifications_active</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container p-2">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary-container p-2">account_circle</span>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Rail) -->
+<aside class="fixed left-0 top-0 h-full w-20 bg-[#0e131e] dark:bg-slate-950 border-r border-[#3b494b]/15 z-50 flex flex-col items-center py-4 pt-20">
+<div class="flex flex-col items-center gap-2 w-full">
+<!-- Overview -->
+<a class="text-[#dee2f2]/40 w-full flex flex-col items-center py-3 hover:bg-[#1b1f2b] hover:text-[#dbfcff] transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-[0.05em] mt-1">Overview</span>
+</a>
+<!-- Live Map (ACTIVE) -->
+<a class="bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff] w-full flex flex-col items-center py-3 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="map" style="font-variation-settings: 'FILL' 1;">map</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-[0.05em] mt-1">Live Map</span>
+</a>
+<!-- Analytics -->
+<a class="text-[#dee2f2]/40 w-full flex flex-col items-center py-3 hover:bg-[#1b1f2b] hover:text-[#dbfcff] transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-[0.05em] mt-1">Analytics</span>
+</a>
+<!-- Alerts -->
+<a class="text-[#dee2f2]/40 w-full flex flex-col items-center py-3 hover:bg-[#1b1f2b] hover:text-[#dbfcff] transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-[0.05em] mt-1">Alerts</span>
+</a>
+</div>
+<div class="mt-auto flex flex-col items-center gap-2 w-full border-t border-outline-variant/10 pt-4">
+<a class="text-[#dee2f2]/40 w-full flex flex-col items-center py-3 hover:bg-[#1b1f2b] hover:text-[#dbfcff]" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-['Space_Grotesk'] text-[11px] font-bold uppercase tracking-[0.05em] mt-1">Support</span>
+</a>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center overflow-hidden mb-4">
+<img alt="User" class="w-full h-full object-cover" data-alt="professional portrait of a technical system operator in a dark blue uniform with soft directional lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeFFOwBy8q5vTdi_JzOenSnbjH7kNqnWxMauI6ymmkPWshiKQ0RmkrTFLvXRqShQvxBlwDkpuAwoO_SSpalmkfnYGf9Le4hE262cvj0ACV9GuXfqrkwJdM-IW0rJ2QXkg3bdQikx7aWXHyb_lwZGwSUmMzLwvBq6m-TIHbkUKYUog8ws3Eyj6mOUr5Vw3TPqwyTX3AhlDGDfHE50AnxSkAUgBE2BGY1HvHoLPILKIqWeq0_5rmqTE3OsCB8gu8qiMPMr81yinGQsc"/>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-20 mt-16 flex-1 flex flex-col overflow-hidden">
+<!-- Content Area Header (Command Strip) -->
+<div class="h-14 bg-surface-container border-b border-outline-variant/20 flex items-center px-6 gap-6 z-40">
+<div class="relative flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm" data-icon="search">search</span>
+<input class="w-full bg-surface-container-lowest border-none border-b-2 border-outline-variant focus:border-primary-container text-sm pl-10 h-9 font-body" placeholder="Search asset, table, zone, or tag ID..." type="text"/>
+</div>
+<div class="flex items-center gap-4 border-l border-outline-variant/20 pl-6 h-8">
+<select class="bg-surface-container-low border-none text-xs font-headline uppercase tracking-wider text-primary focus:ring-0 cursor-pointer">
+<option>Floor 01: Dining Hall A</option>
+<option>Floor 02: Kitchen Level</option>
+<option>Floor 03: Service Floor</option>
+</select>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-primary-container text-on-primary text-[10px] font-bold uppercase rounded-sm">Staff</button>
+<button class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase rounded-sm hover:bg-surface-variant">Equipment</button>
+<button class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase rounded-sm hover:bg-surface-variant">Tags</button>
+</div>
+</div>
+<div class="ml-auto flex items-center gap-4">
+<div class="flex items-center bg-surface-container-lowest rounded-full p-0.5 border border-outline-variant/20">
+<button class="px-4 py-1 rounded-full text-[10px] font-bold uppercase bg-primary-container text-on-primary">Live</button>
+<button class="px-4 py-1 rounded-full text-[10px] font-bold uppercase text-on-surface-variant">History</button>
+</div>
+</div>
+</div>
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Panel (Filters & Alerts) -->
+<aside class="w-64 bg-surface-container-low border-r border-outline-variant/20 flex flex-col overflow-y-auto">
+<div class="p-4 space-y-6">
+<div>
+<h3 class="font-headline text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 border-b border-outline-variant/10 pb-1">System Overlays</h3>
+<div class="space-y-2">
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-xs font-medium text-on-surface group-hover:text-primary transition-colors">Staff Locations</span>
+<input checked="" class="rounded-sm bg-surface-container-highest border-outline-variant text-primary-container focus:ring-primary-container/20" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-xs font-medium text-on-surface group-hover:text-primary transition-colors">Zone Health</span>
+<input class="rounded-sm bg-surface-container-highest border-outline-variant text-primary-container focus:ring-primary-container/20" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between group cursor-pointer">
+<span class="text-xs font-medium text-on-surface group-hover:text-primary transition-colors">Signal Coverage</span>
+<input class="rounded-sm bg-surface-container-highest border-outline-variant text-primary-container focus:ring-primary-container/20" type="checkbox"/>
+</label>
+</div>
+</div>
+<div>
+<h3 class="font-headline text-[10px] font-bold text-error uppercase tracking-widest mb-3 border-b border-error/10 pb-1">Active Alerts (3)</h3>
+<div class="space-y-2">
+<div class="p-2 bg-error/5 border-l-2 border-error rounded-r-sm">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-error uppercase">Restricted Access</span>
+<span class="text-[9px] text-on-surface-variant">02m ago</span>
+</div>
+<p class="text-[11px] text-on-surface mt-1">Tray Cart 09 entered Restricted Storage</p>
+</div>
+<div class="p-2 bg-surface-container-highest border-l-2 border-amber-500/50 rounded-r-sm">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-amber-500 uppercase">Low Battery</span>
+<span class="text-[9px] text-on-surface-variant">15m ago</span>
+</div>
+<p class="text-[11px] text-on-surface mt-1">Gateway G-114 Power Crit</p>
+</div>
+</div>
+</div>
+<div>
+<h3 class="font-headline text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3 border-b border-outline-variant/10 pb-1">Asset Types</h3>
+<div class="grid grid-cols-2 gap-2">
+<div class="p-2 bg-surface-container-lowest border border-outline-variant/20 rounded flex flex-col items-center">
+<span class="material-symbols-outlined text-primary-container mb-1" data-icon="local_shipping">local_shipping</span>
+<span class="text-[9px] uppercase font-bold text-on-surface-variant">Carts</span>
+</div>
+<div class="p-2 bg-surface-container-lowest border border-outline-variant/20 rounded flex flex-col items-center">
+<span class="material-symbols-outlined text-primary-container mb-1" data-icon="inventory">inventory</span>
+<span class="text-[9px] uppercase font-bold text-on-surface-variant">Pallet</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Map Viewport -->
+<div class="flex-1 relative bg-surface-container-lowest overflow-hidden">
+<!-- Map Background (Simulation) -->
+<div class="absolute inset-0 opacity-40 scanline">
+<img class="w-full h-full object-cover" data-alt="Blueprint style floor plan layout of a large industrial warehouse with vector grid lines and blue architectural schematics" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKagHDPsKmgii0os6z5F6z-Q6-JT26S3pxJlWSVEHXGhi4Rpk07MZ707ctdMGEs3wj46oz091Gkw3UBDKniUGylXfE_YSU8HnHcb_nFM31vOb6TJG3NKepeY2Jlx4LS-uCGXxuo2jNUyUbh-jtMT_RIYQiPKR9gbFId2j8tLg4sMzv2viw9Q8w6MK_7sVHn2wXAPgFUgIpYLyQ-a-FK_cWZTskWC0VzDD20EBmpwfR39IUnNw6NEdR_bzqIQWgpikbNfU6mO1Ke3M"/>
+</div>
+<!-- Zone Outlines -->
+<svg class="absolute inset-0 w-full h-full" viewbox="0 0 1000 1000">
+<rect fill="rgba(0,240,255,0.05)" height="200" stroke="rgba(0,240,255,0.2)" stroke-width="2" width="300" x="100" y="100"></rect>
+<text fill="#00f0ff" font-family="Space Grotesk" font-size="12" font-weight="bold" opacity="0.6" x="110" y="125">KITCHEN PASS</text>
+<rect class="animate-pulse" fill="rgba(255,180,171,0.08)" height="400" stroke="#ffb4ab" stroke-width="2" width="400" x="500" y="100"></rect>
+<text fill="#ffb4ab" font-family="Space Grotesk" font-size="12" font-weight="bold" x="510" y="125">RESTRICTED STORAGE</text>
+<rect fill="rgba(0,240,255,0.03)" height="400" stroke="rgba(0,240,255,0.1)" stroke-width="2" width="300" x="100" y="400"></rect>
+<text fill="#00f0ff" font-family="Space Grotesk" font-size="12" font-weight="bold" opacity="0.4" x="110" y="425">DINING WEST</text>
+</svg>
+<!-- Asset Markers -->
+<!-- High Confidence -->
+<div class="absolute top-[250px] left-[200px] flex flex-col items-center group cursor-pointer">
+<div class="w-3 h-3 bg-primary-container rounded-full border-2 border-on-primary shadow-[0_0_8px_rgba(0,240,255,0.8)] z-10"></div>
+<div class="hidden group-hover:block absolute top-4 bg-surface-container border border-primary-container p-2 rounded shadow-2xl min-w-[120px] z-20">
+<p class="text-[10px] font-bold text-primary-container">ID: OP-4421</p>
+<p class="text-[9px] text-on-surface">Staff: Sarah Jenkins</p>
+<p class="text-[9px] text-on-surface">Status: Stable</p>
+</div>
+</div>
+<!-- Medium Confidence -->
+<div class="absolute top-[600px] left-[250px] flex items-center justify-center">
+<div class="w-24 h-24 bg-primary-container/10 border border-primary-container/20 rounded-full animate-pulse"></div>
+<div class="absolute w-2 h-2 bg-primary-container/60 rounded-full"></div>
+<span class="absolute -top-6 text-[9px] font-bold text-primary-container/70 font-headline">Tray Cart 09 (72%)</span>
+</div>
+<!-- Low Confidence Wash -->
+<div class="absolute top-[450px] left-[650px] flex items-center justify-center">
+<div class="w-48 h-48 bg-primary-container/5 blur-xl rounded-full"></div>
+<span class="text-[9px] font-headline font-bold text-primary-container/40">Service Tag Uncertain (34%)</span>
+</div>
+<!-- Alert Marker -->
+<div class="absolute top-[300px] left-[700px] flex flex-col items-center group">
+<div class="w-4 h-4 bg-error rounded-full border-2 border-on-error animate-ping absolute"></div>
+<div class="w-4 h-4 bg-error rounded-full border-2 border-on-error z-10"></div>
+<div class="absolute top-6 bg-error/90 text-on-error p-1 px-2 rounded font-headline font-bold text-[10px]">VIOLATION: TRAY CART 09</div>
+</div>
+<!-- Map Legend & Stats Overlay (Right) -->
+<div class="absolute right-6 top-6 w-56 flex flex-col gap-4">
+<div class="glass-panel p-4 rounded-xl border border-outline-variant/30 shadow-2xl">
+<h4 class="font-headline text-[10px] font-bold text-primary tracking-widest uppercase mb-4">Site Analytics</h4>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between items-end mb-1">
+<span class="text-[9px] uppercase font-bold text-on-surface-variant">Total Assets</span>
+<span class="text-xl font-headline font-bold text-primary-container">142</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full w-[85%]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="text-center p-2 bg-surface-container-highest/40 rounded border border-outline-variant/10">
+<p class="text-[18px] font-headline font-bold text-error">03</p>
+<p class="text-[8px] uppercase text-on-surface-variant">Alerts</p>
+</div>
+<div class="text-center p-2 bg-surface-container-highest/40 rounded border border-outline-variant/10">
+<p class="text-[18px] font-headline font-bold text-secondary">98%</p>
+<p class="text-[8px] uppercase text-on-surface-variant">Health</p>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-panel p-4 rounded-xl border border-outline-variant/30">
+<h4 class="font-headline text-[10px] font-bold text-on-surface-variant tracking-widest uppercase mb-3">Map Legend</h4>
+<div class="space-y-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-primary-container rounded-full"></div>
+<span class="text-[10px] text-on-surface-variant">High Precision</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-primary-container/20 border border-primary-container/40 rounded-full"></div>
+<span class="text-[10px] text-on-surface-variant">Zone Confidence</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-error rounded-full"></div>
+<span class="text-[10px] text-on-surface-variant">Restricted Zone</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Activity Timeline -->
+<div class="absolute bottom-6 left-6 right-6 h-32 glass-panel border border-outline-variant/30 rounded-xl overflow-hidden flex flex-col">
+<div class="px-4 py-2 border-b border-outline-variant/20 flex items-center justify-between">
+<span class="font-headline text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Recent Activity Timeline</span>
+<span class="text-[9px] text-primary underline cursor-pointer">View Audit Log</span>
+</div>
+<div class="flex-1 p-3 overflow-x-auto flex gap-4 items-center">
+<!-- Critical Alert -->
+<div class="min-w-[200px] h-full bg-error/10 border border-error/20 rounded p-2 flex flex-col justify-center">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-error" data-icon="report">report</span>
+<span class="text-[10px] font-bold text-error uppercase">Critical Entry</span>
+</div>
+<p class="text-[11px] text-on-surface">Tray Cart 09 moved into Restricted Storage</p>
+<p class="text-[9px] text-on-surface-variant mt-1">Timestamp: 14:22:04</p>
+</div>
+<!-- Event 1 -->
+<div class="min-w-[180px] h-full bg-surface-container-highest/40 border border-outline-variant/10 rounded p-2 flex flex-col justify-center">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="sync">sync</span>
+<span class="text-[10px] font-bold text-on-surface uppercase">Tray Cart 09 Update</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Position confirmed at Kitchen Pass</p>
+<p class="text-[9px] text-on-surface-variant/60 mt-1">Timestamp: 14:21:44</p>
+</div>
+<!-- Event 2 -->
+<div class="min-w-[180px] h-full bg-surface-container-highest/40 border border-outline-variant/10 rounded p-2 flex flex-col justify-center">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary-container text-sm" data-icon="person">person</span>
+<span class="text-[10px] font-bold text-on-surface uppercase">Staff Login</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Waiter Tag 1102 active in Dining West</p>
+<p class="text-[9px] text-on-surface-variant/60 mt-1">Timestamp: 14:21:12</p>
+</div>
+<!-- Event 3 -->
+<div class="min-w-[180px] h-full bg-surface-container-highest/40 border border-outline-variant/10 rounded p-2 flex flex-col justify-center">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="location_on">location_on</span>
+<span class="text-[10px] font-bold text-on-surface uppercase">Gateway Check</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">G-115 Signal Optimization</p>
+<p class="text-[9px] text-on-surface-variant/60 mt-1">Timestamp: 14:20:55</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Tooltip (Not visible but required logic) -->
+<!-- Suppression Logic: FAB suppressed for details/specific map context to prioritize map canvas interaction -->
+</body></html>

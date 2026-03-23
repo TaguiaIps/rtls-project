@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Operations Overview | RTLS Analytics Platform</title>
+<script src="../_shared/prototype-tailwind-config.js"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="../_shared/prototype-base.css" rel="stylesheet"/>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .glass-panel { background: rgba(27, 31, 43, 0.6); backdrop-filter: blur(24px); }
+    .industrial-gradient { background: linear-gradient(135deg, #dbfcff 0%, #00f0ff 100%); }
+    .scanline { background: linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 50%, rgba(0, 0, 0, 0) 50%); background-size: 100% 4px; }
+    .glow-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.2); }
+  </style>
+</head>
+<body class="bg-surface text-on-surface select-none">
+<!-- Side Navigation Rail -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-[#1b1f2b] dark:bg-slate-900 border-r border-[#3b494b]/15 w-64">
+<div class="p-6 flex flex-col gap-1">
+<span class="text-[#00f0ff] font-black font-headline tracking-tighter text-xl">RTLS Analytics Platform</span>
+<span class="font-headline uppercase tracking-[0.05em] text-[10px] font-bold text-slate-400">Restaurant Ops Cluster</span>
+</div>
+<div class="mt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 bg-[#00f0ff]/10 text-[#00f0ff] border-r-4 border-[#00f0ff] px-4 py-3 ml-2 rounded-l-md font-headline uppercase tracking-[0.05em] text-[10px] font-bold transition-all duration-150 active:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-6 py-3 hover:text-white hover:bg-[#303541]/50 font-headline uppercase tracking-[0.05em] text-[10px] font-bold transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span>Live Map</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-6 py-3 hover:text-white hover:bg-[#303541]/50 font-headline uppercase tracking-[0.05em] text-[10px] font-bold transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Assets</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-6 py-3 hover:text-white hover:bg-[#303541]/50 font-headline uppercase tracking-[0.05em] text-[10px] font-bold transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="polyline">polyline</span>
+<span>Alerts</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-6 py-3 hover:text-white hover:bg-[#303541]/50 font-headline uppercase tracking-[0.05em] text-[10px] font-bold transition-all duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span>Audit Log</span>
+</a>
+</div>
+<div class="px-6 mt-8">
+<button class="w-full py-3 bg-[#00f0ff] text-[#00363a] font-headline font-black text-xs tracking-widest rounded-xl industrial-gradient active:scale-95 transition-transform">
+        OPEN LIVE MAP
+      </button>
+</div>
+<div class="mt-auto border-t border-outline-variant/10 p-4">
+<div class="flex items-center gap-3 px-2 mb-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-full flex items-center justify-center overflow-hidden border border-primary/20">
+<img alt="Unit 01 Operator" data-alt="Cybernetic unit operator avatar icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPvNv1r6EBL4OaGDlriZlNtS9SIyCAxY5q3fDG-GCaeoOdFv3AvYGYDxVLoJEbRoUn_5qowpU1hxym_P-zGvBz7EeOWQ-lq4wrjWyBV6OWbfqawax7ONxISndNNcrsTFg_cbaGMSXKfmiWkdFA1XG3G9uhIcsHPU1zaCqTZcpLsDicVXp7NznT7GDOIk3NGfktq8JY3LK3FVi541P3qXNkOMQuQ3KGLIAsPY2y9DPlTZF0fu-A0asJgaBYS3memWw7hMsNvBOVfX0"/>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold font-headline text-on-surface uppercase">Unit 01</span>
+<span class="text-[8px] text-slate-500 uppercase">System Administrator</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 text-slate-400 px-2 py-2 hover:text-white font-headline uppercase tracking-[0.05em] text-[10px] font-bold" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help_center">help_center</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-2 py-2 hover:text-white font-headline uppercase tracking-[0.05em] text-[10px] font-bold" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Viewport -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full px-8 h-16 sticky top-0 z-50 bg-[#0e131e] dark:bg-slate-950">
+<div class="flex items-center gap-6">
+<span class="text-lg font-bold tracking-tighter text-[#00f0ff] font-headline uppercase">OPERATIONS OVERVIEW</span>
+<div class="h-4 w-px bg-outline-variant/30"></div>
+<nav class="flex gap-6 items-center">
+<a class="text-[#00f0ff] font-bold border-b-2 border-[#00f0ff] pb-1 font-headline uppercase tracking-wider text-xs" href="#">DINING HALL A</a>
+<a class="text-slate-400 hover:text-slate-200 font-headline uppercase tracking-wider text-xs transition-colors duration-200" href="#">LUNCH SERVICE · LIVE</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/15">
+<span class="material-symbols-outlined text-sm text-[#00f0ff]" data-icon="notifications_active">notifications_active</span>
+<span class="text-[10px] font-headline font-bold text-primary tracking-widest">LIVE_FEED</span>
+</div>
+<button class="material-symbols-outlined text-slate-400 hover:text-[#00f0ff] transition-colors" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-full bg-surface-container border border-outline-variant/20 flex items-center justify-center">
+<img alt="User Terminal Profile" class="w-6 h-6" data-alt="Identicon profile thumbnail for system user" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsleTpl15-d-lIJEGTr5kivjcpZ1WJSh_1vdYz3Fs5kt41vQXLnpKDiJxW6vy0l0tswgzGxPfeAUVkUnhnTeFGvefS9DXxRAQGYZcDWHGwbr8OXz6wjbt58KVUbaXrxGdVzTJYuEh-4a5YXiuMsXZICuriVWo-J22w8SU_LUPreb3p4m9W7t7u-pXvHFKL6_5-Nk21ds5vY2cCG6an4onYOosOeyJ55AaVF3ya_7VF0ueaYQWVKyFodOmj3GUw7hkG5ifSZLsqGGU"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 space-y-8 max-w-[1600px] mx-auto w-full">
+<!-- Page Header Controls -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#00f0ff] animate-pulse"></span>
+<span class="text-xs font-headline font-bold text-primary-fixed-dim tracking-[0.2em]">OPERATIONS OVERVIEW</span>
+</div>
+<h1 class="text-4xl font-headline font-black tracking-tight text-on-surface">Operations Overview</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="px-4 py-2 bg-surface-container-low border border-outline-variant/20 flex flex-col items-end">
+<span class="text-[10px] font-headline text-on-surface-variant tracking-widest font-bold">STATUS</span>
+<span class="text-sm font-headline font-bold text-[#00f0ff] uppercase">LIVE CONNECTION STABLE</span>
+</div>
+<button class="p-3 bg-surface-container-highest border border-outline-variant/20 hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="sync">sync</span>
+</button>
+</div>
+</section>
+<!-- Top KPI Row -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- KPI 1 -->
+<div class="bg-surface-container p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-2 opacity-10">
+<span class="material-symbols-outlined text-6xl" data-icon="sensors">sensors</span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-headline font-bold tracking-[0.1em] text-on-surface-variant">ACTIVE ASSETS</span>
+<span class="text-[10px] font-headline font-bold text-primary-fixed-dim bg-primary-fixed-dim/10 px-2 py-0.5">+12% vs avg</span>
+</div>
+<div class="text-5xl font-headline font-black text-on-surface">442</div>
+<div class="mt-4 h-1 bg-surface-container-highest w-full rounded-full">
+<div class="h-full bg-primary-container w-3/4 shadow-[0_0_8px_rgba(0,240,255,0.4)]"></div>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container p-5 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-headline font-bold tracking-[0.1em] text-on-surface-variant">TABLES AT RISK</span>
+<span class="text-[10px] font-headline font-bold text-error bg-error/10 px-2 py-0.5">CRITICAL</span>
+</div>
+<div class="text-5xl font-headline font-black text-error">05</div>
+<div class="mt-4 flex gap-1">
+<div class="h-1 bg-error w-1/5"></div>
+<div class="h-1 bg-error w-1/5"></div>
+<div class="h-1 bg-error w-1/5"></div>
+<div class="h-1 bg-surface-container-highest w-1/5"></div>
+<div class="h-1 bg-surface-container-highest w-1/5"></div>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container p-5 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-headline font-bold tracking-[0.1em] text-on-surface-variant">CRITICAL ALERTS</span>
+<span class="text-[10px] font-headline font-bold text-tertiary-fixed-dim bg-tertiary-fixed-dim/10 px-2 py-0.5 uppercase">High Priority</span>
+</div>
+<div class="text-5xl font-headline font-black text-on-surface">02</div>
+<div class="mt-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-tertiary-fixed-dim" data-icon="warning">warning</span>
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Action required in Cold Storage</span>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-surface-container p-5 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-headline font-bold tracking-[0.1em] text-on-surface-variant">GATEWAYS OFFLINE</span>
+<span class="text-[10px] font-headline font-bold text-outline bg-outline/10 px-2 py-0.5">WARNING</span>
+</div>
+<div class="text-5xl font-headline font-black text-on-surface opacity-50">01</div>
+<div class="mt-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-outline" data-icon="wifi_off">wifi_off</span>
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Node BETA-04 Unreachable</span>
+</div>
+</div>
+</section>
+<!-- Main Split Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6">
+<!-- Left: Live Map Preview -->
+<div class="bg-surface-container border border-outline-variant/10 rounded-xl overflow-hidden relative min-h-[500px] flex flex-col">
+<div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-low">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-fixed-dim" data-icon="map">map</span>
+<span class="font-headline font-bold text-xs uppercase tracking-widest text-on-surface">LIVE TELEMETRY MAP</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] font-headline text-on-surface-variant uppercase">Floor 1 / Main Kitchen</span>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+<span class="text-[9px] font-headline font-bold">ASSETS (442)</span>
+</div>
+</div>
+</div>
+<div class="flex-1 relative bg-[#090e19] overflow-hidden group">
+<!-- Simulated Technical Map Background -->
+<div class="absolute inset-0 opacity-20 scanline pointer-events-none"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<!-- Map Visualization -->
+<div class="w-4/5 h-4/5 border border-primary/20 relative">
+<!-- Kitchen Zones -->
+<div class="absolute top-0 left-0 w-1/3 h-1/2 border border-primary/10 bg-primary/5 flex items-center justify-center">
+<span class="text-[8px] font-headline text-on-surface-variant opacity-40 uppercase">PREP_STATION</span>
+</div>
+<!-- Heat Zone Red -->
+<div class="absolute top-1/2 left-1/4 w-40 h-40 bg-error/20 rounded-full blur-3xl animate-pulse"></div>
+<div class="absolute top-1/2 left-1/4 w-32 h-32 border-2 border-error border-dashed rounded-lg flex flex-col items-center justify-center p-2 bg-error/10">
+<span class="text-[10px] font-headline font-black text-error text-center uppercase leading-tight">ZONE 4: CONGESTION</span>
+<span class="text-[8px] font-headline text-error/80 uppercase mt-1">SLA BREACH DETECTED</span>
+</div>
+<!-- Asset Markers (Dots) -->
+<div class="absolute top-10 left-20 w-1 h-1 bg-primary shadow-[0_0_5px_#00f0ff] rounded-full"></div>
+<div class="absolute top-12 left-24 w-1 h-1 bg-primary shadow-[0_0_5px_#00f0ff] rounded-full"></div>
+<div class="absolute top-15 left-18 w-1 h-1 bg-primary shadow-[0_0_5px_#00f0ff] rounded-full"></div>
+<div class="absolute bottom-20 right-32 w-1.5 h-1.5 bg-primary shadow-[0_0_8px_#00f0ff] rounded-full"></div>
+<div class="absolute bottom-10 right-10 w-1 h-1 bg-primary shadow-[0_0_5px_#00f0ff] rounded-full"></div>
+<img alt="Floor Map Plan" class="w-full h-full object-cover opacity-5 mix-blend-overlay" data-alt="Technical blueprint of a kitchen floor plan" data-location="Chicago" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_aqI6gw2V1YWep6VnJnCfq2svZB5GiQXUBp055c5pVtLO1cRiTc8BGE5ZrlXbVfJgPc5GoewtoG751TkappKU0-o5tCNqb9_Ms5cEiIoTvaDvb3oj0h6OA7svHk8XS2GdsnNY3cRkp_CLVv7J3NpwhGvt1HOmEir55iJLJg4dBR8qTpoxU2NXqun4PZU9M44bu8TLhePnKTaQaROPbWchPnCNOVP3O2ExYB8BFg7Ud91Tg2pYj0rseoK7y7o-oQ3XtUza_AtE6v8"/>
+</div>
+</div>
+<!-- Map HUD -->
+<div class="absolute bottom-6 left-6 flex gap-2">
+<button class="px-6 py-2 bg-[#00f0ff] text-[#00363a] font-headline font-black text-xs tracking-widest rounded-xl industrial-gradient hover:scale-105 active:scale-95 transition-all shadow-lg">
+                OPEN LIVE MAP
+              </button>
+</div>
+<div class="absolute bottom-6 right-6 flex flex-col gap-2">
+<div class="glass-panel p-3 border border-outline-variant/30 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="zoom_in">zoom_in</span>
+<div class="w-24 h-1 bg-surface-container rounded-full relative">
+<div class="absolute top-0 left-0 h-full w-2/3 bg-primary"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Side: Priority Queue & Infrastructure -->
+<div class="space-y-6">
+<!-- Priority Queue -->
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<span class="font-headline font-bold text-[10px] tracking-[0.2em] text-on-surface-variant uppercase">Priority Queue</span>
+<span class="text-[9px] font-headline text-primary opacity-60">AUTO_REFRESH: 5s</span>
+</div>
+<!-- Alert 1: Critical -->
+<div class="bg-surface-container-high border-l-4 border-error p-4 space-y-3 relative">
+<div class="flex justify-between items-start">
+<div class="space-y-0.5">
+<h4 class="text-xs font-headline font-black text-on-surface uppercase">Cold Storage Door Open</h4>
+<div class="flex items-center gap-2">
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Zone: Cold Storage</span>
+</div>
+</div>
+<span class="text-[9px] font-headline font-bold text-error bg-error/10 px-2 py-0.5">4M AGO</span>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-1.5 border border-outline-variant/20 hover:bg-error/10 hover:border-error/50 transition-colors text-[9px] font-headline font-bold uppercase tracking-widest text-error">Acknowledge</button>
+<button class="p-1.5 border border-outline-variant/20 hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-xs text-on-surface-variant" data-icon="location_on">location_on</span>
+</button>
+</div>
+</div>
+<!-- Alert 2: Warning -->
+<div class="bg-surface-container-high border-l-4 border-tertiary-fixed-dim p-4 space-y-2">
+<div class="flex justify-between items-start">
+<div class="space-y-0.5">
+<h4 class="text-xs font-headline font-black text-on-surface uppercase">Table 14: SLA Breach</h4>
+<div class="flex items-center gap-2">
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Zone: Dining West</span>
+</div>
+</div>
+<span class="text-[9px] font-headline font-bold text-tertiary-fixed-dim bg-tertiary-fixed-dim/10 px-2 py-0.5">12M AGO</span>
+</div>
+</div>
+<!-- Alert 3: Info -->
+<div class="bg-surface-container-high border-l-4 border-secondary p-4 space-y-2">
+<div class="flex justify-between items-start">
+<div class="space-y-0.5">
+<h4 class="text-xs font-headline font-black text-on-surface uppercase">Battery Low: Waiter Tag 881</h4>
+<div class="flex items-center gap-2">
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Zone: Prep Station</span>
+</div>
+</div>
+<span class="text-[9px] font-headline font-bold text-secondary bg-secondary/10 px-2 py-0.5">25M AGO</span>
+</div>
+</div>
+</div>
+<!-- Infrastructure Snapshot -->
+<div class="bg-surface-container p-4 border border-outline-variant/10">
+<h4 class="font-headline font-bold text-[10px] tracking-[0.2em] text-on-surface-variant uppercase mb-4">Infrastructure Snapshot</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-sm" data-icon="hub">hub</span>
+<span class="text-[10px] font-headline text-on-surface font-bold">GW-ALPHA-01</span>
+</div>
+<span class="text-[9px] font-headline text-primary-container font-bold uppercase">ACTIVE</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm" data-icon="wifi_off">wifi_off</span>
+<span class="text-[10px] font-headline text-on-surface font-bold">GW-BETA-04</span>
+</div>
+<span class="text-[9px] font-headline text-error font-bold uppercase">OFFLINE (CRITICAL)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-sm" data-icon="priority_high">priority_high</span>
+<span class="text-[10px] font-headline text-on-surface font-bold">GW-GAMMA-09</span>
+</div>
+<span class="text-[9px] font-headline text-tertiary-fixed-dim font-bold uppercase">WARNING</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Row: Trends -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Trend 1 -->
+<div class="bg-surface-container-low p-5 border border-outline-variant/10 rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<span class="text-[10px] font-headline font-bold tracking-widest text-on-surface-variant uppercase">Table SLA Trend</span>
+<span class="material-symbols-outlined text-error text-sm" data-icon="trending_up">trending_up</span>
+</div>
+<div class="flex items-end gap-1 h-12 mb-4">
+<div class="flex-1 bg-surface-container-highest h-[30%]"></div>
+<div class="flex-1 bg-surface-container-highest h-[45%]"></div>
+<div class="flex-1 bg-surface-container-highest h-[35%]"></div>
+<div class="flex-1 bg-surface-container-highest h-[60%]"></div>
+<div class="flex-1 bg-error/40 h-[70%]"></div>
+<div class="flex-1 bg-error h-[85%] shadow-[0_0_10px_rgba(255,180,171,0.3)]"></div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-headline text-on-surface-variant uppercase">Shift: Morning</span>
+<span class="text-xs font-headline font-black text-error">+4 Breach Events</span>
+</div>
+</div>
+<!-- Trend 2 -->
+<div class="bg-surface-container-low p-5 border border-outline-variant/10 rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<span class="text-[10px] font-headline font-bold tracking-widest text-on-surface-variant uppercase">Avg Kitchen Dwell Time</span>
+<span class="material-symbols-outlined text-primary-container text-sm" data-icon="timer">timer</span>
+</div>
+<div class="text-4xl font-headline font-black text-on-surface mb-2">14:22</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-primary-container" data-icon="arrow_downward">arrow_downward</span>
+<span class="text-xs font-headline font-bold text-primary-container">-2% improvement</span>
+</div>
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Target: 15:00</span>
+</div>
+</div>
+<!-- Trend 3 -->
+<div class="bg-surface-container-low p-5 border border-outline-variant/10 rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<span class="text-[10px] font-headline font-bold tracking-widest text-on-surface-variant uppercase">Avg Round-Trip Time</span>
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="route">route</span>
+</div>
+<div class="text-4xl font-headline font-black text-on-surface mb-2">03:45</div>
+<div class="flex justify-between items-center">
+<span class="text-xs font-headline font-bold text-secondary uppercase">Stable Performance</span>
+<span class="text-[9px] font-headline text-on-surface-variant uppercase">Unit: MM:SS</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Contextual FAB (Hidden as per hierarchy rules for this screen type) -->
+<!-- <div class="fixed bottom-8 right-8 z-50">...</div> -->
+</body></html>
