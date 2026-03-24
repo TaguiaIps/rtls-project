@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     mqtt_broker_host: str = "mqtt-broker"
     mqtt_broker_port: int = 1883
     object_storage_endpoint: str = "http://object-storage:9000"
+    object_storage_access_key: str = "minioadmin"
+    object_storage_secret_key: str = "minioadmin"
+    object_storage_bucket: str = "rtls-floor-plans"
+    object_storage_region: str = "us-east-1"
 
 
 @lru_cache

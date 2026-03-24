@@ -8,10 +8,13 @@ version = "0.1.0"
 description = "Bootstrap FastAPI service for the RTLS Analytics Platform."
 requires-python = ">=3.10"
 dependencies = [
+  "boto3>=1.38.0,<2.0.0",
   "email-validator>=2.2.0,<3.0.0",
   "fastapi>=0.115.12,<1.0.0",
+  "pillow>=11.2.1,<12.0.0",
   "PyJWT>=2.10.1,<3.0.0",
   "pydantic-settings>=2.8.1,<3.0.0",
+  "python-multipart>=0.0.20,<1.0.0",
   "redis>=5.2.1,<6.0.0",
   "sqlalchemy>=2.0.39,<3.0.0",
   "passlib>=1.7.4,<2.0.0",
