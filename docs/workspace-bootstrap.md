@@ -26,6 +26,7 @@ The bootstrap workspace uses an `apps/` and `packages/` layout:
 ## 2. Prerequisites
 
 - Python `3.10+`
+- `uv`
 - Node.js `20+`
 - Docker and Docker Compose
 
@@ -45,15 +46,17 @@ The template defines:
 - Redis connection URL
 - MQTT broker host and port
 - object storage endpoint and credentials
+- object storage bucket and region
 - local web and mobile API URLs
 
 Do not commit a populated `.env` file.
 
 ## 4. Install Commands
 
-Install the backend and JavaScript workspace dependencies:
+Create the root virtual environment and install the backend and JavaScript workspace dependencies:
 
 ```bash
+uv venv
 make install
 ```
 
@@ -63,6 +66,14 @@ Useful individual commands:
 make api-install
 make js-install
 make bootstrap-admin EMAIL=admin@example.com PASSWORD=StrongPass123 DISPLAY_NAME="Platform Admin"
+```
+
+Backend dependency management uses `uv` with a repository-root virtual environment at `.venv`.
+The backend sync command is equivalent to:
+
+```bash
+source .venv/bin/activate
+uv sync --project apps/api --extra dev --active
 ```
 
 ## 5. Local Runtime Commands
@@ -107,7 +118,7 @@ make build
 
 These map to:
 
-- Python `ruff`, `pytest`, and `build`
+- Python `ruff`, `pytest`, and `build` through `uv run --project apps/api --active`
 - JavaScript workspace `lint`, `test`, and `build` scripts
 
 ## 7. Expected Local Endpoints
@@ -142,3 +153,21 @@ The local runtime uses the same service inventory intended for the first pilot d
 - one object storage service
 
 This keeps local validation aligned with the deployment strategy without introducing Kubernetes or fine-grained worker splitting yet.
+
+## 10. Spatial Admin Baseline
+
+The current Administrator web workspace now includes the first spatial setup flow:
+
+- create sites and floors
+- upload one raster floor plan per floor
+- confirm scale using two reference points and a measured real-world distance
+- define polygonal `zone`, `table`, `restricted_zone`, and `poi` areas
+
+Current limits are intentional:
+
+- supported floor-plan formats are `PNG` and `JPG`
+- coordinates are stored as normalized image-space points
+- CAD/PDF parsing is deferred to a later change
+- advanced map editing such as snapping, hole editing, and collaborative editing is deferred
+
+See [spatial-admin-workflow.md](/home/hugo/Documents/taguia/rtls_project/docs/spatial-admin-workflow.md) for the step-by-step operator flow.

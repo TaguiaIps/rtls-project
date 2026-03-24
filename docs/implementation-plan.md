@@ -35,6 +35,8 @@ Implement user model, JWT auth, refresh flow, role guards, login shell, and audi
 
 Implement site/floor hierarchy, floor plan upload, real-world scale setup, zone/POI/table model, and drawing/editing APIs and admin UI.
 
+Initial scope should start with raster floor-plan upload and editing workflows. CAD/PDF parsing should be treated as a later extension after the floor, scale, and zone data model is stable.
+
 - Depends on:
   - `bootstrap-implementation-workspace`
   - ideally `implement-identity-rbac-and-audit-foundation`
@@ -208,6 +210,7 @@ Implement async exports, retention policies, rollup tables, and report accelerat
 ## Why This Split Avoids Rework
 
 - Spatial ownership lives in change 3 only. Later changes consume sites/floors/zones instead of redefining them.
+- Floor-plan ingestion should stabilize image upload, scale calibration, and polygon editing before adding CAD/PDF parsing complexity.
 - Gateway and asset ownership live in change 4 only. Positioning, alerts, analytics, and mobile all reuse that registry.
 - Raw telemetry ingestion lives in change 5 only. No later change should parse MQTT payloads again.
 - Derived operational meaning lives in change 8 only. Alerts and analytics both consume the same event layer instead of recomputing dwell, SLA, or round-trip separately.
@@ -263,4 +266,3 @@ After that is approved, create:
 3. `implement-sites-floorplans-and-zone-editor`
 
 Do not create all 15 changes at once unless you intentionally want a large backlog tree. It is more manageable to create the next change only after the current foundation is settled.
-
