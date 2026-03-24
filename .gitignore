@@ -239,6 +239,29 @@ pythontex-files-*/
 # xcolor
 *.xcp
 
+# General development artifacts
+.DS_Store
+.env
+.env.local
+.python-version
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+
+# JavaScript / TypeScript
+node_modules/
+dist/
+.expo/
+
+# Build and runtime data
+*.sqlite3
+tmp/
+data/
+
 # xmpincl
 *.xmpi
 
@@ -474,3 +497,9 @@ venv.bak/
 
 # Poetry
 poetry.lock
+
+# Local AI/tooling workspaces
+.agent/
+.codex/
+.cursor/
+.gemini/

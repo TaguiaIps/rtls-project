@@ -1,0 +1,69 @@
+schema: spec-driven
+
+context: |
+  Project: RTLS Analytics Platform
+  Repository purpose: documentation-first planning for an indoor real-time location and analytics platform.
+
+  Product domain:
+  - Primary target: restaurants and large catering operations.
+  - Secondary applicability: industrial environments, but restaurant/catering terminology is the default.
+  - Core value: real-time location intelligence, table SLA monitoring, dwell time, round-trip analysis, heatmaps, alerts, infrastructure health, and auditability.
+
+  Primary personas:
+  - Alex: Administrator responsible for floor setup, gateways, calibration, health, and security.
+  - Carlos Mendes: Operations Manager responsible for monitoring, triage, and analytics.
+
+  Current project phase:
+  - There is no production implementation baseline yet.
+  - The repository currently contains requirements, system design, UX design, and prototype HTML outputs.
+  - OpenSpec artifacts should not assume an existing working application unless the repo actually contains it.
+
+  Authoritative repository documents:
+  - docs/requirements-document.md: functional and non-functional requirements
+  - docs/system-design.md: target architecture and backend/frontend design direction
+  - docs/ux-design.md: personas, stories, IA, wireframes, visual system, and tokens
+  - openspec/GLOSSARY.md: preferred project terminology for OpenSpec artifacts
+  - VERSIONING.md: Semantic Versioning policy
+  - CHANGE.LOG: changelog source
+
+  Planned architecture and implementation direction:
+  - Backend: FastAPI-based services, JWT auth, WebSockets, MQTT ingestion, Redis, TimescaleDB/PostgreSQL
+  - Frontend web: React SPA
+  - Mobile: cross-platform mobile app for commissioning and asset finding
+  - Infrastructure: Docker and Kubernetes
+  - Messaging: MQTT with TLS, Redis Streams or Kafka for internal stream processing
+
+  Product language and naming conventions:
+  - Use the product name "RTLS Analytics Platform"
+  - Prefer "Operations Overview", "Live Map", "Analytics", "Alerts", "Admin", "Health", and "Audit Log"
+  - Prefer restaurant/catering zone names such as Kitchen, Dining, Service Corridor, Cold Storage, Kitchen Pass
+  - Prefer asset terms such as Waiter Tag, Tray Cart, Gateway, Staff, Equipment, Tag
+  - Avoid industrial/military placeholder terms such as Sentinel, Fleet Command, Rover, Sector Alpha, MHE, tactical, command deck as product naming
+
+  Versioning and commits:
+  - Follow Semantic Versioning as defined in VERSIONING.md
+  - The project is pre-1.0 and should not invent release tags before a code-backed baseline exists
+  - Conventional Commits are the expected commit style
+
+rules:
+  proposal:
+    - Anchor every proposal in the RTLS Analytics Platform domain and state the affected user roles.
+    - Explicitly state scope, motivation, and non-goals.
+    - Do not assume implementation exists when proposing changes; distinguish planned behavior from current repository state.
+    - Call out if the change affects requirements, architecture, UX, prototypes, or future implementation.
+  design:
+    - Align design decisions with docs/requirements-document.md, docs/system-design.md, and docs/ux-design.md unless the change intentionally updates them.
+    - Use restaurant/catering terminology by default.
+    - Be explicit about data flow, state, integrations, and operational constraints.
+    - Call out security, latency, reliability, and observability impacts when relevant.
+    - If tokens, navigation, or terminology change, note whether docs/ux-design.md must be updated.
+  specs:
+    - Write requirements in clear testable language.
+    - Preserve role-aware behavior for Administrator and General User when relevant.
+    - Distinguish web, mobile, backend, and infrastructure effects when they differ.
+    - Prefer additive requirements unless a breaking change is intentional and documented.
+  tasks:
+    - Break work into small ordered tasks with concrete outputs.
+    - Include documentation updates when behavior, terminology, tokens, or architecture change.
+    - Include verification tasks for prototypes, docs consistency, or tests as appropriate.
+    - Avoid implementation tasks that assume files or apps exist when they are not present in the repository.
