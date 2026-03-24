@@ -1,7 +1,8 @@
 import { PRODUCT_NAME } from "@rtls/config";
-import { useEffect, useState, type FormEvent, type PropsWithChildren } from "react";
+import { useState, type FormEvent, type PropsWithChildren } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
+import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
 
 function LoadingScreen() {
@@ -164,59 +165,12 @@ function OperationsHome() {
 }
 
 function AdminHome() {
-  const { fetchWithAuth, user } = useAuth();
-  const [managedRoles, setManagedRoles] = useState<string[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSummary() {
-      const response = await fetchWithAuth("/api/admin/summary");
-      if (!response.ok) {
-        return;
-      }
-
-      const payload = (await response.json()) as { managed_roles: string[] };
-      if (!cancelled) {
-        setManagedRoles(payload.managed_roles);
-      }
-    }
-
-    void loadSummary();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchWithAuth]);
-
   return (
     <ShellLayout
       title="Admin Console"
-      subtitle="Secure setup, role-aware administration, and auditable configuration handling."
+      subtitle="Spatial hierarchy, floor plans, scale confirmation, and operational zone setup."
     >
-      <section className="content-grid">
-        <article className="panel">
-          <p className="eyebrow">Administrator Workspace</p>
-          <h1>System Access Foundation</h1>
-          <p className="panel-copy">
-            Administrator routes stay protected at both the API and web-shell level. This page
-            confirms the role-aware landing behavior defined in the UX specification.
-          </p>
-        </article>
-        <article className="panel panel--compact">
-          <p className="eyebrow">Authorization State</p>
-          <dl className="definition-list">
-            <div>
-              <dt>User</dt>
-              <dd>{user?.email}</dd>
-            </div>
-            <div>
-              <dt>Managed Roles</dt>
-              <dd>{managedRoles.join(", ") || "Loading..."}</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
+      <AdminSpatialWorkspace />
     </ShellLayout>
   );
 }

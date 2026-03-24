@@ -2,6 +2,7 @@ import { API_BASE_URL, ROLE_HOME_ROUTE } from "@rtls/config";
 import type { AuthTokenResponse, AuthenticatedUser, UserRole } from "@rtls/contracts";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -55,6 +56,14 @@ function writeStoredSession(session: SessionState | null) {
   window.localStorage.removeItem(STORAGE_KEY);
 }
 
+function resolveApiUrl(apiBaseUrl: string, input: RequestInfo | URL) {
+  if (typeof input === "string" && input.startsWith("/")) {
+    return `${apiBaseUrl}${input}`;
+  }
+
+  return input;
+}
+
 async function requestRefresh(apiBaseUrl: string, currentSession: SessionState) {
   const response = await fetch(`${apiBaseUrl}/api/auth/refresh`, {
     method: "POST",
@@ -94,34 +103,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<SessionState | null>(() => readStoredSession());
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
 
-  const clearSession = () => {
+  const clearSession = useCallback(() => {
     setSession(null);
     setUser(null);
     setStatus("unauthenticated");
     writeStoredSession(null);
-  };
+  }, []);
 
-  const persistSession = (nextSession: SessionState) => {
+  const persistSession = useCallback((nextSession: SessionState) => {
     setSession(nextSession);
     writeStoredSession(nextSession);
-  };
+  }, []);
 
-  const refreshSession = async (currentSession: SessionState) => {
-    const payload = await requestRefresh(apiBaseUrl, currentSession);
-    const nextSession = {
-      accessToken: payload.access_token,
-      refreshToken: payload.refresh_token
-    };
-    persistSession(nextSession);
-    return nextSession;
-  };
+  const refreshSession = useCallback(
+    async (currentSession: SessionState) => {
+      const payload = await requestRefresh(apiBaseUrl, currentSession);
+      const nextSession = {
+        accessToken: payload.access_token,
+        refreshToken: payload.refresh_token
+      };
+      persistSession(nextSession);
+      return nextSession;
+    },
+    [apiBaseUrl, persistSession]
+  );
 
-  const loadCurrentUser = async (currentSession: SessionState) => {
-    const currentUser = await requestCurrentUser(apiBaseUrl, currentSession);
-    setUser(currentUser);
-    setStatus("authenticated");
-    return currentUser;
-  };
+  const loadCurrentUser = useCallback(
+    async (currentSession: SessionState) => {
+      const currentUser = await requestCurrentUser(apiBaseUrl, currentSession);
+      setUser(currentUser);
+      setStatus("authenticated");
+      return currentUser;
+    },
+    [apiBaseUrl]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -143,14 +158,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       } catch (error) {
         if ((error as Error).message === "SESSION_EXPIRED") {
           try {
-            const payload = await requestRefresh(apiBaseUrl, session);
-            const nextSession = {
-              accessToken: payload.access_token,
-              refreshToken: payload.refresh_token
-            };
-            if (!cancelled) {
-              persistSession(nextSession);
-            }
+            const nextSession = await refreshSession(session);
             const currentUser = await requestCurrentUser(apiBaseUrl, nextSession);
             if (!cancelled) {
               setUser(currentUser);
@@ -175,30 +183,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       cancelled = true;
     };
-  }, [apiBaseUrl, session]);
+  }, [apiBaseUrl, clearSession, refreshSession, session]);
 
-  const login = async (email: string, password: string) => {
-    const response = await fetch(`${apiBaseUrl}/api/auth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const response = await fetch(`${apiBaseUrl}/api/auth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
 
-    if (!response.ok) {
-      throw new Error("Invalid credentials");
-    }
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
 
-    const payload = (await response.json()) as AuthTokenResponse;
-    const nextSession = {
-      accessToken: payload.access_token,
-      refreshToken: payload.refresh_token
-    };
-    persistSession(nextSession);
-    const currentUser = await loadCurrentUser(nextSession);
-    return currentUser.role;
-  };
+      const payload = (await response.json()) as AuthTokenResponse;
+      const nextSession = {
+        accessToken: payload.access_token,
+        refreshToken: payload.refresh_token
+      };
+      persistSession(nextSession);
+      const currentUser = await loadCurrentUser(nextSession);
+      return currentUser.role;
+    },
+    [apiBaseUrl, loadCurrentUser, persistSession]
+  );
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     if (session?.refreshToken) {
       await fetch(`${apiBaseUrl}/api/auth/logout`, {
         method: "POST",
@@ -208,36 +219,39 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     clearSession();
-  };
+  }, [apiBaseUrl, clearSession, session?.refreshToken]);
 
-  const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit) => {
-    if (!session) {
-      throw new Error("Authentication required");
-    }
+  const fetchWithAuth = useCallback(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!session) {
+        throw new Error("Authentication required");
+      }
 
-    const makeRequest = (accessToken: string) =>
-      fetch(resolveApiUrl(input), {
-        ...init,
-        headers: {
-          ...(init?.headers || {}),
-          Authorization: `Bearer ${accessToken}`
-        }
-      });
+      const makeRequest = (accessToken: string) =>
+        fetch(resolveApiUrl(apiBaseUrl, input), {
+          ...init,
+          headers: {
+            ...(init?.headers || {}),
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
 
-    let response = await makeRequest(session.accessToken);
-    if (response.status !== 401) {
-      return response;
-    }
+      let response = await makeRequest(session.accessToken);
+      if (response.status !== 401) {
+        return response;
+      }
 
-    try {
-      const nextSession = await refreshSession(session);
-      response = await makeRequest(nextSession.accessToken);
-      return response;
-    } catch {
-      clearSession();
-      return response;
-    }
-  };
+      try {
+        const nextSession = await refreshSession(session);
+        response = await makeRequest(nextSession.accessToken);
+        return response;
+      } catch {
+        clearSession();
+        return response;
+      }
+    },
+    [apiBaseUrl, clearSession, refreshSession, session]
+  );
 
   const value: AuthContextValue = {
     apiBaseUrl,
@@ -259,10 +273,3 @@ export function useAuth() {
 
   return context;
 }
-  const resolveApiUrl = (input: RequestInfo | URL) => {
-    if (typeof input === "string" && input.startsWith("/")) {
-      return `${apiBaseUrl}${input}`;
-    }
-
-    return input;
-  };
