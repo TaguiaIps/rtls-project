@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install backend dependencies
+        run: python -m pip install -e ./apps/api[dev]
+
+      - name: Lint backend
+        run: python -m ruff check apps/api
+
+      - name: Test backend
+        run: python -m pytest apps/api/tests
+
+      - name: Build backend package
+        run: python -m build ./apps/api
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install workspace dependencies
+        run: npm install
+
+      - name: Lint JavaScript workspaces
+        run: npm run lint
+
+      - name: Test JavaScript workspaces
+        run: npm run test
+
+      - name: Build JavaScript workspaces
+        run: npm run build

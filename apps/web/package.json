@@ -1,0 +1,19 @@
+{
+  "name": "@rtls/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "vitest run --environment jsdom"
+  },
+  "dependencies": {
+    "@rtls/config": "*",
+    "@rtls/contracts": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.6.3"
+  }
+}

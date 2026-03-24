@@ -1,0 +1,122 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: uvicorn rtls_api.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      RTLS_ENV: ${RTLS_ENV:-development}
+      RTLS_API_HOST: 0.0.0.0
+      RTLS_API_PORT: ${RTLS_API_PORT:-8000}
+      RTLS_DATABASE_URL: ${RTLS_DATABASE_URL:-postgresql://rtls:rtls@timescaledb:5432/rtls}
+      RTLS_REDIS_URL: ${RTLS_REDIS_URL:-redis://redis:6379/0}
+      RTLS_MQTT_BROKER_HOST: ${RTLS_MQTT_BROKER_HOST:-mqtt-broker}
+      RTLS_MQTT_BROKER_PORT: ${RTLS_MQTT_BROKER_PORT:-1883}
+      RTLS_OBJECT_STORAGE_ENDPOINT: ${RTLS_OBJECT_STORAGE_ENDPOINT:-http://object-storage:9000}
+    ports:
+      - "${RTLS_API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api:/workspace/apps/api
+    depends_on:
+      redis:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health').read()"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: python -m rtls_api.worker
+    environment:
+      RTLS_ENV: ${RTLS_ENV:-development}
+      RTLS_DATABASE_URL: ${RTLS_DATABASE_URL:-postgresql://rtls:rtls@timescaledb:5432/rtls}
+      RTLS_REDIS_URL: ${RTLS_REDIS_URL:-redis://redis:6379/0}
+      RTLS_MQTT_BROKER_HOST: ${RTLS_MQTT_BROKER_HOST:-mqtt-broker}
+      RTLS_MQTT_BROKER_PORT: ${RTLS_MQTT_BROKER_PORT:-1883}
+      RTLS_OBJECT_STORAGE_ENDPOINT: ${RTLS_OBJECT_STORAGE_ENDPOINT:-http://object-storage:9000}
+    volumes:
+      - ./apps/api:/workspace/apps/api
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${RTLS_WEB_PORT:-5173}:5173"
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "${RTLS_MQTT_BROKER_PORT:-1883}:1883"
+    volumes:
+      - ./ops/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_DB: ${RTLS_POSTGRES_DB:-rtls}
+      POSTGRES_USER: ${RTLS_POSTGRES_USER:-rtls}
+      POSTGRES_PASSWORD: ${RTLS_POSTGRES_PASSWORD:-rtls}
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${RTLS_POSTGRES_USER:-rtls} -d ${RTLS_POSTGRES_DB:-rtls}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  object-storage:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${RTLS_OBJECT_STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${RTLS_OBJECT_STORAGE_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "${RTLS_MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - object-storage-data:/data
+
+volumes:
+  timescaledb-data:
+  object-storage-data:

@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "RTLS Analytics Platform",
+    "slug": "rtls-analytics-platform",
+    "scheme": "rtls",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

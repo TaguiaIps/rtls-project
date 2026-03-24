@@ -1,54 +1,92 @@
-# rtls-project
+# RTLS Analytics Platform
 
-Repository for the RTLS project
+Repository for the RTLS Analytics Platform, a documentation-first and now code-backed workspace for indoor real-time location intelligence focused on restaurants and large catering operations.
 
-Author: Hugo de Paula
+## Versioning
 
-Date: 2023-10-04
+This repository follows Semantic Versioning for releases and tags, but it does not have an official release number yet because the project is still establishing its first implementation baseline.
 
-Description: This repository contains the code and documentation for the RTLS project, which aims to develop a real-time location system using various technologies and methodologies.
+- Versioning policy: [`VERSIONING.md`](./VERSIONING.md)
+- Changelog: [`CHANGE.LOG`](./CHANGE.LOG)
 
-# Project Structure
+## Workspace Structure
 
-- `docs/`: Documentation files for the project.
-- `ips_app/`: Flutter project for the Indoor Positioning System App.
+- `apps/api`: FastAPI baseline for the backend API and worker entrypoints
+- `apps/web`: React and Vite baseline for the web dashboard
+- `apps/mobile`: Expo React Native baseline for future mobile asset-finding and commissioning flows
+- `packages/contracts`: shared runtime and contract definitions for the JavaScript workspaces
+- `packages/config`: shared product and local-stack configuration for the JavaScript workspaces
+- `docs/`: requirements, design, UX, planning, deployment, and prototype documentation
+- `openspec/`: OpenSpec project context and change artifacts
+- `ops/`: local infrastructure configuration such as the Mosquitto baseline
 
-# Getting Started
+## Prerequisites
 
-To get started with the project, follow these steps:
+- Python `3.10+`
+- Node.js `20+`
+- Docker with Compose support
 
-1. Clone the repository:
+## Getting Started
+
+1. Copy the environment template.
 
    ```bash
-   git clone
+   cp .env.example .env
    ```
 
-2. Navigate to the project directory:
+2. Install backend and JavaScript workspace dependencies.
 
    ```bash
-    cd rtls-project
-    ```
-
-3. Install the required dependencies:
-
-   ```bash
-   pip install -r requirements.txt
+   make install
    ```
 
-4. Run the project:
+3. Bootstrap the first Administrator account.
 
    ```bash
-    python src/main.py
-    ```
-
-5. Run the tests:
-
-   ```bash
-   pytest tests/
+   make bootstrap-admin EMAIL=admin@example.com PASSWORD=StrongPass123 DISPLAY_NAME="Platform Admin"
    ```
+
+4. Start the local container stack.
+
+   ```bash
+   make compose-up
+   ```
+
+5. Run the quality baseline.
+
+   ```bash
+   make lint
+   make test
+   make build
+   ```
+
+## Local Services
+
+The bootstrap Compose stack includes:
+
+- `web`
+- `api`
+- `worker`
+- `mqtt-broker`
+- `redis`
+- `timescaledb`
+- `object-storage`
+
+Default URLs:
+
+- Web: `http://localhost:5173`
+- API: `http://localhost:8000`
+- API health: `http://localhost:8000/health`
+- MinIO console: `http://localhost:9001`
+
+## Key Documents
+
+- Workspace setup: [`docs/workspace-bootstrap.md`](./docs/workspace-bootstrap.md)
+- Auth foundation: [`docs/auth-foundation.md`](./docs/auth-foundation.md)
+- Deployment strategy: [`docs/deployment-strategy.md`](./docs/deployment-strategy.md)
+- Implementation plan: [`docs/implementation-plan.md`](./docs/implementation-plan.md)
+- UX specification: [`docs/ux-design.md`](./docs/ux-design.md)
 
 ## License
 
-This project is copyrighted to Hugo de Paula and is licensed not avilable for public use. For more information, please refer to the LICENSE file.
-
-## Contributing  
+This project is copyrighted to Hugo de Paula and is not licensed for public use. Refer to the LICENSE file when it becomes available.
