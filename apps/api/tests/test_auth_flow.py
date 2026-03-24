@@ -19,6 +19,7 @@ def build_settings(tmp_path: Path) -> Settings:
         redis_url="memory://auth-tests",
         web_origin="http://localhost:5173",
         jwt_secret_key="test-secret",
+        object_storage_endpoint=f"file://{tmp_path / 'objects'}",
     )
 
 
