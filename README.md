@@ -23,6 +23,7 @@ This repository follows Semantic Versioning for releases and tags, but it does n
 ## Prerequisites
 
 - Python `3.10+`
+- `uv`
 - Node.js `20+`
 - Docker with Compose support
 
@@ -37,6 +38,7 @@ This repository follows Semantic Versioning for releases and tags, but it does n
 2. Install backend and JavaScript workspace dependencies.
 
    ```bash
+   uv venv
    make install
    ```
 
@@ -59,6 +61,11 @@ This repository follows Semantic Versioning for releases and tags, but it does n
    make test
    make build
    ```
+
+6. Sign in and open the protected spatial admin workflow.
+
+   - Web sign-in: `http://localhost:5173/login`
+   - Admin workspace: `http://localhost:5173/admin`
 
 ## Local Services
 
@@ -83,6 +90,7 @@ Default URLs:
 
 - Workspace setup: [`docs/workspace-bootstrap.md`](./docs/workspace-bootstrap.md)
 - Auth foundation: [`docs/auth-foundation.md`](./docs/auth-foundation.md)
+- Spatial admin workflow: [`docs/spatial-admin-workflow.md`](./docs/spatial-admin-workflow.md)
 - Deployment strategy: [`docs/deployment-strategy.md`](./docs/deployment-strategy.md)
 - Implementation plan: [`docs/implementation-plan.md`](./docs/implementation-plan.md)
 - UX specification: [`docs/ux-design.md`](./docs/ux-design.md)
