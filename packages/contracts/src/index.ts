@@ -32,3 +32,70 @@ export interface AuthenticatedUser {
   role: UserRole;
   status: UserStatus;
 }
+
+export type SpatialAreaType = "zone" | "table" | "restricted_zone" | "poi";
+
+export interface FloorSummary {
+  id: string;
+  site_id: string;
+  name: string;
+  level_label: string | null;
+  has_floor_plan: boolean;
+  scale_configured: boolean;
+}
+
+export interface SiteRecord {
+  id: string;
+  name: string;
+  timezone_name: string | null;
+  floors: FloorSummary[];
+}
+
+export interface SpatialPoint {
+  x: number;
+  y: number;
+}
+
+export interface FloorPlanAsset {
+  id: string;
+  floor_id: string;
+  original_filename: string;
+  mime_type: string;
+  width_px: number;
+  height_px: number;
+  file_download_path: string;
+}
+
+export interface FloorScale {
+  point_a: SpatialPoint;
+  point_b: SpatialPoint;
+  real_world_distance_m: number;
+  pixels_per_meter: number;
+  configured_at: string;
+}
+
+export interface SpatialAreaRecord {
+  id: string;
+  floor_id: string;
+  name: string;
+  area_type: SpatialAreaType;
+  points: SpatialPoint[];
+  sla_eligible: boolean;
+  alert_participation: boolean;
+}
+
+export interface FloorDetail {
+  id: string;
+  site_id: string;
+  name: string;
+  level_label: string | null;
+  scale_configured: boolean;
+  floor_plan: FloorPlanAsset | null;
+  scale: FloorScale | null;
+  areas: SpatialAreaRecord[];
+}
+
+export interface AdminSummary {
+  current_user: AuthenticatedUser;
+  managed_roles: UserRole[];
+}
