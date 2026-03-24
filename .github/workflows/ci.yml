@@ -17,17 +17,29 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install uv
+        run: python -m pip install uv
+
       - name: Install backend dependencies
-        run: python -m pip install -e ./apps/api[dev]
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv sync --project apps/api --extra dev --active
 
       - name: Lint backend
-        run: python -m ruff check apps/api
+        run: |
+          source .venv/bin/activate
+          uv run --project apps/api --active python -m ruff check apps/api
 
       - name: Test backend
-        run: python -m pytest apps/api/tests
+        run: |
+          source .venv/bin/activate
+          uv run --project apps/api --active python -m pytest apps/api/tests
 
       - name: Build backend package
-        run: python -m build ./apps/api
+        run: |
+          source .venv/bin/activate
+          uv run --project apps/api --active python -m build ./apps/api
 
   frontend:
     runs-on: ubuntu-latest
