@@ -34,6 +34,9 @@ export interface AuthenticatedUser {
 }
 
 export type SpatialAreaType = "zone" | "table" | "restricted_zone" | "poi";
+export type GatewayHardwareTier = "Economic" | "Premium";
+export type AssetUpdateRateProfile = "slow" | "balanced" | "realtime";
+export type AssetBatteryProfile = "long_life" | "standard" | "performance";
 
 export interface FloorSummary {
   id: string;
@@ -84,6 +87,53 @@ export interface SpatialAreaRecord {
   alert_participation: boolean;
 }
 
+export interface GatewayRecord {
+  id: string;
+  floor_id: string;
+  gateway_identifier: string;
+  display_name: string;
+  hardware_tier: GatewayHardwareTier;
+  placement: SpatialPoint;
+  notes: string | null;
+}
+
+export interface AssetTagRecord {
+  id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  update_rate_profile: AssetUpdateRateProfile;
+  battery_profile: AssetBatteryProfile;
+}
+
+export interface AssetTagImportPreviewRecord {
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  update_rate_profile: AssetUpdateRateProfile;
+  battery_profile: AssetBatteryProfile;
+}
+
+export interface AssetTagImportValidationRow {
+  row_number: number;
+  values: Record<string, string>;
+  errors: string[];
+}
+
+export interface AssetTagImportValidateResult {
+  import_id: string | null;
+  total_rows: number;
+  valid_row_count: number;
+  invalid_row_count: number;
+  valid_rows: AssetTagImportPreviewRecord[];
+  invalid_rows: AssetTagImportValidationRow[];
+}
+
+export interface AssetTagImportConfirmResult {
+  created_count: number;
+  assets: AssetTagRecord[];
+}
+
 export interface FloorDetail {
   id: string;
   site_id: string;
@@ -93,6 +143,7 @@ export interface FloorDetail {
   floor_plan: FloorPlanAsset | null;
   scale: FloorScale | null;
   areas: SpatialAreaRecord[];
+  gateways: GatewayRecord[];
 }
 
 export interface AdminSummary {

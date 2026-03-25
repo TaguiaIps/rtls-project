@@ -65,7 +65,10 @@ Access model:
 - refresh tokens are rotated on use
 - refresh-session records are stored in the operational database
 - active refresh-token state is stored in Redis under the configured session prefix
+- login audit records target the persisted refresh-session identifier created for that sign-in
+- the web client serializes concurrent refresh retries so one expiring access token does not replay the same rotated refresh token
 - logout revokes the active refresh session and clears the web session state
+- logout rejects rotated or replayed refresh tokens instead of revoking the currently active session
 
 ## Audit Events
 
@@ -76,6 +79,7 @@ The API persists normalized audit records for:
 - refresh success
 - refresh rejection
 - logout
+- logout rejection
 - administrator-driven user updates
 - Administrator bootstrap creation
 

@@ -49,6 +49,8 @@ This repository is an `apps/` + `packages/` monorepo.
 - Keep presentation, business logic, persistence, and contracts in separate modules.
 - Prefer API-first changes: update OpenSpec and shared contracts before spreading shape changes through apps.
 - Reuse the spatial, auth, and audit foundations already in `apps/api` instead of re-encoding the same logic elsewhere.
+- Preserve refresh-session rotation guarantees end-to-end: stale refresh tokens must be rejected on refresh and logout, and web clients must avoid concurrent replay of the same refresh token.
+- Treat floor-plan replacement as a recalibration boundary: if the underlying image changes, any saved scale must be invalidated unless it is explicitly recomputed.
 
 ## Testing Guidelines
 

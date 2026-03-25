@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type PropsWithChildren
 } from "react";
@@ -102,6 +103,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [session, setSession] = useState<SessionState | null>(() => readStoredSession());
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const refreshRequestRef = useRef<{
+    refreshToken: string;
+    promise: Promise<SessionState>;
+  } | null>(null);
 
   const clearSession = useCallback(() => {
     setSession(null);
@@ -117,13 +122,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const refreshSession = useCallback(
     async (currentSession: SessionState) => {
-      const payload = await requestRefresh(apiBaseUrl, currentSession);
-      const nextSession = {
-        accessToken: payload.access_token,
-        refreshToken: payload.refresh_token
+      const inFlightRefresh = refreshRequestRef.current;
+      // Concurrent 401 retries must reuse one refresh request so rotated tokens are not replayed.
+      if (inFlightRefresh && inFlightRefresh.refreshToken === currentSession.refreshToken) {
+        return inFlightRefresh.promise;
+      }
+
+      const refreshPromise = (async () => {
+        const payload = await requestRefresh(apiBaseUrl, currentSession);
+        const nextSession = {
+          accessToken: payload.access_token,
+          refreshToken: payload.refresh_token
+        };
+        persistSession(nextSession);
+        return nextSession;
+      })();
+
+      refreshRequestRef.current = {
+        refreshToken: currentSession.refreshToken,
+        promise: refreshPromise
       };
-      persistSession(nextSession);
-      return nextSession;
+
+      try {
+        return await refreshPromise;
+      } finally {
+        if (refreshRequestRef.current?.promise === refreshPromise) {
+          refreshRequestRef.current = null;
+        }
+      }
     },
     [apiBaseUrl, persistSession]
   );
@@ -219,7 +245,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     clearSession();
-  }, [apiBaseUrl, clearSession, session?.refreshToken]);
+  }, [apiBaseUrl, clearSession, session]);
 
   const fetchWithAuth = useCallback(
     async (input: RequestInfo | URL, init?: RequestInit) => {

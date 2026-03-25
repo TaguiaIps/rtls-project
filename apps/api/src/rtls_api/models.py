@@ -44,6 +44,23 @@ class SpatialAreaType(str, Enum):
     POI = "poi"
 
 
+class GatewayHardwareTier(str, Enum):
+    ECONOMIC = "Economic"
+    PREMIUM = "Premium"
+
+
+class AssetUpdateRateProfile(str, Enum):
+    SLOW = "slow"
+    BALANCED = "balanced"
+    REALTIME = "realtime"
+
+
+class AssetBatteryProfile(str, Enum):
+    LONG_LIFE = "long_life"
+    STANDARD = "standard"
+    PERFORMANCE = "performance"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -151,6 +168,10 @@ class Floor(Base):
         back_populates="floor",
         cascade="all, delete-orphan",
     )
+    gateways: Mapped[list[Gateway]] = relationship(
+        back_populates="floor",
+        cascade="all, delete-orphan",
+    )
 
 
 class FloorPlanAsset(Base):
@@ -192,3 +213,50 @@ class SpatialArea(Base):
     )
 
     floor: Mapped[Floor] = relationship(back_populates="areas")
+
+
+class Gateway(Base):
+    __tablename__ = "gateways"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    gateway_identifier: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(120))
+    hardware_tier: Mapped[str] = mapped_column(String(32))
+    placement_x: Mapped[float] = mapped_column(Float)
+    placement_y: Mapped[float] = mapped_column(Float)
+    notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    floor: Mapped[Floor] = relationship(back_populates="gateways")
+
+
+class AssetTag(Base):
+    __tablename__ = "asset_tags"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    tag_identifier: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(120))
+    asset_category: Mapped[str] = mapped_column(String(80))
+    update_rate_profile: Mapped[str] = mapped_column(String(32))
+    battery_profile: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+
+class AssetTagImportSession(Base):
+    __tablename__ = "asset_tag_import_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    rows: Mapped[list[dict[str, str]]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

@@ -4,7 +4,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
-from rtls_api.models import SpatialAreaType, UserRole, UserStatus
+from rtls_api.models import (
+    AssetBatteryProfile,
+    AssetUpdateRateProfile,
+    GatewayHardwareTier,
+    SpatialAreaType,
+    UserRole,
+    UserStatus,
+)
 
 
 class LoginRequest(BaseModel):
@@ -104,6 +111,40 @@ class SpatialAreaUpdateRequest(BaseModel):
         return self
 
 
+class GatewayCreateRequest(BaseModel):
+    gateway_identifier: str = Field(min_length=1, max_length=120)
+    display_name: str = Field(min_length=1, max_length=120)
+    hardware_tier: GatewayHardwareTier
+    placement: SpatialPoint
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class GatewayUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    hardware_tier: GatewayHardwareTier | None = None
+    placement: SpatialPoint | None = None
+    notes: str | None = Field(default=None, max_length=500)
+
+
+class AssetTagCreateRequest(BaseModel):
+    tag_identifier: str = Field(min_length=1, max_length=120)
+    display_name: str = Field(min_length=1, max_length=120)
+    asset_category: str = Field(min_length=1, max_length=80)
+    update_rate_profile: AssetUpdateRateProfile
+    battery_profile: AssetBatteryProfile
+
+
+class AssetTagUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=120)
+    asset_category: str | None = Field(default=None, min_length=1, max_length=80)
+    update_rate_profile: AssetUpdateRateProfile | None = None
+    battery_profile: AssetBatteryProfile | None = None
+
+
+class AssetTagImportConfirmRequest(BaseModel):
+    import_id: str = Field(min_length=1, max_length=64)
+
+
 class FloorSummaryResponse(BaseModel):
     id: str
     site_id: str
@@ -148,6 +189,53 @@ class SpatialAreaResponse(BaseModel):
     alert_participation: bool
 
 
+class GatewayResponse(BaseModel):
+    id: str
+    floor_id: str
+    gateway_identifier: str
+    display_name: str
+    hardware_tier: GatewayHardwareTier
+    placement: SpatialPoint
+    notes: str | None
+
+
+class AssetTagResponse(BaseModel):
+    id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    update_rate_profile: AssetUpdateRateProfile
+    battery_profile: AssetBatteryProfile
+
+
+class AssetTagImportPreviewRecord(BaseModel):
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    update_rate_profile: AssetUpdateRateProfile
+    battery_profile: AssetBatteryProfile
+
+
+class AssetTagImportValidationRow(BaseModel):
+    row_number: int
+    values: dict[str, str]
+    errors: list[str]
+
+
+class AssetTagImportValidateResponse(BaseModel):
+    import_id: str | None
+    total_rows: int
+    valid_row_count: int
+    invalid_row_count: int
+    valid_rows: list[AssetTagImportPreviewRecord]
+    invalid_rows: list[AssetTagImportValidationRow]
+
+
+class AssetTagImportConfirmResponse(BaseModel):
+    created_count: int
+    assets: list[AssetTagResponse]
+
+
 class FloorDetailResponse(BaseModel):
     id: str
     site_id: str
@@ -157,3 +245,4 @@ class FloorDetailResponse(BaseModel):
     floor_plan: FloorPlanAssetResponse | None
     scale: FloorScaleResponse | None
     areas: list[SpatialAreaResponse]
+    gateways: list[GatewayResponse]

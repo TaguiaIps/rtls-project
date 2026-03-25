@@ -17,6 +17,10 @@ class StoredObject:
     content_type: str
 
 
+class ObjectNotFoundError(FileNotFoundError):
+    pass
+
+
 class ObjectStorageService:
     def put_object(self, *, key: str, content: bytes, content_type: str) -> None:
         raise NotImplementedError
@@ -44,10 +48,11 @@ class LocalObjectStorageService(ObjectStorageService):
 
     def get_object(self, *, key: str) -> StoredObject:
         path = self._path(key)
-        return StoredObject(
-            content=path.read_bytes(),
-            content_type=_guess_content_type(path.suffix),
-        )
+        try:
+            content = path.read_bytes()
+        except FileNotFoundError as error:
+            raise ObjectNotFoundError(key) from error
+        return StoredObject(content=content, content_type=_guess_content_type(path.suffix))
 
     def delete_object(self, *, key: str) -> None:
         path = self._path(key)
@@ -91,7 +96,13 @@ class S3CompatibleObjectStorageService(ObjectStorageService):
         )
 
     def get_object(self, *, key: str) -> StoredObject:
-        response = self.client.get_object(Bucket=self.bucket, Key=key)
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=key)
+        except ClientError as error:
+            error_code = (error.response.get("Error") or {}).get("Code")
+            if error_code in {"404", "NoSuchKey", "NotFound"}:
+                raise ObjectNotFoundError(key) from error
+            raise
         content_type = response.get("ContentType") or "application/octet-stream"
         return StoredObject(content=response["Body"].read(), content_type=content_type)
 

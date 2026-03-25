@@ -280,6 +280,11 @@ body {
   text-transform: uppercase;
 }
 
+.metric-chip--subtle {
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+}
+
 .admin-form {
   display: grid;
   gap: 14px;
@@ -300,6 +305,7 @@ body {
 
 .admin-form input,
 .admin-form select,
+.admin-form textarea,
 .coordinate-grid input,
 .file-input input {
   width: 100%;
@@ -312,9 +318,16 @@ body {
 
 .admin-form input:focus,
 .admin-form select:focus,
+.admin-form textarea:focus,
 .coordinate-grid input:focus {
   outline: 2px solid rgba(34, 211, 238, 0.5);
   outline-offset: 1px;
+}
+
+.admin-form textarea {
+  resize: vertical;
+  min-height: 96px;
+  font: inherit;
 }
 
 .selection-list {
@@ -380,8 +393,20 @@ body {
   grid-template-columns: minmax(280px, 0.7fr) minmax(0, 1fr);
 }
 
+.admin-workspace-grid--triad {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.asset-registry-grid,
+.asset-import-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 20px;
+}
+
 .scale-controls,
-.point-editor-list {
+.point-editor-list,
+.import-review-column {
   display: grid;
   gap: 14px;
 }
@@ -465,7 +490,8 @@ body {
 }
 
 .map-area {
-  stroke-width: 0.35;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-area--zone {
@@ -489,37 +515,45 @@ body {
 }
 
 .map-area--selected {
-  stroke-width: 0.55;
+  stroke-width: 6;
   filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.35));
 }
 
 .map-area__label {
   fill: #e5eef8;
-  font-size: 2px;
+  font-size: 26px;
   font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.92);
+  stroke-width: 10px;
+  stroke-linejoin: round;
 }
 
 .map-draft--line {
   fill: none;
   stroke: rgba(191, 219, 254, 0.9);
-  stroke-dasharray: 1.1 1.1;
-  stroke-width: 0.32;
+  stroke-dasharray: 16 12;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-draft--polygon {
   fill: rgba(191, 219, 254, 0.12);
   stroke: rgba(191, 219, 254, 0.92);
-  stroke-width: 0.35;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-scale {
   stroke: rgba(250, 204, 21, 0.95);
-  stroke-width: 0.4;
-  stroke-dasharray: 1 0.8;
+  stroke-width: 5;
+  stroke-dasharray: 16 10;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-point {
-  stroke-width: 0.25;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .map-point--scale {
@@ -530,6 +564,34 @@ body {
 .map-point--draft {
   fill: rgba(191, 219, 254, 0.95);
   stroke: rgba(15, 23, 42, 0.9);
+}
+
+.map-point--gateway-draft {
+  fill: rgba(251, 146, 60, 0.85);
+  stroke: rgba(15, 23, 42, 0.95);
+}
+
+.map-gateway {
+  fill: rgba(251, 146, 60, 0.92);
+  stroke: rgba(15, 23, 42, 0.95);
+  stroke-width: 5;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-gateway--selected {
+  fill: rgba(245, 158, 11, 0.98);
+  filter: drop-shadow(0 0 12px rgba(251, 146, 60, 0.35));
+}
+
+.map-gateway__label {
+  fill: #fff7ed;
+  font-size: 24px;
+  font-weight: 700;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.95);
+  stroke-width: 10px;
+  stroke-linejoin: round;
 }
 
 .canvas-guidance {
@@ -576,6 +638,47 @@ body {
   color: #e5eef8;
 }
 
+.asset-selection-list,
+.import-review-list {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.asset-selection-list,
+.import-review-list,
+.import-column-list {
+  display: grid;
+  gap: 10px;
+}
+
+.import-column-list {
+  grid-template-columns: repeat(auto-fit, minmax(130px, max-content));
+}
+
+.import-review-card,
+.import-validation-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.import-review-card {
+  border: 1px solid rgba(34, 197, 94, 0.16);
+  background: rgba(20, 83, 45, 0.22);
+}
+
+.import-validation-card {
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.import-section-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
 @media (max-width: 900px) {
   .dashboard-shell {
     grid-template-columns: 1fr;
@@ -594,6 +697,9 @@ body {
   .admin-spatial-grid,
   .admin-workspace-grid,
   .admin-workspace-grid--bottom,
+  .admin-workspace-grid--triad,
+  .asset-registry-grid,
+  .asset-import-grid,
   .admin-form--inline {
     grid-template-columns: 1fr;
   }

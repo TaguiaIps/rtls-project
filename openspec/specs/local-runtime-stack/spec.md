@@ -1,4 +1,9 @@
-## ADDED Requirements
+# local-runtime-stack Specification
+
+## Purpose
+Define the Docker Compose-based local runtime, required service roles, and environment conventions used to run the RTLS Analytics Platform implementation baseline.
+
+## Requirements
 
 ### Requirement: Local container runtime
 The RTLS Analytics Platform SHALL provide a Docker Compose-based local runtime for development and integration work.

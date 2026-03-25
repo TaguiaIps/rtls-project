@@ -157,6 +157,7 @@ def login(
     )
     db.add(refresh_session)
     user.last_login_at = datetime.now(timezone.utc)
+    db.flush()
     write_audit_event(
         db,
         action_category="authentication",
@@ -165,7 +166,6 @@ def login(
         target_type="refresh_session",
         target_id=refresh_session.id,
     )
-    db.flush()
     tokens = _issue_tokens_for_session(
         user=user,
         refresh_session=refresh_session,
@@ -264,7 +264,26 @@ def logout(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)) from error
 
     refresh_session = db.get(RefreshSession, str(token_payload["sid"]))
-    if refresh_session is None:
+    if refresh_session is None or refresh_session.revoked_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh session",
+        )
+
+    expected_hash = session_store.get_token_hash(refresh_session.id)
+    presented_hash = hash_token(payload.refresh_token)
+    if expected_hash is None or presented_hash != expected_hash:
+        # A stale rotated token must not revoke the active session during logout.
+        write_audit_event(
+            db,
+            action_category="authentication",
+            action_type="auth.logout.rejected",
+            actor=refresh_session.user,
+            target_type="refresh_session",
+            target_id=refresh_session.id,
+            details={"reason": "rotated_or_replayed"},
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh session",

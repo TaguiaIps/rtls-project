@@ -27,7 +27,7 @@ The bootstrap workspace uses an `apps/` and `packages/` layout:
 
 - Python `3.10+`
 - `uv`
-- Node.js `20+`
+- Node.js `20.19+` or `22.12+`
 - Docker and Docker Compose
 
 ## 3. Environment Setup

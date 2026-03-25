@@ -9,7 +9,6 @@ from rtls_api.config import Settings, get_settings
 from rtls_api.db import create_session_factory
 from rtls_api.session_store import create_refresh_session_store
 from rtls_api.spatial_admin import SPATIAL_ADMIN_ROUTER
-from rtls_api.storage import create_object_storage_service
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -23,7 +22,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app_settings.redis_url,
             app_settings.refresh_session_key_prefix,
         )
-        app.state.object_storage_service = create_object_storage_service(app_settings)
         yield
 
     app = FastAPI(

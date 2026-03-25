@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import csv
+import logging
 import math
-from io import BytesIO
+from io import BytesIO, StringIO
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
@@ -15,8 +17,14 @@ from rtls_api.auth import get_current_user, require_role
 from rtls_api.config import Settings
 from rtls_api.db import get_db
 from rtls_api.models import (
+    AssetBatteryProfile,
+    AssetTag,
+    AssetTagImportSession,
+    AssetUpdateRateProfile,
     Floor,
     FloorPlanAsset,
+    Gateway,
+    GatewayHardwareTier,
     Site,
     SpatialArea,
     SpatialAreaType,
@@ -25,23 +33,46 @@ from rtls_api.models import (
     utc_now,
 )
 from rtls_api.schemas import (
+    AssetTagCreateRequest,
+    AssetTagImportConfirmRequest,
+    AssetTagImportConfirmResponse,
+    AssetTagImportPreviewRecord,
+    AssetTagImportValidateResponse,
+    AssetTagImportValidationRow,
+    AssetTagResponse,
+    AssetTagUpdateRequest,
     FloorCreateRequest,
     FloorDetailResponse,
     FloorPlanAssetResponse,
     FloorScaleResponse,
     FloorScaleUpdateRequest,
     FloorSummaryResponse,
+    GatewayCreateRequest,
+    GatewayResponse,
+    GatewayUpdateRequest,
     SiteCreateRequest,
     SiteResponse,
     SpatialAreaCreateRequest,
     SpatialAreaResponse,
     SpatialAreaUpdateRequest,
 )
-from rtls_api.storage import ObjectStorageService
+from rtls_api.storage import (
+    ObjectNotFoundError,
+    ObjectStorageService,
+    create_object_storage_service,
+)
 
 SPATIAL_ADMIN_ROUTER = APIRouter(prefix="/api/admin", tags=["admin-spatial"])
 SUPPORTED_FLOOR_PLAN_MIME_TYPES = {"image/png", "image/jpeg"}
 SUPPORTED_FLOOR_PLAN_FORMATS = {"PNG": ".png", "JPEG": ".jpg"}
+ASSET_IMPORT_HEADERS = [
+    "tag_identifier",
+    "display_name",
+    "asset_category",
+    "update_rate_profile",
+    "battery_profile",
+]
+logger = logging.getLogger("rtls-api")
 
 
 def get_settings(request: Request) -> Settings:
@@ -49,7 +80,23 @@ def get_settings(request: Request) -> Settings:
 
 
 def get_storage_service(request: Request) -> ObjectStorageService:
-    return request.app.state.object_storage_service
+    storage_service = getattr(request.app.state, "object_storage_service", None)
+    if storage_service is None:
+        storage_service = create_object_storage_service(get_settings(request))
+        request.app.state.object_storage_service = storage_service
+    return storage_service
+
+
+def _delete_object_quietly(
+    storage_service: ObjectStorageService,
+    *,
+    key: str,
+    context: str,
+) -> None:
+    try:
+        storage_service.delete_object(key=key)
+    except Exception:
+        logger.exception("Failed to delete floor-plan object during %s for %s", context, key)
 
 
 def _ordered_floor_summary(floor: Floor) -> FloorSummaryResponse:
@@ -61,6 +108,34 @@ def _ordered_floor_summary(floor: Floor) -> FloorSummaryResponse:
         has_floor_plan=floor.floor_plan_asset is not None,
         scale_configured=floor.scale_configured_at is not None,
     )
+
+
+def _normalize_asset_import_cell(value: str | None) -> str:
+    return (value or "").strip()
+
+
+def _parse_asset_update_rate_profile(value: str) -> AssetUpdateRateProfile | None:
+    normalized = value.strip().lower()
+    try:
+        return AssetUpdateRateProfile(normalized)
+    except ValueError:
+        return None
+
+
+def _parse_asset_battery_profile(value: str) -> AssetBatteryProfile | None:
+    normalized = value.strip().lower()
+    try:
+        return AssetBatteryProfile(normalized)
+    except ValueError:
+        return None
+
+
+def _clear_floor_scale(floor: Floor) -> None:
+    floor.scale_point_a = None
+    floor.scale_point_b = None
+    floor.scale_distance_m = None
+    floor.scale_pixels_per_meter = None
+    floor.scale_configured_at = None
 
 
 def serialize_site(site: Site) -> SiteResponse:
@@ -100,6 +175,29 @@ def serialize_area(area: SpatialArea) -> SpatialAreaResponse:
     )
 
 
+def serialize_gateway(gateway: Gateway) -> GatewayResponse:
+    return GatewayResponse(
+        id=gateway.id,
+        floor_id=gateway.floor_id,
+        gateway_identifier=gateway.gateway_identifier,
+        display_name=gateway.display_name,
+        hardware_tier=GatewayHardwareTier(gateway.hardware_tier),
+        placement={"x": gateway.placement_x, "y": gateway.placement_y},
+        notes=gateway.notes,
+    )
+
+
+def serialize_asset_tag(asset_tag: AssetTag) -> AssetTagResponse:
+    return AssetTagResponse(
+        id=asset_tag.id,
+        tag_identifier=asset_tag.tag_identifier,
+        display_name=asset_tag.display_name,
+        asset_category=asset_tag.asset_category,
+        update_rate_profile=AssetUpdateRateProfile(asset_tag.update_rate_profile),
+        battery_profile=AssetBatteryProfile(asset_tag.battery_profile),
+    )
+
+
 def serialize_floor_detail(floor: Floor) -> FloorDetailResponse:
     scale = None
     if (
@@ -120,6 +218,10 @@ def serialize_floor_detail(floor: Floor) -> FloorDetailResponse:
         floor.areas,
         key=lambda area: (SpatialAreaType(area.area_type).value, area.name.lower()),
     )
+    ordered_gateways = sorted(
+        floor.gateways,
+        key=lambda gateway: (gateway.display_name.lower(), gateway.gateway_identifier.lower()),
+    )
     return FloorDetailResponse(
         id=floor.id,
         site_id=floor.site_id,
@@ -129,6 +231,7 @@ def serialize_floor_detail(floor: Floor) -> FloorDetailResponse:
         floor_plan=serialize_floor_plan(floor.floor_plan_asset) if floor.floor_plan_asset else None,
         scale=scale,
         areas=[serialize_area(area) for area in ordered_areas],
+        gateways=[serialize_gateway(gateway) for gateway in ordered_gateways],
     )
 
 
@@ -136,7 +239,11 @@ def get_floor_or_404(db: Session, floor_id: str) -> Floor:
     floor = db.scalar(
         select(Floor)
         .where(Floor.id == floor_id)
-        .options(selectinload(Floor.floor_plan_asset), selectinload(Floor.areas))
+        .options(
+            selectinload(Floor.floor_plan_asset),
+            selectinload(Floor.areas),
+            selectinload(Floor.gateways),
+        )
     )
     if floor is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Floor not found")
@@ -150,11 +257,33 @@ def get_area_or_404(db: Session, area_id: str) -> SpatialArea:
     return area
 
 
+def get_gateway_or_404(db: Session, gateway_id: str) -> Gateway:
+    gateway = db.scalar(select(Gateway).where(Gateway.id == gateway_id))
+    if gateway is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gateway not found")
+    return gateway
+
+
+def get_asset_tag_or_404(db: Session, asset_tag_id: str) -> AssetTag:
+    asset_tag = db.scalar(select(AssetTag).where(AssetTag.id == asset_tag_id))
+    if asset_tag is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset tag not found")
+    return asset_tag
+
+
 def _validate_floor_for_area_editing(floor: Floor) -> None:
     if floor.floor_plan_asset is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Upload a floor plan before editing operational areas",
+        )
+
+
+def _validate_floor_for_gateway_placement(floor: Floor) -> None:
+    if floor.floor_plan_asset is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Upload a floor plan before placing gateways",
         )
 
 
@@ -313,6 +442,7 @@ async def upload_floor_plan(
         content_type=floor_plan.content_type,
     )
 
+    previous_key: str | None = None
     if floor.floor_plan_asset is not None:
         previous_key = floor.floor_plan_asset.storage_key
         asset = floor.floor_plan_asset
@@ -321,9 +451,8 @@ async def upload_floor_plan(
         asset.mime_type = floor_plan.content_type
         asset.width_px = image.width
         asset.height_px = image.height
+        _clear_floor_scale(floor)
         action_type = "floorplan.replaced"
-        if previous_key != storage_key:
-            storage_service.delete_object(key=previous_key)
     else:
         asset = FloorPlanAsset(
             floor_id=floor_id,
@@ -336,17 +465,34 @@ async def upload_floor_plan(
         db.add(asset)
         action_type = "floorplan.uploaded"
 
-    db.flush()
-    write_audit_event(
-        db,
-        action_category="configuration",
-        action_type=action_type,
-        actor=admin_user,
-        target_type="floor_plan",
-        target_id=asset.id,
-        details={"floor_id": floor_id, "filename": asset.original_filename},
-    )
-    db.commit()
+    try:
+        db.flush()
+        write_audit_event(
+            db,
+            action_category="configuration",
+            action_type=action_type,
+            actor=admin_user,
+            target_type="floor_plan",
+            target_id=asset.id,
+            details={"floor_id": floor_id, "filename": asset.original_filename},
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        _delete_object_quietly(
+            storage_service,
+            key=storage_key,
+            context="rollback cleanup",
+        )
+        raise
+
+    if previous_key is not None and previous_key != storage_key:
+        _delete_object_quietly(
+            storage_service,
+            key=previous_key,
+            context="post-commit replacement cleanup",
+        )
+
     db.refresh(asset)
     return serialize_floor_plan(asset)
 
@@ -362,7 +508,13 @@ def download_floor_plan_file(
     if floor.floor_plan_asset is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Floor plan not found")
 
-    stored_object = storage_service.get_object(key=floor.floor_plan_asset.storage_key)
+    try:
+        stored_object = storage_service.get_object(key=floor.floor_plan_asset.storage_key)
+    except ObjectNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Floor plan file not found",
+        ) from error
     return Response(content=stored_object.content, media_type=floor.floor_plan_asset.mime_type)
 
 
@@ -415,6 +567,154 @@ def configure_floor_scale(
     db.commit()
     db.refresh(floor)
     return serialize_floor_detail(get_floor_or_404(db, floor_id))
+
+
+@SPATIAL_ADMIN_ROUTER.get("/floors/{floor_id}/gateways", response_model=list[GatewayResponse])
+def list_floor_gateways(
+    floor_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> list[GatewayResponse]:
+    del admin_user
+    floor = get_floor_or_404(db, floor_id)
+    ordered_gateways = sorted(
+        floor.gateways,
+        key=lambda gateway: (gateway.display_name.lower(), gateway.gateway_identifier.lower()),
+    )
+    return [serialize_gateway(gateway) for gateway in ordered_gateways]
+
+
+@SPATIAL_ADMIN_ROUTER.post(
+    "/floors/{floor_id}/gateways",
+    response_model=GatewayResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_gateway(
+    floor_id: str,
+    payload: GatewayCreateRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> GatewayResponse:
+    floor = get_floor_or_404(db, floor_id)
+    _validate_floor_for_gateway_placement(floor)
+
+    gateway = Gateway(
+        floor_id=floor_id,
+        gateway_identifier=payload.gateway_identifier.strip(),
+        display_name=payload.display_name.strip(),
+        hardware_tier=payload.hardware_tier.value,
+        placement_x=payload.placement.x,
+        placement_y=payload.placement.y,
+        notes=payload.notes.strip() if payload.notes else None,
+    )
+    db.add(gateway)
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Gateway already exists",
+        ) from error
+
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="gateway.created",
+        actor=admin_user,
+        target_type="gateway",
+        target_id=gateway.id,
+        details={
+            "floor_id": floor_id,
+            "gateway_identifier": gateway.gateway_identifier,
+            "hardware_tier": gateway.hardware_tier,
+        },
+    )
+    db.commit()
+    db.refresh(gateway)
+    return serialize_gateway(gateway)
+
+
+@SPATIAL_ADMIN_ROUTER.patch("/gateways/{gateway_id}", response_model=GatewayResponse)
+def update_gateway(
+    gateway_id: str,
+    payload: GatewayUpdateRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> GatewayResponse:
+    gateway = get_gateway_or_404(db, gateway_id)
+    floor = get_floor_or_404(db, gateway.floor_id)
+    _validate_floor_for_gateway_placement(floor)
+
+    changes: dict[str, object] = {}
+    if payload.display_name is not None and payload.display_name.strip() != gateway.display_name:
+        gateway.display_name = payload.display_name.strip()
+        changes["display_name"] = gateway.display_name
+    if payload.hardware_tier is not None and payload.hardware_tier.value != gateway.hardware_tier:
+        gateway.hardware_tier = payload.hardware_tier.value
+        changes["hardware_tier"] = gateway.hardware_tier
+    if payload.placement is not None:
+        if (
+            payload.placement.x != gateway.placement_x
+            or payload.placement.y != gateway.placement_y
+        ):
+            gateway.placement_x = payload.placement.x
+            gateway.placement_y = payload.placement.y
+            changes["placement"] = {"x": gateway.placement_x, "y": gateway.placement_y}
+    if payload.notes is not None:
+        next_notes = payload.notes.strip() or None
+        if next_notes != gateway.notes:
+            gateway.notes = next_notes
+            changes["notes"] = gateway.notes
+
+    if not changes:
+        return serialize_gateway(gateway)
+
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Gateway already exists",
+        ) from error
+
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="gateway.updated",
+        actor=admin_user,
+        target_type="gateway",
+        target_id=gateway.id,
+        details={"floor_id": gateway.floor_id, "changes": changes},
+    )
+    db.commit()
+    db.refresh(gateway)
+    return serialize_gateway(gateway)
+
+
+@SPATIAL_ADMIN_ROUTER.delete("/gateways/{gateway_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_gateway(
+    gateway_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> None:
+    gateway = get_gateway_or_404(db, gateway_id)
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="gateway.deleted",
+        actor=admin_user,
+        target_type="gateway",
+        target_id=gateway.id,
+        details={
+            "floor_id": gateway.floor_id,
+            "gateway_identifier": gateway.gateway_identifier,
+            "display_name": gateway.display_name,
+        },
+    )
+    db.delete(gateway)
+    db.commit()
 
 
 @SPATIAL_ADMIN_ROUTER.get("/floors/{floor_id}/areas", response_model=list[SpatialAreaResponse])
@@ -554,3 +854,337 @@ def delete_area(
     )
     db.delete(area)
     db.commit()
+
+
+@SPATIAL_ADMIN_ROUTER.get("/assets", response_model=list[AssetTagResponse])
+def list_asset_tags(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> list[AssetTagResponse]:
+    del admin_user
+    asset_tags = db.scalars(select(AssetTag).order_by(AssetTag.display_name.asc())).all()
+    return [serialize_asset_tag(asset_tag) for asset_tag in asset_tags]
+
+
+@SPATIAL_ADMIN_ROUTER.post(
+    "/assets",
+    response_model=AssetTagResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_asset_tag(
+    payload: AssetTagCreateRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> AssetTagResponse:
+    asset_tag = AssetTag(
+        tag_identifier=payload.tag_identifier.strip(),
+        display_name=payload.display_name.strip(),
+        asset_category=payload.asset_category.strip(),
+        update_rate_profile=payload.update_rate_profile.value,
+        battery_profile=payload.battery_profile.value,
+    )
+    db.add(asset_tag)
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Asset tag already exists",
+        ) from error
+
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="asset.created",
+        actor=admin_user,
+        target_type="asset_tag",
+        target_id=asset_tag.id,
+        details={
+            "tag_identifier": asset_tag.tag_identifier,
+            "update_rate_profile": asset_tag.update_rate_profile,
+            "battery_profile": asset_tag.battery_profile,
+        },
+    )
+    db.commit()
+    db.refresh(asset_tag)
+    return serialize_asset_tag(asset_tag)
+
+
+@SPATIAL_ADMIN_ROUTER.get("/assets/{asset_tag_id}", response_model=AssetTagResponse)
+def get_asset_tag_detail(
+    asset_tag_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> AssetTagResponse:
+    del admin_user
+    return serialize_asset_tag(get_asset_tag_or_404(db, asset_tag_id))
+
+
+@SPATIAL_ADMIN_ROUTER.patch("/assets/{asset_tag_id}", response_model=AssetTagResponse)
+def update_asset_tag(
+    asset_tag_id: str,
+    payload: AssetTagUpdateRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> AssetTagResponse:
+    asset_tag = get_asset_tag_or_404(db, asset_tag_id)
+
+    changes: dict[str, object] = {}
+    if payload.display_name is not None and payload.display_name.strip() != asset_tag.display_name:
+        asset_tag.display_name = payload.display_name.strip()
+        changes["display_name"] = asset_tag.display_name
+    if (
+        payload.asset_category is not None
+        and payload.asset_category.strip() != asset_tag.asset_category
+    ):
+        asset_tag.asset_category = payload.asset_category.strip()
+        changes["asset_category"] = asset_tag.asset_category
+    if (
+        payload.update_rate_profile is not None
+        and payload.update_rate_profile.value != asset_tag.update_rate_profile
+    ):
+        asset_tag.update_rate_profile = payload.update_rate_profile.value
+        changes["update_rate_profile"] = asset_tag.update_rate_profile
+    if (
+        payload.battery_profile is not None
+        and payload.battery_profile.value != asset_tag.battery_profile
+    ):
+        asset_tag.battery_profile = payload.battery_profile.value
+        changes["battery_profile"] = asset_tag.battery_profile
+
+    if not changes:
+        return serialize_asset_tag(asset_tag)
+
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Asset tag already exists",
+        ) from error
+
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="asset.updated",
+        actor=admin_user,
+        target_type="asset_tag",
+        target_id=asset_tag.id,
+        details={"changes": changes},
+    )
+    db.commit()
+    db.refresh(asset_tag)
+    return serialize_asset_tag(asset_tag)
+
+
+@SPATIAL_ADMIN_ROUTER.delete("/assets/{asset_tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_asset_tag(
+    asset_tag_id: str,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> None:
+    asset_tag = get_asset_tag_or_404(db, asset_tag_id)
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="asset.deleted",
+        actor=admin_user,
+        target_type="asset_tag",
+        target_id=asset_tag.id,
+        details={
+            "tag_identifier": asset_tag.tag_identifier,
+            "display_name": asset_tag.display_name,
+        },
+    )
+    db.delete(asset_tag)
+    db.commit()
+
+
+@SPATIAL_ADMIN_ROUTER.post(
+    "/assets/imports/validate",
+    response_model=AssetTagImportValidateResponse,
+)
+async def validate_asset_tag_import(
+    import_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> AssetTagImportValidateResponse:
+    if import_file.content_type not in {"text/csv", "application/vnd.ms-excel", "text/plain"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Upload a CSV file for asset import",
+        )
+
+    raw_bytes = await import_file.read()
+    try:
+        decoded = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="CSV import must be UTF-8 encoded",
+        ) from error
+
+    reader = csv.DictReader(StringIO(decoded))
+    if reader.fieldnames is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="CSV import is missing a header row",
+        )
+
+    missing_headers = [header for header in ASSET_IMPORT_HEADERS if header not in reader.fieldnames]
+    if missing_headers:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"CSV import is missing required columns: {', '.join(missing_headers)}",
+        )
+
+    existing_identifiers = set(
+        db.scalars(select(AssetTag.tag_identifier)).all()
+    )
+    seen_identifiers: set[str] = set()
+    valid_rows: list[AssetTagImportPreviewRecord] = []
+    invalid_rows: list[AssetTagImportValidationRow] = []
+
+    for row_number, row in enumerate(reader, start=2):
+        values = {
+            header: _normalize_asset_import_cell(row.get(header))
+            for header in ASSET_IMPORT_HEADERS
+        }
+        errors: list[str] = []
+
+        if not values["tag_identifier"]:
+            errors.append("tag_identifier is required")
+        if not values["display_name"]:
+            errors.append("display_name is required")
+        if not values["asset_category"]:
+            errors.append("asset_category is required")
+
+        update_rate_profile = _parse_asset_update_rate_profile(values["update_rate_profile"])
+        if update_rate_profile is None:
+            errors.append(
+                "update_rate_profile must be one of: slow, balanced, realtime"
+            )
+
+        battery_profile = _parse_asset_battery_profile(values["battery_profile"])
+        if battery_profile is None:
+            errors.append(
+                "battery_profile must be one of: long_life, standard, performance"
+            )
+
+        if values["tag_identifier"]:
+            if values["tag_identifier"] in seen_identifiers:
+                errors.append("tag_identifier is duplicated in this CSV file")
+            elif values["tag_identifier"] in existing_identifiers:
+                errors.append("tag_identifier already exists")
+            seen_identifiers.add(values["tag_identifier"])
+
+        if errors:
+            invalid_rows.append(
+                AssetTagImportValidationRow(
+                    row_number=row_number,
+                    values=values,
+                    errors=errors,
+                )
+            )
+            continue
+
+        valid_rows.append(
+            AssetTagImportPreviewRecord(
+                tag_identifier=values["tag_identifier"],
+                display_name=values["display_name"],
+                asset_category=values["asset_category"],
+                update_rate_profile=update_rate_profile,
+                battery_profile=battery_profile,
+            )
+        )
+
+    import_id: str | None = None
+    if valid_rows and not invalid_rows:
+        import_id = str(uuid4())
+        db.add(
+            AssetTagImportSession(
+                id=import_id,
+                created_by_user_id=admin_user.id,
+                rows=[
+                    {
+                        "tag_identifier": row.tag_identifier,
+                        "display_name": row.display_name,
+                        "asset_category": row.asset_category,
+                        "update_rate_profile": row.update_rate_profile.value,
+                        "battery_profile": row.battery_profile.value,
+                    }
+                    for row in valid_rows
+                ],
+            )
+        )
+        db.commit()
+
+    return AssetTagImportValidateResponse(
+        import_id=import_id,
+        total_rows=len(valid_rows) + len(invalid_rows),
+        valid_row_count=len(valid_rows),
+        invalid_row_count=len(invalid_rows),
+        valid_rows=valid_rows,
+        invalid_rows=invalid_rows,
+    )
+
+
+@SPATIAL_ADMIN_ROUTER.post(
+    "/assets/imports/confirm",
+    response_model=AssetTagImportConfirmResponse,
+)
+def confirm_asset_tag_import(
+    payload: AssetTagImportConfirmRequest,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> AssetTagImportConfirmResponse:
+    import_session = db.scalar(
+        select(AssetTagImportSession).where(
+            AssetTagImportSession.id == payload.import_id,
+            AssetTagImportSession.created_by_user_id == admin_user.id,
+        )
+    )
+    if import_session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Import session not found",
+        )
+
+    created_assets: list[AssetTag] = []
+    for row in import_session.rows:
+        asset_tag = AssetTag(**row)
+        db.add(asset_tag)
+        created_assets.append(asset_tag)
+
+    try:
+        db.flush()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="One or more asset tags already exist",
+        ) from error
+
+    write_audit_event(
+        db,
+        action_category="configuration",
+        action_type="asset.imported",
+        actor=admin_user,
+        target_type="asset_import",
+        target_id=payload.import_id,
+        details={
+            "created_count": len(created_assets),
+            "tag_identifiers": [asset.tag_identifier for asset in created_assets],
+        },
+    )
+    db.delete(import_session)
+    db.commit()
+    for asset_tag in created_assets:
+        db.refresh(asset_tag)
+
+    return AssetTagImportConfirmResponse(
+        created_count=len(created_assets),
+        assets=[serialize_asset_tag(asset_tag) for asset_tag in created_assets],
+    )
