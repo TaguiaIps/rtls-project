@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     mqtt_topic_prefix: str = "rtls"
     ingestion_dedupe_key_prefix: str = "rtls:ingest:message"
     ingestion_dedupe_ttl_seconds: int = 10
+    positioning_recent_window_seconds: int = 20
+    live_location_stream_poll_interval_ms: int = 500
     gateway_heartbeat_stale_after_seconds: int = 120
     object_storage_endpoint: str = "http://object-storage:9000"
     object_storage_access_key: str = "minioadmin"

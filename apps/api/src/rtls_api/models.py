@@ -66,6 +66,17 @@ class AssetBatteryProfile(str, Enum):
     PERFORMANCE = "performance"
 
 
+class AssetLocationType(str, Enum):
+    POINT = "point"
+    ZONE = "zone"
+
+
+class LocationConfidenceLevel(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -267,6 +278,15 @@ class AssetTag(Base):
     )
 
     raw_readings: Mapped[list[RawReading]] = relationship(back_populates="asset_tag")
+    current_location: Mapped[AssetCurrentLocation | None] = relationship(
+        back_populates="asset_tag",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    location_history: Mapped[list[AssetLocationHistory]] = relationship(
+        back_populates="asset_tag",
+        cascade="all, delete-orphan",
+    )
 
 
 class AssetTagImportSession(Base):
@@ -298,6 +318,53 @@ class RawReading(Base):
 
     gateway: Mapped[Gateway] = relationship(back_populates="raw_readings")
     asset_tag: Mapped[AssetTag | None] = relationship(back_populates="raw_readings")
+
+
+class AssetCurrentLocation(Base):
+    __tablename__ = "asset_current_locations"
+
+    asset_tag_id: Mapped[str] = mapped_column(ForeignKey("asset_tags.id"), primary_key=True)
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    zone_id: Mapped[str | None] = mapped_column(ForeignKey("spatial_areas.id"), nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    location_type: Mapped[str] = mapped_column(String(16))
+    coordinate_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence_level: Mapped[str] = mapped_column(String(16))
+    confidence_score: Mapped[float] = mapped_column(Float)
+    source_gateway_count: Mapped[int] = mapped_column(Integer)
+    source_reading_count: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    asset_tag: Mapped[AssetTag] = relationship(back_populates="current_location")
+    floor: Mapped[Floor] = relationship()
+    zone: Mapped[SpatialArea | None] = relationship()
+
+
+class AssetLocationHistory(Base):
+    __tablename__ = "asset_location_history"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    asset_tag_id: Mapped[str] = mapped_column(ForeignKey("asset_tags.id"), index=True)
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    zone_id: Mapped[str | None] = mapped_column(ForeignKey("spatial_areas.id"), nullable=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    location_type: Mapped[str] = mapped_column(String(16))
+    coordinate_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence_level: Mapped[str] = mapped_column(String(16))
+    confidence_score: Mapped[float] = mapped_column(Float)
+    source_gateway_count: Mapped[int] = mapped_column(Integer)
+    source_reading_count: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    asset_tag: Mapped[AssetTag] = relationship(back_populates="location_history")
+    floor: Mapped[Floor] = relationship()
+    zone: Mapped[SpatialArea | None] = relationship()
 
 
 class GatewayHeartbeat(Base):

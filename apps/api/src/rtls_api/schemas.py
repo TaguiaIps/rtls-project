@@ -6,9 +6,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from rtls_api.models import (
     AssetBatteryProfile,
+    AssetLocationType,
     AssetUpdateRateProfile,
     GatewayHardwareTier,
     GatewayHealthStatus,
+    LocationConfidenceLevel,
     SpatialAreaType,
     UserRole,
     UserStatus,
@@ -262,3 +264,32 @@ class FloorDetailResponse(BaseModel):
     scale: FloorScaleResponse | None
     areas: list[SpatialAreaResponse]
     gateways: list[GatewayResponse]
+
+
+class AssetLocationResponse(BaseModel):
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    floor_id: str
+    floor_name: str
+    site_id: str
+    site_name: str
+    observed_at: datetime
+    location_type: AssetLocationType
+    point: SpatialPoint | None
+    zone_id: str | None
+    zone_name: str | None
+    confidence_level: LocationConfidenceLevel
+    confidence_score: float = Field(ge=0, le=1)
+    source_gateway_count: int = Field(ge=0)
+    source_reading_count: int = Field(ge=0)
+
+
+class AssetLocationHistoryResponse(AssetLocationResponse):
+    id: str
+
+
+class LiveLocationStreamEvent(BaseModel):
+    event: str = "location.updated"
+    location: AssetLocationResponse

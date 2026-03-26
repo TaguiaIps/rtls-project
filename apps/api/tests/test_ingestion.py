@@ -22,6 +22,7 @@ from rtls_api.models import (
     Site,
     UserRole,
 )
+from rtls_api.positioning import PositioningService
 
 
 def build_settings(tmp_path: Path, **overrides: object) -> Settings:
@@ -68,6 +69,7 @@ def create_ingestion_service(app, settings: Settings) -> TelemetryIngestionServi
         session_factory=app.state.session_factory,
         settings=settings,
         dedupe_store=app.state.message_dedupe_store,
+        positioning_service=PositioningService(settings),
     )
 
 

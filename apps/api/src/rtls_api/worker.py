@@ -12,6 +12,7 @@ from rtls_api.ingestion import (
     telemetry_topic,
 )
 from rtls_api.ingestion_store import create_message_dedupe_store
+from rtls_api.positioning import PositioningService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("rtls-worker")
@@ -36,6 +37,7 @@ def create_ingestion_service() -> TelemetryIngestionService:
             settings.redis_url,
             settings.ingestion_dedupe_key_prefix,
         ),
+        positioning_service=PositioningService(settings),
     )
 
 

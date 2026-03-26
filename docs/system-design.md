@@ -164,13 +164,15 @@ sequenceDiagram
 - Deduplicate by `(gateway_id, message_id)` using Redis with a 10-second TTL.
 - Gateway-provided `gateway_timestamp` remains optional metadata and never replaces canonical time.
 - Unknown gateways, topic/payload mismatches, invalid payloads, and duplicate retries are rejected before durable writes.
-- The Stage B baseline persists raw telemetry and latest heartbeat state only. It does not compute positions or emit derived events.
+- The current economic-tier baseline derives latest known asset locations and append-only location history from recent accepted raw readings on mapped floors.
 
 #### Key operational notes
 
 - **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
-- **Stage B scope boundary:** Position estimation, `location_history`, WebSocket fan-out, alerts, analytics rollups, and premium-tier telemetry remain out of scope for this baseline.
+- **Economic-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements to compute confidence-aware floor locations. Low-confidence outputs fall back to mapped zones when possible instead of implying point precision.
+- **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
+- **Remaining scope boundary:** Alerts, analytics rollups, premium-tier telemetry, and mobile calibration workflows remain out of scope for this baseline.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -186,6 +188,9 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Authentication** | `POST` | `/api/token` | Authenticates user with credentials, returns access/refresh tokens. |
 | | `POST` | `/api/token/refresh` | Obtains a new access token using a valid refresh token. |
+| **Live Locations** | `GET` | `/api/locations/live` | Returns the latest known live locations with supported site, floor, asset, and confidence filters. |
+| | `GET` | `/api/locations/search` | Searches tracked assets and returns the latest known location context for matches. |
+| | `GET` | `/api/locations/assets/{asset_tag_id}/history` | Returns durable location history for a selected asset and time range. |
 | **Assets** | `GET` | `/api/assets` | Retrieves a paginated list of all assets. Supports filtering by type. |
 | | `POST` | `/api/assets` | Creates a new asset (US-ADM-04). |
 | | `GET` | `/api/assets/{id}` | Retrieves details for a single asset. |
@@ -244,12 +249,25 @@ sequenceDiagram
     - `readings` (JSONB),
     - `asset_id` (FK to assets),
     - `gateway_id` (FK to gateways).
-  - **`location_history`** (TimescaleDB Hypertable):
+  - **`asset_current_locations`**:
+    - `asset_id` (PK / FK to assets),
+    - `floor_id` (FK to floors),
+    - `zone_id` (nullable FK to zones),
+    - `observed_at` (TIMESTAMPTZ),
+    - `location_type` (`point` or `zone`),
+    - `location_x` (FLOAT, nullable),
+    - `location_y` (FLOAT, nullable),
+    - `confidence_level` (VARCHAR),
+    - `confidence_score` (FLOAT).
+  - **`location_history`** (TimescaleDB Hypertable / append-only history pattern):
     - `id` (PK),
     - `timestamp` (TIMESTAMPTZ),
     - `location_x` (FLOAT),
     - `location_y` (FLOAT).
     - `asset_id` (FK to assets),
+    - `zone_id` (nullable FK to zones),
+    - `confidence_level` (VARCHAR),
+    - `confidence_score` (FLOAT).
 - **Data Lifecycle Management:**
   - A TimescaleDB **retention policy** will automatically delete raw data older than **90 days**.
   - Rollups: hourly/daily tables for dwell time, zone counts, avg_rssi

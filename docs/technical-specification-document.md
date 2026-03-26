@@ -44,7 +44,8 @@ The backend is structured around microservices:
 1. **MQTT Broker (e.g., Mosquitto, EMQX):** Handles edge telemetry ingestion.
 2. **Ingestion & Normalization:** A shared worker subscribes to `rtls/data/{gateway_id}` and `rtls/heartbeat/{gateway_id}`, validates registered gateway identity, deduplicates retries in Redis, stamps canonical broker time, and persists raw telemetry plus latest heartbeat state.
 3. **Location Engine:**
-   - *Economic:* Applies **Kalman Filters** or Median smoothing to RSSI, then uses KNN/WKNN Fingerprinting to estimate position, yielding a `Confidence Score`.
+   - *Economic (current baseline):* Reuses recent accepted raw readings and registered gateway placements on a mapped floor to derive a confidence-aware location result. When confidence is too low for a trustworthy point estimate, the backend falls back to a mapped zone result.
+   - *Economic (later extension):* Guided mobile calibration may add richer radiomap/fingerprinting reference data without changing the downstream location contracts introduced now.
    - *Premium:* Processes AoA phase data or UWB ToF for precise (X,Y) coordinates.
    - Constrains outputs using Geofence/Floorplan mapping to prevent "wall crossing".
 4. **Events / Rules Engine:** Evaluates positioning against business logic (Table SLAs, Zone Entry/Exit, Dwell Time) and generates Alerts.
@@ -58,19 +59,21 @@ The backend is structured around microservices:
 
 Current Stage B scope notes:
 
-* Raw-reading persistence and latest gateway heartbeat state are implemented first.
-* Position estimation, live-map delivery, alerts, analytics rollups, and premium-tier telemetry remain deferred to later implementation-plan changes.
+* Raw-reading persistence and latest gateway heartbeat state remain the canonical ingestion layer.
+* The current economic-tier baseline adds latest known asset locations, append-only location history, confidence scoring, zone fallback, live-location queries, and `/ws/locations`.
+* Alerts, analytics rollups, premium-tier telemetry, and guided mobile calibration remain deferred to later implementation-plan changes.
 
 ---
 
 ## **3. Positioning Algorithm Strategy**
 
-### **3.1. Economic Tier: Filtered Fingerprinting**
+### **3.1. Economic Tier: Confidence-Aware Placement Baseline**
 
-1. **Preprocessing & Smoothing:** RSSI data is notoriously noisy. The engine applies an **Extended Kalman Filter (EKF)** or moving average to smooth RSSI values from multiple gateways before evaluation.
-2. **Classification:** Uses K-Nearest Neighbors (KNN) to compare real-time smoothed RSSI against the calibrated radiomap.
-3. **Confidence Scoring & Fallback:** Generates a confidence metric (entropy of neighbors). If confidence drops below a threshold, the system reports the position at a "Zone-level" fallback rather than a pinpoint dot.
-4. **Map Matching:** Uses physical vectors (walls, corridors) to "snap" estimated dots to realistic pathways.
+1. **Recent-reading aggregation:** The engine looks at the latest accepted raw reading per gateway inside a short backend-controlled time window.
+2. **Floor selection:** Candidate readings are grouped by floor through the registered gateway map, and the strongest floor wins the update.
+3. **Point estimation:** The current baseline computes a weighted floor-plan coordinate from the selected gateways' placements.
+4. **Confidence Scoring & Fallback:** The backend emits `high`, `medium`, or `low` confidence. Low-confidence updates fall back to a mapped zone when possible and are dropped when no credible mapped placement exists.
+5. **Future calibration extension:** Later mobile calibration work can enrich this stage with radiomap/fingerprinting inputs without changing the persisted latest-location, history, or streaming contracts.
 
 ### **3.2. Premium Tier: Deterministic Location**
 
@@ -86,7 +89,8 @@ Current Stage B scope notes:
 
 * `site_hierarchy`: Defines Sites -> Buildings -> Floors -> Zones.
 * `asset_entities`: Links an asset to a Profile (update rate, battery spec).
-* `position_estimate` (Timescale): Timestamp, AssetID, X, Y, Z, Confidence, Method (Fingerprint/AoA).
+* `asset_current_locations`: Latest known floor-linked state per tracked asset, including confidence and optional zone fallback metadata.
+* `asset_location_history`: Append-only history of accepted location results for trajectory and replay workflows.
 * `business_events`: Logs of entry/exit, SLA violations, alert triggers.
 
 ### **4.2. API & Observability**

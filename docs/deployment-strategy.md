@@ -217,7 +217,9 @@ Stage B runtime contract:
 - accepted messages must resolve to a registered gateway before durable writes
 - Redis stores `(gateway_id, message_id)` dedupe keys for the short replay window
 - TimescaleDB persists append-only raw readings plus the latest gateway heartbeat snapshot
-- positioning, live map delivery, alerts, analytics rollups, and premium-tier telemetry stay out of scope until later changes
+- the same worker computes economic-tier latest-location state and append-only location history from recent raw readings on mapped floors
+- the API serves authorized latest-location queries, time-bounded history, and `/ws/locations` updates from durable state
+- alerts, analytics rollups, premium-tier telemetry, and guided mobile calibration stay out of scope until later changes
 
 ### 5.3 Stage C: Operational intelligence baseline
 

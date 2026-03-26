@@ -37,6 +37,8 @@ export type SpatialAreaType = "zone" | "table" | "restricted_zone" | "poi";
 export type GatewayHardwareTier = "Economic" | "Premium";
 export type AssetUpdateRateProfile = "slow" | "balanced" | "realtime";
 export type AssetBatteryProfile = "long_life" | "standard" | "performance";
+export type AssetLocationType = "point" | "zone";
+export type LocationConfidenceLevel = "high" | "medium" | "low";
 
 export interface FloorSummary {
   id: string;
@@ -149,4 +151,33 @@ export interface FloorDetail {
 export interface AdminSummary {
   current_user: AuthenticatedUser;
   managed_roles: UserRole[];
+}
+
+export interface AssetLocationRecord {
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  observed_at: string;
+  location_type: AssetLocationType;
+  point: SpatialPoint | null;
+  zone_id: string | null;
+  zone_name: string | null;
+  confidence_level: LocationConfidenceLevel;
+  confidence_score: number;
+  source_gateway_count: number;
+  source_reading_count: number;
+}
+
+export interface AssetLocationHistoryRecord extends AssetLocationRecord {
+  id: string;
+}
+
+export interface LiveLocationStreamEvent {
+  event: "location.updated";
+  location: AssetLocationRecord;
 }

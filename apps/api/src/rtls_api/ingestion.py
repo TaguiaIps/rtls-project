@@ -17,6 +17,7 @@ from rtls_api.models import (
     GatewayHeartbeat,
     RawReading,
 )
+from rtls_api.positioning import PositioningService
 
 
 def utc_now() -> datetime:
@@ -98,10 +99,12 @@ class TelemetryIngestionService:
         session_factory: sessionmaker[Session],
         settings: Settings,
         dedupe_store: MessageDedupeStore,
+        positioning_service: PositioningService,
     ) -> None:
         self._session_factory = session_factory
         self._settings = settings
         self._dedupe_store = dedupe_store
+        self._positioning_service = positioning_service
 
     def process_message(
         self,
@@ -152,6 +155,12 @@ class TelemetryIngestionService:
                     gateway=gateway,
                     envelope=envelope,
                     broker_received_at=received_at,
+                )
+                db.flush()
+                self._positioning_service.update_positions_for_tags(
+                    db=db,
+                    tag_identifiers={reading.tag_id for reading in envelope.readings},
+                    observed_at=received_at,
                 )
                 db.commit()
                 return IngestionResult(True, message_type, "accepted", reading_count)
