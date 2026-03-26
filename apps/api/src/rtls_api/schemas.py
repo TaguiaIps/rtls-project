@@ -217,6 +217,49 @@ class GatewayHealthResponse(BaseModel):
     battery_level_percent: float | None
 
 
+class OperationsOverviewKpisResponse(BaseModel):
+    active_assets: int = Field(ge=0)
+    low_confidence_assets: int = Field(ge=0)
+    restricted_zone_assets: int = Field(ge=0)
+    stale_gateways: int = Field(ge=0)
+
+
+class OperationsPriorityItemResponse(BaseModel):
+    id: str
+    kind: str
+    severity: str
+    title: str
+    summary: str
+    observed_at: datetime
+    floor_id: str | None
+    asset_tag_id: str | None
+    gateway_id: str | None
+
+
+class OperationsMapPreviewResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    floor_plan: FloorPlanAssetResponse | None
+    areas: list[SpatialAreaResponse]
+    gateways: list[GatewayResponse]
+    locations: list[AssetLocationResponse]
+
+
+class OperationsOverviewResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    feed_status: str
+    feed_updated_at: datetime | None
+    kpis: OperationsOverviewKpisResponse
+    priority_items: list[OperationsPriorityItemResponse]
+    gateway_snapshot: list[GatewayHealthResponse]
+    map_preview: OperationsMapPreviewResponse
+
+
 class AssetTagResponse(BaseModel):
     id: str
     tag_identifier: str

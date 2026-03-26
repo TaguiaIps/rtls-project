@@ -88,6 +88,11 @@ Implement the BLE fingerprinting path, location history, confidence scoring, Web
 
 Implement the React shell, role-aware routing, Operations Overview, Live Map workspace, search/filter UI, asset drawer, and confidence visualization.
 
+Delivered baseline note:
+
+- The implemented Overview is intentionally driven by currently available live-location and gateway-health signals.
+- Full Alerts Center behavior, SLA trend cards, and analytics workspaces remain deferred to later backlog items even though the shell now provides the navigation and layout foundation they will plug into.
+
 - Depends on:
   - `implement-identity-rbac-and-audit-foundation`
   - `implement-sites-floorplans-and-zone-editor`

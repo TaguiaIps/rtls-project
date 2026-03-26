@@ -1,9 +1,21 @@
 import { PRODUCT_NAME } from "@rtls/config";
 import { useState, type FormEvent, type PropsWithChildren } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate
+} from "react-router-dom";
 
 import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
+import {
+  LiveMapPage,
+  OperationsOverviewPage,
+  OperationsShellLayout
+} from "./operations/OperationsShell";
 
 function LoadingScreen() {
   return (
@@ -129,41 +141,6 @@ function ShellLayout({
   );
 }
 
-function OperationsHome() {
-  const { user } = useAuth();
-
-  return (
-    <ShellLayout
-      title="Operations Overview"
-      subtitle="Live service readiness, alert triage, and quick routing into map and analytics."
-    >
-      <section className="content-grid">
-        <article className="panel">
-          <p className="eyebrow">Role Routing</p>
-          <h1>Operations Console</h1>
-          <p className="panel-copy">
-            General Users land in the operational workspace after login. This route is protected
-            and only renders for authenticated sessions.
-          </p>
-        </article>
-        <article className="panel panel--compact">
-          <p className="eyebrow">Current User</p>
-          <dl className="definition-list">
-            <div>
-              <dt>Email</dt>
-              <dd>{user?.email}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{user?.status}</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
-    </ShellLayout>
-  );
-}
-
 function AdminHome() {
   return (
     <ShellLayout
@@ -223,10 +200,13 @@ function AppRoutes() {
         path="/operations"
         element={
           <ProtectedRoute allowedRoles={["Administrator", "General User"]}>
-            <OperationsHome />
+            <OperationsShellLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<OperationsOverviewPage />} />
+        <Route path="live-map" element={<LiveMapPage />} />
+      </Route>
       <Route
         path="*"
         element={

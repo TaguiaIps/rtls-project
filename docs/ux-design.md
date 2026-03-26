@@ -262,6 +262,12 @@ graph TD
 
 **Supports:** US-GEN-01, FR-NOT-001, FR-NOT-002, NFR-REL-001
 
+Implementation baseline note:
+
+* The delivered baseline uses only currently implemented live-location and gateway-health signals.
+* KPI and queue content in the current product build therefore focuses on active assets, confidence degradation, restricted-zone presence, and stale gateways.
+* Dedicated alert workflows, SLA risk cards, and trend rows remain planned follow-on work after the alerting and analytics changes land.
+
 ```text
 +--------------------------------------------------------------------------------+
 | Top Bar: Site/Floor | Time | Live Status | Alert Tray | User                  |
@@ -283,6 +289,12 @@ graph TD
 ### **5.3. Web App: Live Operations Map**
 
 **Supports:** US-GEN-02, US-GEN-03, US-GEN-04, FR-VIS-001, FR-VIS-002, FR-VIS-003, FR-VIS-004, US-MOB-01
+
+Implementation baseline note:
+
+* The delivered Live Map supports floor selection, live markers, confidence-aware visualization, search, category/confidence/location-type filters, and a selected-asset drawer.
+* Zone fallback and confidence states are implemented now because they are already backed by the current positioning contract.
+* Alert-specific overlays, trajectory replay, and analytics drill-ins remain future work.
 
 ```text
 +------------------------------------------------------------------------------------------------+

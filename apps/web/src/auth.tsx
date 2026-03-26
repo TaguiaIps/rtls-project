@@ -21,6 +21,7 @@ type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextValue {
   apiBaseUrl: string;
+  accessToken: string | null;
   status: AuthStatus;
   user: AuthenticatedUser | null;
   login: (email: string, password: string) => Promise<UserRole>;
@@ -281,6 +282,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value: AuthContextValue = {
     apiBaseUrl,
+    accessToken: session?.accessToken ?? null,
     status,
     user,
     login,

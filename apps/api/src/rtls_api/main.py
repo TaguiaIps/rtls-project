@@ -10,6 +10,7 @@ from rtls_api.db import create_session_factory
 from rtls_api.gateway_health import GATEWAY_HEALTH_ROUTER
 from rtls_api.ingestion_store import create_message_dedupe_store
 from rtls_api.live_locations import LIVE_LOCATION_ROUTER
+from rtls_api.operations_overview import OPERATIONS_OVERVIEW_ROUTER
 from rtls_api.session_store import create_refresh_session_store
 from rtls_api.spatial_admin import SPATIAL_ADMIN_ROUTER
 
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(SPATIAL_ADMIN_ROUTER)
     app.include_router(GATEWAY_HEALTH_ROUTER)
     app.include_router(LIVE_LOCATION_ROUTER)
+    app.include_router(OPERATIONS_OVERVIEW_ROUTER)
     return app
 
 

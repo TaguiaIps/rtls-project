@@ -39,6 +39,13 @@ export type AssetUpdateRateProfile = "slow" | "balanced" | "realtime";
 export type AssetBatteryProfile = "long_life" | "standard" | "performance";
 export type AssetLocationType = "point" | "zone";
 export type LocationConfidenceLevel = "high" | "medium" | "low";
+export type GatewayHealthStatus = "healthy" | "stale";
+export type OperationsFeedStatus = "live" | "degraded" | "empty";
+export type OperationsPrioritySeverity = "critical" | "warning";
+export type OperationsPriorityKind =
+  | "restricted_zone_asset"
+  | "low_confidence_asset"
+  | "stale_gateway";
 
 export interface FloorSummary {
   id: string;
@@ -97,6 +104,21 @@ export interface GatewayRecord {
   hardware_tier: GatewayHardwareTier;
   placement: SpatialPoint;
   notes: string | null;
+}
+
+export interface GatewayHealthRecord {
+  gateway_id: string;
+  floor_id: string;
+  floor_name: string;
+  gateway_identifier: string;
+  display_name: string;
+  hardware_tier: GatewayHardwareTier;
+  status: GatewayHealthStatus;
+  last_seen_at: string;
+  gateway_timestamp: string | null;
+  message_id: string;
+  firmware_version: string | null;
+  battery_level_percent: number | null;
 }
 
 export interface AssetTagRecord {
@@ -180,4 +202,47 @@ export interface AssetLocationHistoryRecord extends AssetLocationRecord {
 export interface LiveLocationStreamEvent {
   event: "location.updated";
   location: AssetLocationRecord;
+}
+
+export interface OperationsOverviewKpis {
+  active_assets: number;
+  low_confidence_assets: number;
+  restricted_zone_assets: number;
+  stale_gateways: number;
+}
+
+export interface OperationsPriorityItem {
+  id: string;
+  kind: OperationsPriorityKind;
+  severity: OperationsPrioritySeverity;
+  title: string;
+  summary: string;
+  observed_at: string;
+  floor_id: string | null;
+  asset_tag_id: string | null;
+  gateway_id: string | null;
+}
+
+export interface OperationsMapPreview {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  floor_plan: FloorPlanAsset | null;
+  areas: SpatialAreaRecord[];
+  gateways: GatewayRecord[];
+  locations: AssetLocationRecord[];
+}
+
+export interface OperationsOverviewRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  feed_status: OperationsFeedStatus;
+  feed_updated_at: string | null;
+  kpis: OperationsOverviewKpis;
+  priority_items: OperationsPriorityItem[];
+  gateway_snapshot: GatewayHealthRecord[];
+  map_preview: OperationsMapPreview;
 }

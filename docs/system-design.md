@@ -191,6 +191,7 @@ sequenceDiagram
 | **Live Locations** | `GET` | `/api/locations/live` | Returns the latest known live locations with supported site, floor, asset, and confidence filters. |
 | | `GET` | `/api/locations/search` | Searches tracked assets and returns the latest known location context for matches. |
 | | `GET` | `/api/locations/assets/{asset_tag_id}/history` | Returns durable location history for a selected asset and time range. |
+| **Operations Shell** | `GET` | `/api/operations/overview` | Returns the current operations overview snapshot for the selected site/floor using delivered live-location and gateway-health signals. |
 | **Assets** | `GET` | `/api/assets` | Retrieves a paginated list of all assets. Supports filtering by type. |
 | | `POST` | `/api/assets` | Creates a new asset (US-ADM-04). |
 | | `GET` | `/api/assets/{id}` | Retrieves details for a single asset. |
@@ -372,8 +373,16 @@ erDiagram
 ## **5. Frontend Design**
 
 - **Framework:** React.js (using Vite for the build tool).
-- **State Management:** **Zustand**.
-- **Key Components:** `MapView`, `DashboardView`, `AnalyticsPanel`, `AdminPanel`.
+- **Current State Management:** React Router plus route-local and page-local state. A dedicated client store remains optional future work, not a delivered requirement.
+- **Delivered Shell Baseline:** protected login, administrator spatial setup workspace, shared operations shell, Operations Overview, and Live Map.
+- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`.
+
+### **5.0. Delivered Web Baseline Scope**
+
+- The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
+- The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
+- The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
+- Alerts Center, analytics workspaces, SLA trends, and richer incident workflows remain follow-on backlog items and are not part of the current web baseline.
 
 ### **5.1. General User Flow Diagram**
 

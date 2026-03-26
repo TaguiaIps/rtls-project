@@ -51,6 +51,12 @@ The backend is structured around microservices:
 4. **Events / Rules Engine:** Evaluates positioning against business logic (Table SLAs, Zone Entry/Exit, Dwell Time) and generates Alerts.
 5. **API Service (FastAPI / Django REST):** Provides REST endpoints for CRUD and serves Analytics. Uses **WebSockets** for real-time map pushes.
 
+Current delivered web-facing contract notes:
+
+- `/api/operations/overview` provides the current Operations Overview snapshot for a selected site/floor.
+- `/api/locations/live`, `/api/locations/search`, `/api/locations/assets/{asset_tag_id}/history`, and `/ws/locations` provide the Live Map baseline.
+- The current overview surface is intentionally limited to live-location and gateway-health signals. Full alert-center workflows, SLA trend cards, and analytics pages remain later work.
+
 ### **2.4. Data Storage Model**
 
 * **PostgreSQL:** Operational Data (Users, Profiles, Sites, Floorplans, Zones, Assets).
