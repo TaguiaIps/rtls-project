@@ -49,6 +49,11 @@ class GatewayHardwareTier(str, Enum):
     PREMIUM = "Premium"
 
 
+class GatewayHealthStatus(str, Enum):
+    HEALTHY = "healthy"
+    STALE = "stale"
+
+
 class AssetUpdateRateProfile(str, Enum):
     SLOW = "slow"
     BALANCED = "balanced"
@@ -234,6 +239,15 @@ class Gateway(Base):
     )
 
     floor: Mapped[Floor] = relationship(back_populates="gateways")
+    raw_readings: Mapped[list[RawReading]] = relationship(
+        back_populates="gateway",
+        cascade="all, delete-orphan",
+    )
+    latest_heartbeat: Mapped[GatewayHeartbeat | None] = relationship(
+        back_populates="gateway",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 class AssetTag(Base):
@@ -252,6 +266,8 @@ class AssetTag(Base):
         onupdate=utc_now,
     )
 
+    raw_readings: Mapped[list[RawReading]] = relationship(back_populates="asset_tag")
+
 
 class AssetTagImportSession(Base):
     __tablename__ = "asset_tag_import_sessions"
@@ -260,3 +276,46 @@ class AssetTagImportSession(Base):
     created_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     rows: Mapped[list[dict[str, str]]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class RawReading(Base):
+    __tablename__ = "raw_readings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    gateway_id: Mapped[str] = mapped_column(ForeignKey("gateways.id"), index=True)
+    asset_tag_id: Mapped[str | None] = mapped_column(ForeignKey("asset_tags.id"), nullable=True)
+    tag_identifier: Mapped[str] = mapped_column(String(120), index=True)
+    message_id: Mapped[str] = mapped_column(String(120), index=True)
+    broker_received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    gateway_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    firmware_version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    rssi: Mapped[int] = mapped_column(Integer)
+    tx_power: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    channel: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    gateway: Mapped[Gateway] = relationship(back_populates="raw_readings")
+    asset_tag: Mapped[AssetTag | None] = relationship(back_populates="raw_readings")
+
+
+class GatewayHeartbeat(Base):
+    __tablename__ = "gateway_heartbeats"
+
+    gateway_id: Mapped[str] = mapped_column(ForeignKey("gateways.id"), primary_key=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    gateway_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    message_id: Mapped[str] = mapped_column(String(120))
+    firmware_version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    battery_level_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    gateway: Mapped[Gateway] = relationship(back_populates="latest_heartbeat")

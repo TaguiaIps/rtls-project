@@ -1,7 +1,7 @@
 # audit-event-recording Specification
 
 ## Purpose
-TBD - created by archiving change implement-identity-rbac-and-audit-foundation. Update Purpose after archive.
+Define the audit-event record model that captures authentication and configuration actions for later operational review, incident analysis, and compliance workflows.
 ## Requirements
 ### Requirement: Audit event persistence
 The RTLS Analytics Platform SHALL persist audit events for authentication lifecycle actions and configuration mutations performed by authenticated users.
@@ -31,4 +31,3 @@ The RTLS Analytics Platform SHALL persist audit events in a form that a later Au
 #### Scenario: Later audit review capability is added
 - **WHEN** a future change queries persisted audit history
 - **THEN** the stored audit events SHALL support filtering by actor, action category, target reference, and time window without redesigning the underlying audit record shape
-

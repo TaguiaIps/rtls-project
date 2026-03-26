@@ -93,29 +93,47 @@ sequenceDiagram
 ### **3.1. Gateway Communication Layer**
 
 - **Protocol:** MQTT
-- **MQTT Topic Structure:** `rtls/data/{gateway_id}`
-- **Payload Format (JSON):** Each message published by a gateway will contain a list of observed beacons.
+- **MQTT Topic Structure:**
+  - telemetry: `rtls/data/{gateway_id}`
+  - heartbeat: `rtls/heartbeat/{gateway_id}`
+- **Identity Rule:** The topic gateway identifier must match the payload `gateway_id` and an existing registered gateway.
+- **Payload Format (JSON):** Each telemetry message published by a gateway contains one message envelope and one or more observed tag readings.
 
     ```json
     {
-      "gatewayId": "gw-01-lobby",
-      "timestamp": "2025-10-29T18:30:00Z",
-      "beacons": [
-        { "tagId": "A1:B2:C3:D4:E5:F6", "rssi": -65 },
-        { "tagId": "B2:C3:D4:E5:F6:A1", "rssi": -72 }
+      "gateway_id": "gw-01-lobby",
+      "message_id": "msg-001",
+      "gateway_timestamp": "2026-03-25T18:30:00Z",
+      "firmware_version": "1.4.0",
+      "readings": [
+        { "tag_id": "A1:B2:C3:D4:E5:F6", "rssi": -65, "tx_power": -8, "channel": 37 },
+        { "tag_id": "B2:C3:D4:E5:F6:A1", "rssi": -72 }
       ]
+    }
+    ```
+
+- **Heartbeat Format (JSON):** Each heartbeat publishes latest-known gateway liveness metadata without location computation.
+
+    ```json
+    {
+      "gateway_id": "gw-01-lobby",
+      "message_id": "hb-001",
+      "gateway_timestamp": "2026-03-25T18:30:05Z",
+      "firmware_version": "1.4.0",
+      "battery_level_percent": 88
     }
     ```
 
 ### **3.2. Data Ingestion & Positioning Service**
 
-- **Language/Framework:** Python (using a high-performance library like `asyncio` for concurrency).
+- **Language/Framework:** Python worker process.
 - **Core Logic:**
-    1. The service subscribes to the MQTT topic `rtls/data/#`.
-    2. Incoming beacon readings are stored in an in-memory buffer.
-    3. **Aggregation Window:** A process runs every **3 seconds** (configurable), averaging RSSI values for each tag from each gateway.
-    4. **Position Calculation:** The service calculates the asset's (X, Y) coordinates using the **Weighted Centroid Localization (WCL)** algorithm.
-    5. **Data Persistence:** The service writes the raw readings to the `raw_readings` table and the calculated position to the `location_history` table.
+    1. The worker subscribes to `rtls/data/+` and `rtls/heartbeat/+`.
+    2. Each message is parsed and validated before any durable state is written.
+    3. The worker verifies that the MQTT topic gateway identifier matches the payload `gateway_id` and a registered gateway record.
+    4. The worker deduplicates MQTT retries using the tuple `(gateway_id, message_id)` in Redis with a 10-second TTL.
+    5. Accepted telemetry is persisted as one `raw_readings` row per observed tag with `broker_received_at` as canonical time.
+    6. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
 
 #### MQTT payload schema (canonical)
 
@@ -142,15 +160,17 @@ sequenceDiagram
 #### Ingestion rules
 
 - QoS = 1 for MQTT publishes.
-- Ingestion service appends `broker_received_timestamp` (UTC) and uses it as canonical time.
-- Deduplicate by `message_id` using Redis with 10s TTL.
-- Clock skew policy: 200 ms threshold; messages diff >200ms marked `suspect_gateway_time`.
-- Reorder buffer: configurable 500ms; stale messages >10s are archived.
+- Ingestion appends `broker_received_at` (UTC) and uses it as canonical time.
+- Deduplicate by `(gateway_id, message_id)` using Redis with a 10-second TTL.
+- Gateway-provided `gateway_timestamp` remains optional metadata and never replaces canonical time.
+- Unknown gateways, topic/payload mismatches, invalid payloads, and duplicate retries are rejected before durable writes.
+- The Stage B baseline persists raw telemetry and latest heartbeat state only. It does not compute positions or emit derived events.
 
 #### Key operational notes
 
-- **Time canonicalization:** The ingestion service appends `broker_received_timestamp` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
+- **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
+- **Stage B scope boundary:** Position estimation, `location_history`, WebSocket fan-out, alerts, analytics rollups, and premium-tier telemetry remain out of scope for this baseline.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -172,6 +192,7 @@ sequenceDiagram
 | | `PUT` | `/api/assets/{id}` | Updates details for a single asset. |
 | | `DELETE` | `/api/assets/{id}` | Deletes an asset. |
 | | `POST` | `/api/assets/bulk_import` | Imports assets from a CSV file (US-ADM-05). |
+| **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
 | | `GET` | `/api/analytics/visit_count` | Retrieves a report of visits to specified POIs by an asset (US-ANL-03). |

@@ -8,6 +8,7 @@ from rtls_api.models import (
     AssetBatteryProfile,
     AssetUpdateRateProfile,
     GatewayHardwareTier,
+    GatewayHealthStatus,
     SpatialAreaType,
     UserRole,
     UserStatus,
@@ -197,6 +198,21 @@ class GatewayResponse(BaseModel):
     hardware_tier: GatewayHardwareTier
     placement: SpatialPoint
     notes: str | None
+
+
+class GatewayHealthResponse(BaseModel):
+    gateway_id: str
+    floor_id: str
+    floor_name: str
+    gateway_identifier: str
+    display_name: str
+    hardware_tier: GatewayHardwareTier
+    status: GatewayHealthStatus
+    last_seen_at: datetime
+    gateway_timestamp: datetime | None
+    message_id: str
+    firmware_version: str | None
+    battery_level_percent: float | None
 
 
 class AssetTagResponse(BaseModel):

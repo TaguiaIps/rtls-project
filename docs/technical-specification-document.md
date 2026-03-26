@@ -42,7 +42,7 @@ The system follows an agnostic, event-driven pattern connecting hardware infrast
 The backend is structured around microservices:
 
 1. **MQTT Broker (e.g., Mosquitto, EMQX):** Handles edge telemetry ingestion.
-2. **Ingestion & Normalization:** Decodes raw payloads, deduplicates overlapping RSSI observations, and syncs timestamps.
+2. **Ingestion & Normalization:** A shared worker subscribes to `rtls/data/{gateway_id}` and `rtls/heartbeat/{gateway_id}`, validates registered gateway identity, deduplicates retries in Redis, stamps canonical broker time, and persists raw telemetry plus latest heartbeat state.
 3. **Location Engine:**
    - *Economic:* Applies **Kalman Filters** or Median smoothing to RSSI, then uses KNN/WKNN Fingerprinting to estimate position, yielding a `Confidence Score`.
    - *Premium:* Processes AoA phase data or UWB ToF for precise (X,Y) coordinates.
@@ -53,8 +53,13 @@ The backend is structured around microservices:
 ### **2.4. Data Storage Model**
 
 * **PostgreSQL:** Operational Data (Users, Profiles, Sites, Floorplans, Zones, Assets).
-* **TimescaleDB:** Time-series extension mapping hyper-tables for `location_history` (x,y,z, confidence, smoothing state) and `raw_readings` (rssi, ToF).
+* **TimescaleDB:** Time-series extension mapping append-only `raw_readings` plus later `location_history` workloads. The Stage B baseline also keeps a latest heartbeat snapshot per registered gateway.
 * *(Optional)* **ClickHouse:** OLAP database for complex, enterprise-level historical heatmap generations and aggregates.
+
+Current Stage B scope notes:
+
+* Raw-reading persistence and latest gateway heartbeat state are implemented first.
+* Position estimation, live-map delivery, alerts, analytics rollups, and premium-tier telemetry remain deferred to later implementation-plan changes.
 
 ---
 

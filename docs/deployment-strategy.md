@@ -211,6 +211,14 @@ Reasoning:
 - keeps failure analysis manageable
 - avoids repeating ingestion contracts across multiple services
 
+Stage B runtime contract:
+
+- the shared `worker` subscribes to `rtls/data/+` and `rtls/heartbeat/+`
+- accepted messages must resolve to a registered gateway before durable writes
+- Redis stores `(gateway_id, message_id)` dedupe keys for the short replay window
+- TimescaleDB persists append-only raw readings plus the latest gateway heartbeat snapshot
+- positioning, live map delivery, alerts, analytics rollups, and premium-tier telemetry stay out of scope until later changes
+
 ### 5.3 Stage C: Operational intelligence baseline
 
 Topology:
@@ -297,7 +305,11 @@ Reasoning:
 
 - Build artifact: Python worker process or worker image family
 - Responsibilities:
-  - message validation follow-up
+  - MQTT telemetry and heartbeat subscription
+  - gateway identity validation
+  - duplicate suppression with Redis
+  - raw-reading persistence
+  - latest-heartbeat projection
   - positioning jobs
   - derived event generation
   - alert generation
@@ -305,6 +317,16 @@ Reasoning:
   - retention and rollup jobs
 - Scaling: vertical first, then horizontal per specialized worker type
 - State: stateless workers with durable state in TimescaleDB and object storage
+- Required runtime settings for the ingestion baseline:
+  - `RTLS_MQTT_BROKER_HOST`
+  - `RTLS_MQTT_BROKER_PORT`
+  - `RTLS_MQTT_USERNAME`
+  - `RTLS_MQTT_PASSWORD`
+  - `RTLS_MQTT_KEEPALIVE_SECONDS`
+  - `RTLS_MQTT_TOPIC_PREFIX`
+  - `RTLS_INGESTION_DEDUPE_KEY_PREFIX`
+  - `RTLS_INGESTION_DEDUPE_TTL_SECONDS`
+  - `RTLS_GATEWAY_HEARTBEAT_STALE_AFTER_SECONDS`
 
 ### 6.4 `mqtt-broker`
 
