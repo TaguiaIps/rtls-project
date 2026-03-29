@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     object_storage_secret_key: str = "minioadmin"
     object_storage_bucket: str = "rtls-floor-plans"
     object_storage_region: str = "us-east-1"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    alert_email_from_address: str | None = None
 
 
 @lru_cache

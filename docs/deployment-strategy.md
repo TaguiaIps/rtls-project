@@ -66,10 +66,13 @@ The following concerns should initially live inside the `api` or `worker` contai
 - analytics query APIs
 - positioning jobs
 - derived event processing
+- inline alert evaluation and in-app notification persistence for delivered operational rules
 - export generation
 - scheduled data retention and rollups
 
 This avoids premature service fragmentation while the codebase is still being established.
+
+For the current derived-event foundation, keep the projection inline with accepted live-location processing inside the shared worker. Split it into a dedicated `worker-events` process only after throughput, retry isolation, or ownership pressure justifies the extra boundary.
 
 ### 3.3 Services that may be split later
 
@@ -218,8 +221,10 @@ Stage B runtime contract:
 - Redis stores `(gateway_id, message_id)` dedupe keys for the short replay window
 - TimescaleDB persists append-only raw readings plus the latest gateway heartbeat snapshot
 - the same worker computes economic-tier latest-location state and append-only location history from recent raw readings on mapped floors
-- the API serves authorized latest-location queries, time-bounded history, and `/ws/locations` updates from durable state
-- alerts, analytics rollups, premium-tier telemetry, and guided mobile calibration stay out of scope until later changes
+- the same worker can also project forward-only canonical zone transitions, dwell closures, current table timer snapshots, and the first delivered alert lifecycle for table-SLA and unauthorized-geofence rules without adding a second event pipeline
+- the API serves authorized latest-location queries, time-bounded history, derived-event read contracts, and `/ws/locations` updates from durable state
+- the API also serves `/api/alerts/*` rule, queue, detail, acknowledgement, resolution, and shell-summary contracts from durable state
+- maintenance alerts, analytics rollups, premium-tier telemetry, and guided mobile calibration stay out of scope until later changes
 
 ### 5.3 Stage C: Operational intelligence baseline
 
@@ -244,7 +249,8 @@ Use this stage for:
 
 Reasoning:
 
-- derived events and alerting often deserve independent retry and scaling behavior
+- derived events and alerting now exist as a delivered product concern, but the first rollout still runs inline on the shared worker path for simplicity
+- split `worker-events` only after throughput, retry isolation, or ownership pressure justifies the extra boundary
 - analytics jobs should not delay real-time event processing
 
 ### 5.4 Stage D: Hardened production platform
@@ -314,9 +320,10 @@ Reasoning:
   - latest-heartbeat projection
   - positioning jobs
   - derived event generation
-  - alert generation
-  - exports
-  - retention and rollup jobs
+- alert generation
+- in-app notification persistence and optional email-delivery attempts for delivered alert rules
+- exports
+- retention and rollup jobs
 - Scaling: vertical first, then horizontal per specialized worker type
 - State: stateless workers with durable state in TimescaleDB and object storage
 - Required runtime settings for the ingestion baseline:

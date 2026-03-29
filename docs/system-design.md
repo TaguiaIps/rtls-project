@@ -134,6 +134,7 @@ sequenceDiagram
     4. The worker deduplicates MQTT retries using the tuple `(gateway_id, message_id)` in Redis with a 10-second TTL.
     5. Accepted telemetry is persisted as one `raw_readings` row per observed tag with `broker_received_at` as canonical time.
     6. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
+    7. Accepted live-location updates derived from recent raw readings now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
 
 #### MQTT payload schema (canonical)
 
@@ -171,8 +172,10 @@ sequenceDiagram
 - **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
 - **Economic-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements to compute confidence-aware floor locations. Low-confidence outputs fall back to mapped zones when possible instead of implying point precision.
+- **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
+- **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Remaining scope boundary:** Alerts, analytics rollups, premium-tier telemetry, and mobile calibration workflows remain out of scope for this baseline.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, and the delivered Alerts Center for table SLA and unauthorized geofence workflows. Maintenance alerts, analytics workspaces, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -191,6 +194,18 @@ sequenceDiagram
 | **Live Locations** | `GET` | `/api/locations/live` | Returns the latest known live locations with supported site, floor, asset, and confidence filters. |
 | | `GET` | `/api/locations/search` | Searches tracked assets and returns the latest known location context for matches. |
 | | `GET` | `/api/locations/assets/{asset_tag_id}/history` | Returns durable location history for a selected asset and time range. |
+| **Derived Events** | `GET` | `/api/derived/zone-events` | Returns canonical zone-entry and zone-exit events filtered by site, floor, zone, asset, and time range. |
+| | `GET` | `/api/derived/dwells` | Returns durable dwell windows closed from canonical zone occupancy. |
+| | `GET` | `/api/derived/table-timers` | Returns current timer snapshots for SLA-eligible tables within a supported site or floor scope. |
+| | `GET` | `/api/derived/round-trips` | Evaluates origin-destination-origin cycles from canonical zone-entry history for a requested route and time scope. |
+| **Alerts** | `GET` | `/api/alerts/summary` | Returns unresolved and unread in-app alert counts for the current operational shell context. |
+| | `GET` | `/api/alerts/rules` | Returns delivered alert rule definitions for the selected operational scope. |
+| | `POST` | `/api/alerts/rules` | Creates a delivered alert rule for table SLA or unauthorized geofence workflows. |
+| | `PATCH` | `/api/alerts/rules/{rule_id}` | Updates an existing delivered alert rule and reconciles active alert state. |
+| | `GET` | `/api/alerts` | Returns the Alerts Center queue and history using supported status, type, severity, scope, and time filters. |
+| | `GET` | `/api/alerts/{alert_id}` | Returns alert detail including rule summary, delivery attempts, and persisted action history. |
+| | `POST` | `/api/alerts/{alert_id}/acknowledge` | Persists acknowledgement state and actor context for an alert instance. |
+| | `POST` | `/api/alerts/{alert_id}/resolve` | Persists resolution state and moves the alert into history. |
 | **Operations Shell** | `GET` | `/api/operations/overview` | Returns the current operations overview snapshot for the selected site/floor using delivered live-location and gateway-health signals. |
 | **Assets** | `GET` | `/api/assets` | Retrieves a paginated list of all assets. Supports filtering by type. |
 | | `POST` | `/api/assets` | Creates a new asset (US-ADM-04). |
@@ -382,7 +397,8 @@ erDiagram
 - The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
 - The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
 - The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
-- Alerts Center, analytics workspaces, SLA trends, and richer incident workflows remain follow-on backlog items and are not part of the current web baseline.
+- Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
+- Maintenance alerts, analytics workspaces, SLA trends, assignments, exports, and richer incident workflows remain follow-on backlog items.
 
 ### **5.1. General User Flow Diagram**
 
@@ -625,3 +641,39 @@ The pipeline will execute the following steps for each relevant service:
     2. After the CI pipeline successfully pushes a new Docker image, a step will automatically update the corresponding Deployment manifest in the GitOps repository with the new image tag.
     3. Argo CD, running in the Kubernetes cluster, will detect the change in the GitOps repository.
     4. Argo CD will automatically apply the updated manifest to the cluster, triggering a **rolling update** of the service. This ensures zero-downtime deployments.
+  - **`alert_rules`**:
+    - `id` (PK),
+    - `rule_type` (VARCHAR),
+    - `severity` (VARCHAR),
+    - `enabled` (BOOLEAN),
+    - `site_id` (FK to sites),
+    - `floor_id` (FK to floors),
+    - `config` (JSONB),
+    - `delivery` (JSONB).
+  - **`alert_instances`**:
+    - `id` (PK),
+    - `rule_id` (FK to alert_rules),
+    - `status` (VARCHAR),
+    - `scope_key` (VARCHAR),
+    - `site_id` (FK to sites),
+    - `floor_id` (FK to floors),
+    - `area_id` (FK to zones),
+    - `asset_tag_id` (FK to assets),
+    - `condition_key` (VARCHAR),
+    - `first_triggered_at` (TIMESTAMPTZ),
+    - `last_triggered_at` (TIMESTAMPTZ).
+  - **`alert_actions`**:
+    - `id` (PK),
+    - `alert_id` (FK to alert_instances),
+    - `action_type` (VARCHAR),
+    - `actor_user_id` (FK to users),
+    - `notes` (TEXT),
+    - `details` (JSONB).
+  - **`alert_notification_deliveries`**:
+    - `id` (PK),
+    - `alert_id` (FK to alert_instances),
+    - `channel` (VARCHAR),
+    - `destination` (VARCHAR),
+    - `status` (VARCHAR),
+    - `error_message` (TEXT),
+    - `read_at` (TIMESTAMPTZ).

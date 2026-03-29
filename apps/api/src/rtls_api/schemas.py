@@ -5,13 +5,23 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from rtls_api.models import (
+    AlertActionType,
+    AlertDeliveryChannel,
+    AlertDeliveryStatus,
+    AlertRuleType,
+    AlertSeverity,
+    AlertStatus,
     AssetBatteryProfile,
     AssetLocationType,
     AssetUpdateRateProfile,
+    DerivedZoneEventType,
+    DwellClosureReason,
     GatewayHardwareTier,
     GatewayHealthStatus,
     LocationConfidenceLevel,
     SpatialAreaType,
+    TableServiceTimerStatus,
+    UnauthorizedGeofenceTrigger,
     UserRole,
     UserStatus,
 )
@@ -336,3 +346,199 @@ class AssetLocationHistoryResponse(AssetLocationResponse):
 class LiveLocationStreamEvent(BaseModel):
     event: str = "location.updated"
     location: AssetLocationResponse
+
+
+class DerivedZoneTransitionEventResponse(BaseModel):
+    id: str
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    floor_id: str
+    floor_name: str
+    site_id: str
+    site_name: str
+    zone_id: str
+    zone_name: str
+    observed_at: datetime
+    event_type: DerivedZoneEventType
+    transition_boundary_id: str
+
+
+class DerivedZoneDwellRecordResponse(BaseModel):
+    id: str
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    floor_id: str
+    floor_name: str
+    site_id: str
+    site_name: str
+    zone_id: str
+    zone_name: str
+    started_at: datetime
+    ended_at: datetime
+    duration_seconds: float = Field(ge=0)
+    closure_reason: DwellClosureReason
+
+
+class TableServiceTimerStateResponse(BaseModel):
+    table_area_id: str
+    table_name: str
+    floor_id: str
+    floor_name: str
+    site_id: str
+    site_name: str
+    status: TableServiceTimerStatus
+    active_visit_count: int = Field(ge=0)
+    boundary_at: datetime | None
+    elapsed_seconds: float = Field(ge=0)
+    active_since: datetime | None
+    last_entry_at: datetime | None
+    last_exit_at: datetime | None
+    last_visit_started_at: datetime | None
+    last_visit_ended_at: datetime | None
+    last_visit_duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class RoundTripMeasurementResponse(BaseModel):
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    floor_id: str
+    floor_name: str
+    site_id: str
+    site_name: str
+    origin_zone_id: str
+    origin_zone_name: str
+    destination_zone_id: str
+    destination_zone_name: str
+    origin_entered_at: datetime
+    destination_entered_at: datetime
+    completed_at: datetime
+    outbound_seconds: float = Field(ge=0)
+    return_seconds: float = Field(ge=0)
+    total_seconds: float = Field(ge=0)
+
+
+class AlertRuleUpsertRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    rule_type: AlertRuleType
+    enabled: bool = True
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    table_area_ids: list[str] | None = None
+    area_ids: list[str] | None = None
+    trigger_on: UnauthorizedGeofenceTrigger | None = None
+    asset_category: str | None = Field(default=None, min_length=1, max_length=80)
+    notify_in_app: bool = True
+    notify_email: bool = False
+    email_recipients: list[EmailStr] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_rule_shape(self) -> AlertRuleUpsertRequest:
+        if not self.notify_in_app:
+            raise ValueError("In-app delivery must stay enabled for delivered alerts")
+        if self.notify_email and not self.email_recipients:
+            raise ValueError("Email recipients are required when email delivery is enabled")
+        if self.rule_type == AlertRuleType.TABLE_SLA:
+            if self.threshold_seconds is None:
+                raise ValueError("threshold_seconds is required for table SLA rules")
+            if not self.table_area_ids:
+                raise ValueError("table_area_ids is required for table SLA rules")
+            return self
+        if not self.area_ids:
+            raise ValueError("area_ids is required for unauthorized geofence rules")
+        if self.trigger_on is None:
+            raise ValueError("trigger_on is required for unauthorized geofence rules")
+        return self
+
+
+class AlertRuleDeliveryResponse(BaseModel):
+    in_app: bool
+    email: bool
+    email_recipients: list[EmailStr]
+
+
+class AlertRuleResponse(BaseModel):
+    id: str
+    name: str
+    rule_type: AlertRuleType
+    severity: AlertSeverity
+    enabled: bool
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    config: dict[str, object]
+    delivery: AlertRuleDeliveryResponse
+    created_at: datetime
+    updated_at: datetime
+
+
+class AlertNotificationSummaryResponse(BaseModel):
+    unresolved_count: int = Field(ge=0)
+    unread_count: int = Field(ge=0)
+    active_critical_count: int = Field(ge=0)
+    active_warning_count: int = Field(ge=0)
+    latest_alert_at: datetime | None
+
+
+class AlertListItemResponse(BaseModel):
+    id: str
+    rule_id: str
+    rule_name: str
+    rule_type: AlertRuleType
+    severity: AlertSeverity
+    status: AlertStatus
+    title: str
+    summary: str
+    scope_key: str
+    scope_label: str
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    area_id: str | None
+    area_name: str | None
+    asset_tag_id: str | None
+    asset_label: str | None
+    first_triggered_at: datetime
+    last_triggered_at: datetime
+    acknowledged_at: datetime | None
+    resolved_at: datetime | None
+    cleared_at: datetime | None
+
+
+class AlertActionResponse(BaseModel):
+    id: str
+    action_type: AlertActionType
+    actor_user_id: str | None
+    actor_email: str | None
+    actor_display_name: str | None
+    notes: str | None
+    details: dict[str, object] | None
+    created_at: datetime
+
+
+class AlertNotificationDeliveryResponse(BaseModel):
+    id: str
+    channel: AlertDeliveryChannel
+    destination: str
+    status: AlertDeliveryStatus
+    error_message: str | None
+    read_at: datetime | None
+    created_at: datetime
+
+
+class AlertDetailResponse(AlertListItemResponse):
+    condition_key: str | None
+    context: dict[str, object] | None
+    rule: AlertRuleResponse
+    actions: list[AlertActionResponse]
+    deliveries: list[AlertNotificationDeliveryResponse]
+
+
+class AlertActionRequest(BaseModel):
+    notes: str | None = Field(default=None, max_length=500)

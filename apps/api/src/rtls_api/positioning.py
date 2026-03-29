@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from rtls_api.alerts import evaluate_alerts_for_position_update
 from rtls_api.config import Settings
+from rtls_api.derived_events import apply_derived_zone_semantics
 from rtls_api.models import (
     AssetCurrentLocation,
     AssetLocationHistory,
@@ -203,6 +205,23 @@ class PositioningService:
                 source_gateway_count=candidate.source_gateway_count,
                 source_reading_count=candidate.source_reading_count,
             )
+        )
+        semantics = apply_derived_zone_semantics(
+            db=db,
+            asset_tag_id=candidate.asset_tag_id,
+            floor_id=candidate.floor_id,
+            zone_id=candidate.zone_id,
+            observed_at=candidate.observed_at,
+        )
+        floor_ids = {candidate.floor_id}
+        if semantics.exit_event is not None:
+            floor_ids.add(semantics.exit_event.floor_id)
+        evaluate_alerts_for_position_update(
+            db=db,
+            settings=self._settings,
+            floor_ids=floor_ids,
+            semantics=semantics,
+            observed_at=candidate.observed_at,
         )
         return True
 

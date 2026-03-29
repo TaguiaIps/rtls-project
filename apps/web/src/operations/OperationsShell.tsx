@@ -1,4 +1,5 @@
 import type {
+  AlertNotificationSummaryRecord,
   AssetLocationRecord,
   FloorDetail,
   FloorPlanAsset,
@@ -13,6 +14,7 @@ import type {
 } from "@rtls/contracts";
 import {
   startTransition,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -31,8 +33,10 @@ import { useAuth } from "../auth";
 
 type ShellContextValue = {
   accessToken: string | null;
+  alertSummary: AlertNotificationSummaryRecord | null;
   apiBaseUrl: string;
   fetchWithAuth: ReturnType<typeof useAuth>["fetchWithAuth"];
+  refreshAlertSummary: () => Promise<void>;
   selectedSite: SiteRecord | null;
   selectedFloor: FloorSummary | null;
   setSearchParam: (key: string, value: string | null) => void;
@@ -54,6 +58,7 @@ export function OperationsShellLayout() {
   const [sites, setSites] = useState<SiteRecord[]>([]);
   const [sitesLoading, setSitesLoading] = useState(true);
   const [sitesError, setSitesError] = useState<string | null>(null);
+  const [alertSummary, setAlertSummary] = useState<AlertNotificationSummaryRecord | null>(null);
   const [feedStatus, setFeedStatus] = useState<OperationsFeedStatus>("empty");
   const [feedUpdatedAt, setFeedUpdatedAt] = useState<string | null>(null);
   const location = useLocation();
@@ -102,6 +107,30 @@ export function OperationsShellLayout() {
     return floorPool.find((floor) => floor.id === floorId) ?? null;
   }, [searchParams, selectedSite, sites]);
 
+  const refreshAlertSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedSite?.id) {
+        params.set("site_id", selectedSite.id);
+      }
+      if (selectedFloor?.id) {
+        params.set("floor_id", selectedFloor.id);
+      }
+      const response = await fetchWithAuth(`/api/alerts/summary?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error("Unable to load alert summary");
+      }
+      const payload = (await response.json()) as AlertNotificationSummaryRecord;
+      setAlertSummary(payload);
+    } catch {
+      setAlertSummary(null);
+    }
+  }, [fetchWithAuth, selectedFloor?.id, selectedSite?.id]);
+
+  useEffect(() => {
+    void refreshAlertSummary();
+  }, [refreshAlertSummary]);
+
   useEffect(() => {
     if (sitesLoading || sites.length === 0) {
       return;
@@ -146,8 +175,10 @@ export function OperationsShellLayout() {
 
   const shellContext: ShellContextValue = {
     accessToken,
+    alertSummary,
     apiBaseUrl,
     fetchWithAuth,
+    refreshAlertSummary,
     selectedSite,
     selectedFloor,
     setSearchParam,
@@ -164,7 +195,12 @@ export function OperationsShellLayout() {
 
   const navItems = [
     { label: "Overview", path: "/operations" },
-    { label: "Live Map", path: "/operations/live-map" }
+    { label: "Live Map", path: "/operations/live-map" },
+    {
+      label: "Alerts",
+      path: "/operations/alerts",
+      badgeCount: alertSummary?.unresolved_count ?? 0
+    }
   ];
   if (user?.role === "Administrator") {
     navItems.push({ label: "Admin", path: "/admin" });
@@ -188,12 +224,16 @@ export function OperationsShellLayout() {
               className={({ isActive }) =>
                 isActive ? "shell-nav__link shell-nav__link--active" : "shell-nav__link"
               }
+              end={item.path === "/operations"}
               to={{
                 pathname: item.path,
                 search: searchParams.toString() ? `?${searchParams.toString()}` : ""
               }}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {"badgeCount" in item && item.badgeCount ? (
+                <span className="shell-nav__badge">{item.badgeCount}</span>
+              ) : null}
             </NavLink>
           ))}
         </nav>
