@@ -338,6 +338,12 @@ Implementation baseline note:
 
 **Supports:** US-ANL-01, US-ANL-03, US-ANL-04, FR-ANL-002, FR-ANL-003, FR-ANL-004, FR-ANL-005
 
+Implementation baseline note:
+
+* The delivered Analytics workspace now supports trajectory replay, heatmap generation, dwell reporting, round-trip reporting, and table SLA trend views inside the shared monitoring shell.
+* The first delivery keeps analytics interactive and read-only: bounded time windows, report switching, and explicit empty-state handling are included now.
+* Export jobs, saved presets, compare-period workflows, and scheduled report delivery remain later work.
+
 ```text
 +------------------------------------------------------------------------------------------------+
 | Report Switcher: Heatmap | Trajectory | Round-Trip | Dwell Time | SLA Trends                   |
@@ -351,8 +357,8 @@ Implementation baseline note:
 +------------------------------------------------------------------------------------------------+
 ```
 
-* The workspace uses one mental model for all analytics: choose population, choose time, generate, compare, export.
-* Saved presets let Carlos repeat common analyses without rebuilding filters each time.
+* The workspace uses one mental model for all delivered analytics: choose scope, choose time, generate, inspect.
+* Deeper export, preset, and cross-period comparison workflows remain deferred even though the IA already reserves room for them.
 
 ### **5.6. Web App: Zone & POI Editor**
 

@@ -302,6 +302,91 @@ const liveLocationsResponse = [
   }
 ];
 
+const analyticsTrajectoryResponse = {
+  asset_tag_id: "asset-1",
+  tag_identifier: "TAG-881",
+  display_name: "Waiter Tag 881",
+  asset_category: "staff",
+  site_id: "site-1",
+  site_name: "Salvador Flagship",
+  floor_id: "floor-1",
+  floor_name: "Dining Hall A",
+  start_at: "2026-03-26T08:00:00Z",
+  end_at: "2026-03-26T12:00:00Z",
+  points: [
+    {
+      id: "hist-1",
+      asset_tag_id: "asset-1",
+      tag_identifier: "TAG-881",
+      display_name: "Waiter Tag 881",
+      asset_category: "staff",
+      floor_id: "floor-1",
+      floor_name: "Dining Hall A",
+      site_id: "site-1",
+      site_name: "Salvador Flagship",
+      observed_at: "2026-03-26T08:10:00Z",
+      location_type: "point",
+      point: { x: 0.2, y: 0.2 },
+      zone_id: null,
+      zone_name: null,
+      confidence_level: "high",
+      confidence_score: 0.9,
+      source_gateway_count: 3,
+      source_reading_count: 3
+    },
+    {
+      id: "hist-2",
+      asset_tag_id: "asset-1",
+      tag_identifier: "TAG-881",
+      display_name: "Waiter Tag 881",
+      asset_category: "staff",
+      floor_id: "floor-1",
+      floor_name: "Dining Hall A",
+      site_id: "site-1",
+      site_name: "Salvador Flagship",
+      observed_at: "2026-03-26T08:20:00Z",
+      location_type: "point",
+      point: { x: 0.6, y: 0.2 },
+      zone_id: "zone-1",
+      zone_name: "Cold Storage",
+      confidence_level: "medium",
+      confidence_score: 0.72,
+      source_gateway_count: 2,
+      source_reading_count: 2
+    }
+  ]
+};
+
+const analyticsHeatmapResponse = {
+  site_id: "site-1",
+  site_name: "Salvador Flagship",
+  floor_id: "floor-1",
+  floor_name: "Dining Hall A",
+  asset_category: null,
+  start_at: "2026-03-26T08:00:00Z",
+  end_at: "2026-03-26T12:00:00Z",
+  grid_columns: 12,
+  grid_rows: 8,
+  total_samples: 6,
+  max_density: 3,
+  cells: [
+    {
+      row: 1,
+      column: 2,
+      center: { x: 0.2, y: 0.2 },
+      sample_count: 3,
+      intensity: 1
+    },
+    {
+      row: 4,
+      column: 6,
+      center: { x: 0.55, y: 0.56 },
+      sample_count: 2,
+      intensity: 0.66
+    }
+  ]
+};
+
 describe("operations shell", () => {
   beforeEach(() => {
     cleanup();
@@ -366,6 +451,7 @@ describe("operations shell", () => {
       expect(screen.getByText("Feed Degraded")).toBeInTheDocument();
     });
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Live Map" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
     expect(screen.getByText("Restricted Zone Hits")).toBeInTheDocument();
@@ -607,5 +693,69 @@ describe("operations shell", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Dining Hall SLA/i })).toBeInTheDocument();
     });
+  });
+
+  it("renders Analytics workspace reports and switches from trajectory to heatmap", async () => {
+    window.history.pushState(
+      {},
+      "",
+      "/operations/analytics?site_id=site-1&floor_id=floor-1&analytics_report=trajectory&analytics_start_at=2026-03-26T08%3A00%3A00Z&analytics_end_at=2026-03-26T12%3A00%3A00Z&analytics_asset_tag_id=asset-1"
+    );
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.endsWith("/api/me")) {
+        return jsonResponse({
+          id: "user-1",
+          email: "ops@example.com",
+          display_name: "Carlos",
+          role: "General User",
+          status: "active"
+        });
+      }
+      if (url.endsWith("/api/admin/sites")) {
+        return jsonResponse(sitesResponse);
+      }
+      if (url.includes("/api/alerts/summary")) {
+        return jsonResponse(alertSummaryResponse);
+      }
+      if (url.endsWith("/api/admin/floors/floor-1")) {
+        return jsonResponse(floorDetailResponse);
+      }
+      if (url.endsWith("/api/admin/floors/floor-1/floor-plan/file")) {
+        return new Response("png-data", {
+          status: 200,
+          headers: { "Content-Type": "image/png" }
+        });
+      }
+      if (url === "/api/locations/live?floor_id=floor-1" || url.endsWith("/api/locations/live?floor_id=floor-1")) {
+        return jsonResponse(liveLocationsResponse);
+      }
+      if (url.includes("/api/analytics/trajectory")) {
+        return jsonResponse(analyticsTrajectoryResponse);
+      }
+      if (url.includes("/api/analytics/heatmap")) {
+        return jsonResponse(analyticsHeatmapResponse);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Waiter Tag 881" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Heatmap" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Traffic density" })).toBeInTheDocument();
+    });
+    expect(
+      fetchSpy.mock.calls.some(([input]) => String(input).includes("/api/analytics/heatmap"))
+    ).toBe(true);
   });
 });

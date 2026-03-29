@@ -211,6 +211,81 @@ export interface LiveLocationStreamEvent {
   location: AssetLocationRecord;
 }
 
+export interface DerivedZoneTransitionEventRecord {
+  id: string;
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  zone_id: string;
+  zone_name: string;
+  observed_at: string;
+  event_type: "entry" | "exit";
+  transition_boundary_id: string;
+}
+
+export interface DerivedZoneDwellRecord {
+  id: string;
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;
+  ended_at: string;
+  duration_seconds: number;
+  closure_reason: "zone_change" | "floor_change" | "resolved_placement_lost";
+}
+
+export interface TableServiceTimerStateRecord {
+  table_area_id: string;
+  table_name: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  status: "active" | "idle";
+  active_visit_count: number;
+  boundary_at: string | null;
+  elapsed_seconds: number;
+  active_since: string | null;
+  last_entry_at: string | null;
+  last_exit_at: string | null;
+  last_visit_started_at: string | null;
+  last_visit_ended_at: string | null;
+  last_visit_duration_seconds: number | null;
+}
+
+export interface RoundTripMeasurementRecord {
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  origin_zone_id: string;
+  origin_zone_name: string;
+  destination_zone_id: string;
+  destination_zone_name: string;
+  origin_entered_at: string;
+  destination_entered_at: string;
+  completed_at: string;
+  outbound_seconds: number;
+  return_seconds: number;
+  total_seconds: number;
+}
+
 export interface OperationsOverviewKpis {
   active_assets: number;
   low_confidence_assets: number;
@@ -368,4 +443,119 @@ export interface AlertRuleUpsertPayload {
 
 export interface AlertActionPayload {
   notes?: string | null;
+}
+
+export type AnalyticsThresholdSource = "alert_rule" | "unavailable";
+
+export interface AnalyticsSummaryMetrics {
+  sample_count: number;
+  avg_duration_seconds: number | null;
+  max_duration_seconds: number | null;
+}
+
+export interface AnalyticsHeatmapCellRecord {
+  row: number;
+  column: number;
+  center: SpatialPoint;
+  sample_count: number;
+  intensity: number;
+}
+
+export interface AnalyticsHeatmapRecord {
+  site_id: string;
+  site_name: string;
+  floor_id: string;
+  floor_name: string;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  grid_columns: number;
+  grid_rows: number;
+  total_samples: number;
+  max_density: number;
+  cells: AnalyticsHeatmapCellRecord[];
+}
+
+export interface AnalyticsTrajectoryRecord {
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  site_id: string;
+  site_name: string;
+  floor_id: string;
+  floor_name: string;
+  start_at: string;
+  end_at: string;
+  points: AssetLocationHistoryRecord[];
+}
+
+export interface AnalyticsDwellSummaryRecord extends AnalyticsSummaryMetrics {
+  threshold_seconds: number | null;
+  threshold_source: AnalyticsThresholdSource;
+  threshold_breach_count: number;
+}
+
+export interface AnalyticsDwellRecord extends DerivedZoneDwellRecord {
+  threshold_seconds: number | null;
+  threshold_breached: boolean;
+}
+
+export interface AnalyticsDwellReportRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  summary: AnalyticsDwellSummaryRecord;
+  records: AnalyticsDwellRecord[];
+}
+
+export interface AnalyticsRoundTripSummaryRecord extends AnalyticsSummaryMetrics {
+  avg_outbound_seconds: number | null;
+  avg_return_seconds: number | null;
+}
+
+export interface AnalyticsRoundTripReportRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  origin_zone_id: string;
+  origin_zone_name: string;
+  destination_zone_id: string;
+  destination_zone_name: string;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  summary: AnalyticsRoundTripSummaryRecord;
+  records: RoundTripMeasurementRecord[];
+}
+
+export interface AnalyticsSlaTrendBucketRecord {
+  bucket_started_at: string;
+  completed_visit_count: number;
+  breach_count: number;
+  avg_duration_seconds: number | null;
+  max_duration_seconds: number | null;
+}
+
+export interface AnalyticsSlaTrendRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  table_area_id: string;
+  table_name: string;
+  start_at: string;
+  end_at: string;
+  bucket_minutes: number;
+  threshold_source: AnalyticsThresholdSource;
+  threshold_seconds: number | null;
+  current_timer: TableServiceTimerStateRecord | null;
+  buckets: AnalyticsSlaTrendBucketRecord[];
 }

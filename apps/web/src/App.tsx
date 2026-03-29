@@ -12,6 +12,7 @@ import {
 import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
 import { AlertsCenterPage } from "./operations/AlertsCenter";
+import { AnalyticsWorkspacePage } from "./operations/AnalyticsWorkspace";
 import {
   LiveMapPage,
   OperationsOverviewPage,
@@ -206,6 +207,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<OperationsOverviewPage />} />
+        <Route path="analytics" element={<AnalyticsWorkspacePage />} />
         <Route path="alerts" element={<AlertsCenterPage />} />
         <Route path="live-map" element={<LiveMapPage />} />
       </Route>

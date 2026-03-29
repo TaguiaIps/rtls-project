@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from rtls_api.admin import ADMIN_ROUTER
 from rtls_api.alerts_api import ALERT_ROUTER
+from rtls_api.analytics_api import ANALYTICS_ROUTER
 from rtls_api.auth import AUTH_ROUTER, USER_ROUTER
 from rtls_api.config import Settings, get_settings
 from rtls_api.db import create_session_factory
@@ -77,6 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(GATEWAY_HEALTH_ROUTER)
     app.include_router(LIVE_LOCATION_ROUTER)
     app.include_router(DERIVED_EVENT_ROUTER)
+    app.include_router(ANALYTICS_ROUTER)
     app.include_router(ALERT_ROUTER)
     app.include_router(OPERATIONS_OVERVIEW_ROUTER)
     return app

@@ -423,6 +423,119 @@ class RoundTripMeasurementResponse(BaseModel):
     total_seconds: float = Field(ge=0)
 
 
+class AnalyticsHeatmapCellResponse(BaseModel):
+    row: int = Field(ge=0)
+    column: int = Field(ge=0)
+    center: SpatialPoint
+    sample_count: int = Field(ge=1)
+    intensity: float = Field(ge=0, le=1)
+
+
+class AnalyticsHeatmapResponse(BaseModel):
+    site_id: str
+    site_name: str
+    floor_id: str
+    floor_name: str
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    grid_columns: int = Field(ge=1)
+    grid_rows: int = Field(ge=1)
+    total_samples: int = Field(ge=0)
+    max_density: int = Field(ge=0)
+    cells: list[AnalyticsHeatmapCellResponse]
+
+
+class AnalyticsTrajectoryResponse(BaseModel):
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    site_id: str
+    site_name: str
+    floor_id: str
+    floor_name: str
+    start_at: datetime
+    end_at: datetime
+    points: list[AssetLocationHistoryResponse]
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    sample_count: int = Field(ge=0)
+    avg_duration_seconds: float | None = Field(default=None, ge=0)
+    max_duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsDwellSummaryResponse(AnalyticsSummaryResponse):
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    threshold_source: str
+    threshold_breach_count: int = Field(ge=0)
+
+
+class AnalyticsDwellRecordResponse(DerivedZoneDwellRecordResponse):
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    threshold_breached: bool
+
+
+class AnalyticsDwellReportResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    zone_id: str | None
+    zone_name: str | None
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    summary: AnalyticsDwellSummaryResponse
+    records: list[AnalyticsDwellRecordResponse]
+
+
+class AnalyticsRoundTripSummaryResponse(AnalyticsSummaryResponse):
+    avg_outbound_seconds: float | None = Field(default=None, ge=0)
+    avg_return_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsRoundTripReportResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    origin_zone_id: str
+    origin_zone_name: str
+    destination_zone_id: str
+    destination_zone_name: str
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    summary: AnalyticsRoundTripSummaryResponse
+    records: list[RoundTripMeasurementResponse]
+
+
+class AnalyticsSlaTrendBucketResponse(BaseModel):
+    bucket_started_at: datetime
+    completed_visit_count: int = Field(ge=0)
+    breach_count: int = Field(ge=0)
+    avg_duration_seconds: float | None = Field(default=None, ge=0)
+    max_duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsSlaTrendResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    table_area_id: str
+    table_name: str
+    start_at: datetime
+    end_at: datetime
+    bucket_minutes: int = Field(ge=1)
+    threshold_source: str
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    current_timer: TableServiceTimerStateResponse | None
+    buckets: list[AnalyticsSlaTrendBucketResponse]
+
+
 class AlertRuleUpsertRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     rule_type: AlertRuleType

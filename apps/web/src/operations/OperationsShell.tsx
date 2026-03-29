@@ -195,6 +195,7 @@ export function OperationsShellLayout() {
 
   const navItems = [
     { label: "Overview", path: "/operations" },
+    { label: "Analytics", path: "/operations/analytics" },
     { label: "Live Map", path: "/operations/live-map" },
     {
       label: "Alerts",

@@ -175,7 +175,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, and the delivered Alerts Center for table SLA and unauthorized geofence workflows. Maintenance alerts, analytics workspaces, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, and the first Analytics workspace for trajectory replay, heatmaps, dwell reports, round-trip reports, and table SLA trends. Maintenance alerts, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -216,7 +216,9 @@ sequenceDiagram
 | **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
-| | `GET` | `/api/analytics/visit_count` | Retrieves a report of visits to specified POIs by an asset (US-ANL-03). |
+| | `GET` | `/api/analytics/dwells` | Retrieves dwell-time report data derived from canonical dwell history for the selected scope (FR-ANL-004). |
+| | `GET` | `/api/analytics/round-trips` | Retrieves completed route cycles and summary metrics for a selected origin and destination pair (FR-ANL-003). |
+| | `GET` | `/api/analytics/sla-trends` | Retrieves time-bucketed table SLA trend data using the configured alert-rule threshold baseline when available (FR-ANL-006). |
 | **Admin - Gateways** | `GET` | `/api/gateways` | Retrieves a list of all configured gateways. |
 | | `POST` | `/api/gateways` | Registers a new gateway and its location (US-ADM-02). |
 | | `PUT` | `/api/gateways/{id}` | Updates a gateway's configuration. |
@@ -398,7 +400,8 @@ erDiagram
 - The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
 - The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
 - Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
-- Maintenance alerts, analytics workspaces, SLA trends, assignments, exports, and richer incident workflows remain follow-on backlog items.
+- Analytics workspace delivery now includes trajectory replay, heatmap visualization, dwell reporting, round-trip reporting, and table SLA trends backed by bounded read-only queries.
+- Maintenance alerts, assignments, exports, scheduled reports, and richer incident workflows remain follow-on backlog items.
 
 ### **5.1. General User Flow Diagram**
 
