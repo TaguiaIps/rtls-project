@@ -49,6 +49,17 @@ class GatewayHardwareTier(str, Enum):
     PREMIUM = "Premium"
 
 
+class PremiumTelemetryModality(str, Enum):
+    BLE_AOA = "BLE_AOA"
+    UWB = "UWB"
+
+
+class PremiumCalibrationStatus(str, Enum):
+    UNCALIBRATED = "uncalibrated"
+    CALIBRATED = "calibrated"
+    STALE = "stale"
+
+
 class GatewayHealthStatus(str, Enum):
     HEALTHY = "healthy"
     STALE = "stale"
@@ -75,6 +86,12 @@ class LocationConfidenceLevel(str, Enum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class LocationSourceModality(str, Enum):
+    BLE_RSSI = "BLE_RSSI"
+    BLE_AOA = PremiumTelemetryModality.BLE_AOA.value
+    UWB = PremiumTelemetryModality.UWB.value
 
 
 class DerivedZoneEventType(str, Enum):
@@ -297,6 +314,14 @@ class Gateway(Base):
     hardware_tier: Mapped[str] = mapped_column(String(32))
     placement_x: Mapped[float] = mapped_column(Float)
     placement_y: Mapped[float] = mapped_column(Float)
+    premium_modality: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    premium_mounting_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    premium_mounting_angle_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    premium_calibration_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    premium_calibration_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
@@ -307,6 +332,10 @@ class Gateway(Base):
 
     floor: Mapped[Floor] = relationship(back_populates="gateways")
     raw_readings: Mapped[list[RawReading]] = relationship(
+        back_populates="gateway",
+        cascade="all, delete-orphan",
+    )
+    premium_raw_measurements: Mapped[list[PremiumRawMeasurement]] = relationship(
         back_populates="gateway",
         cascade="all, delete-orphan",
     )
@@ -334,6 +363,9 @@ class AssetTag(Base):
     )
 
     raw_readings: Mapped[list[RawReading]] = relationship(back_populates="asset_tag")
+    premium_raw_measurements: Mapped[list[PremiumRawMeasurement]] = relationship(
+        back_populates="asset_tag"
+    )
     current_location: Mapped[AssetCurrentLocation | None] = relationship(
         back_populates="asset_tag",
         cascade="all, delete-orphan",
@@ -376,6 +408,31 @@ class RawReading(Base):
     asset_tag: Mapped[AssetTag | None] = relationship(back_populates="raw_readings")
 
 
+class PremiumRawMeasurement(Base):
+    __tablename__ = "premium_raw_measurements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    gateway_id: Mapped[str] = mapped_column(ForeignKey("gateways.id"), index=True)
+    asset_tag_id: Mapped[str | None] = mapped_column(ForeignKey("asset_tags.id"), nullable=True)
+    tag_identifier: Mapped[str] = mapped_column(String(120), index=True)
+    message_id: Mapped[str] = mapped_column(String(120), index=True)
+    sequence_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    broker_received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    gateway_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    firmware_version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    modality: Mapped[str] = mapped_column(String(32), index=True)
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    azimuth_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    elevation_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    distance_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    gateway: Mapped[Gateway] = relationship(back_populates="premium_raw_measurements")
+    asset_tag: Mapped[AssetTag | None] = relationship(back_populates="premium_raw_measurements")
+
+
 class AssetCurrentLocation(Base):
     __tablename__ = "asset_current_locations"
 
@@ -388,6 +445,15 @@ class AssetCurrentLocation(Base):
     coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence_level: Mapped[str] = mapped_column(String(16))
     confidence_score: Mapped[float] = mapped_column(Float)
+    source_tier: Mapped[str] = mapped_column(
+        String(32),
+        default=GatewayHardwareTier.ECONOMIC.value,
+    )
+    source_modality: Mapped[str] = mapped_column(
+        String(32),
+        default=LocationSourceModality.BLE_RSSI.value,
+    )
+    precision_meters: Mapped[float | None] = mapped_column(Float, nullable=True)
     source_gateway_count: Mapped[int] = mapped_column(Integer)
     source_reading_count: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(
@@ -414,6 +480,15 @@ class AssetLocationHistory(Base):
     coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence_level: Mapped[str] = mapped_column(String(16))
     confidence_score: Mapped[float] = mapped_column(Float)
+    source_tier: Mapped[str] = mapped_column(
+        String(32),
+        default=GatewayHardwareTier.ECONOMIC.value,
+    )
+    source_modality: Mapped[str] = mapped_column(
+        String(32),
+        default=LocationSourceModality.BLE_RSSI.value,
+    )
+    precision_meters: Mapped[float | None] = mapped_column(Float, nullable=True)
     source_gateway_count: Mapped[int] = mapped_column(Integer)
     source_reading_count: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

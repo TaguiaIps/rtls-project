@@ -35,10 +35,13 @@ export interface AuthenticatedUser {
 
 export type SpatialAreaType = "zone" | "table" | "restricted_zone" | "poi";
 export type GatewayHardwareTier = "Economic" | "Premium";
+export type PremiumTelemetryModality = "BLE_AOA" | "UWB";
+export type PremiumCalibrationStatus = "uncalibrated" | "calibrated" | "stale";
 export type AssetUpdateRateProfile = "slow" | "balanced" | "realtime";
 export type AssetBatteryProfile = "long_life" | "standard" | "performance";
 export type AssetLocationType = "point" | "zone";
 export type LocationConfidenceLevel = "high" | "medium" | "low";
+export type LocationSourceModality = "BLE_RSSI" | "BLE_AOA" | "UWB";
 export type GatewayHealthStatus = "healthy" | "stale";
 export type OperationsFeedStatus = "live" | "degraded" | "empty";
 export type OperationsPrioritySeverity = "critical" | "warning";
@@ -110,7 +113,16 @@ export interface GatewayRecord {
   display_name: string;
   hardware_tier: GatewayHardwareTier;
   placement: SpatialPoint;
+  premium_profile: PremiumGatewayProfile | null;
   notes: string | null;
+}
+
+export interface PremiumGatewayProfile {
+  modality: PremiumTelemetryModality;
+  mounting_label: string;
+  mounting_angle_degrees: number;
+  calibration_status: PremiumCalibrationStatus;
+  calibration_updated_at: string | null;
 }
 
 export interface GatewayHealthRecord {
@@ -198,6 +210,9 @@ export interface AssetLocationRecord {
   zone_name: string | null;
   confidence_level: LocationConfidenceLevel;
   confidence_score: number;
+  source_tier: GatewayHardwareTier;
+  source_modality: LocationSourceModality;
+  precision_meters: number | null;
   source_gateway_count: number;
   source_reading_count: number;
 }

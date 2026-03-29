@@ -19,6 +19,9 @@ from rtls_api.models import (
     GatewayHardwareTier,
     GatewayHealthStatus,
     LocationConfidenceLevel,
+    LocationSourceModality,
+    PremiumCalibrationStatus,
+    PremiumTelemetryModality,
     SpatialAreaType,
     TableServiceTimerStatus,
     UnauthorizedGeofenceTrigger,
@@ -124,18 +127,43 @@ class SpatialAreaUpdateRequest(BaseModel):
         return self
 
 
+class PremiumGatewayProfileRequest(BaseModel):
+    modality: PremiumTelemetryModality
+    mounting_label: str = Field(min_length=1, max_length=120)
+    mounting_angle_degrees: float = Field(ge=-180, le=180)
+    calibration_status: PremiumCalibrationStatus = PremiumCalibrationStatus.UNCALIBRATED
+
+
+class PremiumGatewayProfileResponse(BaseModel):
+    modality: PremiumTelemetryModality
+    mounting_label: str
+    mounting_angle_degrees: float
+    calibration_status: PremiumCalibrationStatus
+    calibration_updated_at: datetime | None
+
+
 class GatewayCreateRequest(BaseModel):
     gateway_identifier: str = Field(min_length=1, max_length=120)
     display_name: str = Field(min_length=1, max_length=120)
     hardware_tier: GatewayHardwareTier
     placement: SpatialPoint
+    premium_profile: PremiumGatewayProfileRequest | None = None
     notes: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_premium_profile(self) -> GatewayCreateRequest:
+        if self.hardware_tier == GatewayHardwareTier.PREMIUM and self.premium_profile is None:
+            raise ValueError("Premium gateways require a premium profile")
+        if self.hardware_tier == GatewayHardwareTier.ECONOMIC and self.premium_profile is not None:
+            raise ValueError("Economic gateways cannot include a premium profile")
+        return self
 
 
 class GatewayUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=120)
     hardware_tier: GatewayHardwareTier | None = None
     placement: SpatialPoint | None = None
+    premium_profile: PremiumGatewayProfileRequest | None = None
     notes: str | None = Field(default=None, max_length=500)
 
 
@@ -209,6 +237,7 @@ class GatewayResponse(BaseModel):
     display_name: str
     hardware_tier: GatewayHardwareTier
     placement: SpatialPoint
+    premium_profile: PremiumGatewayProfileResponse | None
     notes: str | None
 
 
@@ -335,6 +364,9 @@ class AssetLocationResponse(BaseModel):
     zone_name: str | None
     confidence_level: LocationConfidenceLevel
     confidence_score: float = Field(ge=0, le=1)
+    source_tier: GatewayHardwareTier
+    source_modality: LocationSourceModality
+    precision_meters: float | None = Field(default=None, ge=0)
     source_gateway_count: int = Field(ge=0)
     source_reading_count: int = Field(ge=0)
 

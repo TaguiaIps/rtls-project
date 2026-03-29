@@ -9,6 +9,7 @@ from rtls_api.db import create_session_factory
 from rtls_api.ingestion import (
     TelemetryIngestionService,
     heartbeat_topic,
+    premium_telemetry_topic,
     telemetry_topic,
 )
 from rtls_api.ingestion_store import create_message_dedupe_store
@@ -18,9 +19,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("rtls-worker")
 
 
-def build_subscription_topics() -> tuple[str, str]:
+def build_subscription_topics() -> tuple[str, str, str]:
     settings = get_settings()
-    return (telemetry_topic(settings), heartbeat_topic(settings))
+    return (
+        telemetry_topic(settings),
+        premium_telemetry_topic(settings),
+        heartbeat_topic(settings),
+    )
 
 
 def subscribe_to_topics(client: Any) -> None:
