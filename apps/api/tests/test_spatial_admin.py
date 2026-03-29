@@ -554,12 +554,19 @@ def test_gateway_and_asset_registry_flow_records_audit_events(tmp_path: Path) ->
                 "display_name": "Dining Gateway Updated",
                 "hardware_tier": "Premium",
                 "placement": {"x": 0.4, "y": 0.55},
+                "premium_profile": {
+                    "modality": "UWB",
+                    "mounting_label": "Kitchen beam",
+                    "mounting_angle_degrees": 10,
+                    "calibration_status": "calibrated",
+                },
                 "notes": "Relocated near the kitchen pass",
             },
         )
         assert update_gateway.status_code == 200
         assert update_gateway.json()["hardware_tier"] == "Premium"
         assert update_gateway.json()["placement"] == {"x": 0.4, "y": 0.55}
+        assert update_gateway.json()["premium_profile"]["modality"] == "UWB"
 
         floor_detail = client.get(
             f"/api/admin/floors/{floor_id}",

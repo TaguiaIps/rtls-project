@@ -282,5 +282,6 @@ def test_worker_subscribes_to_data_and_heartbeat_topics(monkeypatch, tmp_path: P
 
     assert subscribed_topics == [
         ("pilot/data/+", 1),
+        ("pilot/premium/+", 1),
         ("pilot/heartbeat/+", 1),
     ]
