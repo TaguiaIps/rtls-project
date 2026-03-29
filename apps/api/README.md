@@ -10,10 +10,11 @@ This package provides:
 - the inline derived-event foundation for canonical zone transitions, dwell history, round-trip evaluation, and table timer snapshots
 - authenticated backend-facing read endpoints under `/api/derived/*` for downstream event-history and timer queries
 - protected `/api/analytics/*` report endpoints for trajectory replay, heatmaps, dwell reports, round-trip reports, and table SLA trends
+- premium gateway profile metadata, `rtls/premium/{gateway_id}` ingestion, normalized AoA or UWB measurement persistence, and Premium-aware canonical live-location outputs
 - typed alert rule management plus protected `/api/alerts/*` contracts for queue, detail, acknowledgement, resolution, and shell summary workflows
 - durable in-app notification records and optional email-delivery attempt tracking for delivered table-SLA and unauthorized-geofence alerts
 - inline alert evaluation that reuses the derived-event and table-timer foundation instead of reparsing raw telemetry
-- an explicit scope boundary where Analytics remains interactive and read-only for now, while exports, rollups, and maintenance alerts remain deferred to later changes
+- an explicit scope boundary where Analytics remains interactive and read-only for now, while exports, rollups, vendor-specific Premium provisioning, and maintenance alerts remain deferred to later changes
 - the backend lint, test, and build baseline for future OpenSpec changes
 
 Bootstrap the first Administrator account with:

@@ -95,6 +95,7 @@ sequenceDiagram
 - **Protocol:** MQTT
 - **MQTT Topic Structure:**
   - telemetry: `rtls/data/{gateway_id}`
+  - premium telemetry: `rtls/premium/{gateway_id}`
   - heartbeat: `rtls/heartbeat/{gateway_id}`
 - **Identity Rule:** The topic gateway identifier must match the payload `gateway_id` and an existing registered gateway.
 - **Payload Format (JSON):** Each telemetry message published by a gateway contains one message envelope and one or more observed tag readings.
@@ -124,17 +125,39 @@ sequenceDiagram
     }
     ```
 
+- **Premium Telemetry Format (JSON):** Each Premium gateway publishes modality-specific AoA or UWB measurements through a parallel contract that preserves normalized estimator inputs.
+
+    ```json
+    {
+      "gateway_id": "gw-premium-01",
+      "message_id": "uwb-001",
+      "gateway_timestamp": "2026-03-29T12:00:00Z",
+      "firmware_version": "2.0.0",
+      "measurements": [
+        {
+          "tag_id": "TAG-PRM-01",
+          "modality": "UWB",
+          "sequence_id": "uwb-001",
+          "quality_score": 0.92,
+          "distance_m": 4.24
+        }
+      ]
+    }
+    ```
+
 ### **3.2. Data Ingestion & Positioning Service**
 
 - **Language/Framework:** Python worker process.
 - **Core Logic:**
-    1. The worker subscribes to `rtls/data/+` and `rtls/heartbeat/+`.
+    1. The worker subscribes to `rtls/data/+`, `rtls/premium/+`, and `rtls/heartbeat/+`.
     2. Each message is parsed and validated before any durable state is written.
     3. The worker verifies that the MQTT topic gateway identifier matches the payload `gateway_id` and a registered gateway record.
     4. The worker deduplicates MQTT retries using the tuple `(gateway_id, message_id)` in Redis with a 10-second TTL.
     5. Accepted telemetry is persisted as one `raw_readings` row per observed tag with `broker_received_at` as canonical time.
-    6. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
-    7. Accepted live-location updates derived from recent raw readings now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
+    6. Accepted Premium telemetry is persisted as normalized AoA or UWB measurement rows with modality, quality, and sequence context intact for the Premium estimator.
+    7. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
+    8. The positioning layer now evaluates both the delivered Economic BLE flow and the Premium AoA or UWB flow, then writes one canonical latest-known result with source-tier, source-modality, and precision metadata.
+    9. Accepted live-location updates derived from recent telemetry now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
 
 #### MQTT payload schema (canonical)
 
@@ -165,17 +188,17 @@ sequenceDiagram
 - Deduplicate by `(gateway_id, message_id)` using Redis with a 10-second TTL.
 - Gateway-provided `gateway_timestamp` remains optional metadata and never replaces canonical time.
 - Unknown gateways, topic/payload mismatches, invalid payloads, and duplicate retries are rejected before durable writes.
-- The current economic-tier baseline derives latest known asset locations and append-only location history from recent accepted raw readings on mapped floors.
+- The current positioning layer derives latest known asset locations and append-only location history from recent accepted Economic telemetry and supported Premium measurements on mapped floors.
 
 #### Key operational notes
 
 - **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
-- **Economic-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements to compute confidence-aware floor locations. Low-confidence outputs fall back to mapped zones when possible instead of implying point precision.
+- **Two-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements for the Economic path, and normalized AoA or UWB measurements plus Premium gateway calibration state for the Premium path. Canonical live-location outputs now include source-tier, source-modality, and optional precision metadata so downstream clients can distinguish Premium precision from Economic fallback behavior.
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, and the first Analytics workspace for trajectory replay, heatmaps, dwell reports, round-trip reports, and table SLA trends. Maintenance alerts, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, and Premium-tier AoA or UWB telemetry support. Maintenance alerts, exports and rollups, vendor-specific provisioning, and mobile calibration workflows remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -256,7 +279,11 @@ sequenceDiagram
     - `name` (VARCHAR),
     - `site_id` (VARCHAR, UNIQUE),
     - `location_x` (FLOAT),
-    - `location_y` (FLOAT).
+    - `location_y` (FLOAT),
+    - `premium_modality` (nullable VARCHAR),
+    - `premium_mounting_label` (nullable VARCHAR),
+    - `premium_mounting_angle_degrees` (nullable FLOAT),
+    - `premium_calibration_status` (nullable VARCHAR).
   - **`raw_readings`** (TimescaleDB Hypertable):
     - `id` (PK),
     - `message_id`  (INTEGER, UNIQUE),
@@ -267,6 +294,18 @@ sequenceDiagram
     - `readings` (JSONB),
     - `asset_id` (FK to assets),
     - `gateway_id` (FK to gateways).
+  - **`premium_raw_measurements`**:
+    - `id` (PK),
+    - `message_id` (VARCHAR),
+    - `sequence_id` (nullable VARCHAR),
+    - `broker_received_at` (TIMESTAMPTZ),
+    - `gateway_timestamp` (nullable TIMESTAMPTZ),
+    - `modality` (VARCHAR),
+    - `quality_score` (nullable FLOAT),
+    - `azimuth_degrees` (nullable FLOAT),
+    - `distance_m` (nullable FLOAT),
+    - `asset_id` (nullable FK to assets),
+    - `gateway_id` (FK to gateways).
   - **`asset_current_locations`**:
     - `asset_id` (PK / FK to assets),
     - `floor_id` (FK to floors),
@@ -276,7 +315,10 @@ sequenceDiagram
     - `location_x` (FLOAT, nullable),
     - `location_y` (FLOAT, nullable),
     - `confidence_level` (VARCHAR),
-    - `confidence_score` (FLOAT).
+    - `confidence_score` (FLOAT),
+    - `source_tier` (VARCHAR),
+    - `source_modality` (VARCHAR),
+    - `precision_meters` (nullable FLOAT).
   - **`location_history`** (TimescaleDB Hypertable / append-only history pattern):
     - `id` (PK),
     - `timestamp` (TIMESTAMPTZ),
@@ -285,7 +327,10 @@ sequenceDiagram
     - `asset_id` (FK to assets),
     - `zone_id` (nullable FK to zones),
     - `confidence_level` (VARCHAR),
-    - `confidence_score` (FLOAT).
+    - `confidence_score` (FLOAT),
+    - `source_tier` (VARCHAR),
+    - `source_modality` (VARCHAR),
+    - `precision_meters` (nullable FLOAT).
 - **Data Lifecycle Management:**
   - A TimescaleDB **retention policy** will automatically delete raw data older than **90 days**.
   - Rollups: hourly/daily tables for dwell time, zone counts, avg_rssi

@@ -219,7 +219,7 @@ graph TD
 | :--- | :--- | :--- | :--- | :--- |
 | **Sign in and route by role** | FR-SEC-001, FR-SEC-002 | Login | Enter credentials -> system validates role -> routes to role-specific home | Correct landing page plus visible role badge |
 | **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
-| **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> save | Gateway marker persists with tier color and status |
+| **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> complete Premium modality and calibration metadata when needed -> save | Gateway marker persists with tier color and status |
 | **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> QR Scanner | Scan QR -> identify device -> select zone/room -> confirm placement -> sync to web | Device appears in registry and map draft layer |
 | **Run automated calibration** | US-ADM-04, FR-ADM-003, US-MOB-02 | Admin Console -> Calibration Wizard | Choose floor and gateways -> start session -> walk route with blue dot guidance -> collect signal data -> process radiomap | Wizard returns quality score, offsets, and completion summary |
 | **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
@@ -294,6 +294,7 @@ Implementation baseline note:
 
 * The delivered Live Map supports floor selection, live markers, confidence-aware visualization, search, category/confidence/location-type filters, and a selected-asset drawer.
 * Zone fallback and confidence states are implemented now because they are already backed by the current positioning contract.
+* Canonical live-location results now carry source-tier, source-modality, and optional precision metadata, so Premium AoA or UWB updates can reuse the same Live Map and drawer patterns without implying that every point estimate came from the Economic BLE path.
 * Alert-specific overlays, trajectory replay, and analytics drill-ins remain future work.
 
 ```text
