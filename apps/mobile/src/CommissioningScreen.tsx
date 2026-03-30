@@ -9,7 +9,7 @@ import {
   TextInput,
   View
 } from "react-native";
-import type { AssetTagRecord, FloorDetail, SiteRecord, SpatialAreaRecord, SpatialPoint } from "@rtls/contracts";
+import type { AssetTagRecord, FloorDetail, SiteRecord, SpatialPoint } from "@rtls/contracts";
 
 import {
   buildFloorPlanFileUrl,
@@ -21,11 +21,13 @@ import {
   buildCalibrationWaypoints,
   buildCommissioningSummary,
   describeTargetKind,
+  extractIdentifierFromQrPayload,
   formatElapsedDuration,
   resolveCommissioningTarget,
   type CommissioningSessionSummary,
   upsertCommissioningSummary
 } from "./commissioning";
+import { MobileQrScanner } from "./MobileQrScanner";
 import { normalizeApiBaseUrl } from "./session";
 import {
   loadCommissioningSummaries,
@@ -50,6 +52,7 @@ export function CommissioningScreen({
   const [contextLoaded, setContextLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scannerValue, setScannerValue] = useState("");
+  const [scannerPanelVisible, setScannerPanelVisible] = useState(false);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [capturedPoints, setCapturedPoints] = useState<SpatialPoint[]>([]);
   const [currentPosition, setCurrentPosition] = useState<SpatialPoint | null>(null);
@@ -197,6 +200,12 @@ export function CommissioningScreen({
     setError(null);
   };
 
+  const handleScannerCapture = (payload: string) => {
+    setScannerValue(extractIdentifierFromQrPayload(payload));
+    setScannerPanelVisible(false);
+    setError(null);
+  };
+
   const handleMapPress = (event: {
     nativeEvent: { locationX: number; locationY: number };
   }) => {
@@ -340,9 +349,28 @@ export function CommissioningScreen({
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Scanner Input</Text>
         <Text style={styles.helperText}>
-          Use a connected QR scanner or paste the QR payload here to resolve a gateway or asset
-          tag identifier against the delivered registry.
+          Open the camera scanner to capture a QR code directly on device, or keep the fallback
+          field for simulator testing and external scanner input.
         </Text>
+        <View style={styles.buttonRow}>
+          <Pressable
+            onPress={() => setScannerPanelVisible((current) => !current)}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : null
+            ]}
+          >
+            <Text style={styles.primaryButtonLabel}>
+              {scannerPanelVisible ? "Hide Camera Scanner" : "Open Camera Scanner"}
+            </Text>
+          </Pressable>
+        </View>
+        {scannerPanelVisible ? (
+          <MobileQrScanner
+            onClose={() => setScannerPanelVisible(false)}
+            onScan={handleScannerCapture}
+          />
+        ) : null}
         <TextInput
           autoCapitalize="characters"
           autoCorrect={false}

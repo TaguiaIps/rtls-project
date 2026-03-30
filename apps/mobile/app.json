@@ -6,6 +6,16 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow RTLS Analytics Platform to scan gateway and tag QR codes.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ]
+    ],
     "assetBundlePatterns": ["**/*"],
     "web": {
       "bundler": "metro"

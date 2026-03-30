@@ -60,12 +60,31 @@ export function normalizeIdentifier(value: string) {
   return value.trim().toUpperCase();
 }
 
+export function extractIdentifierFromQrPayload(payload: string) {
+  const trimmedPayload = payload.trim();
+  if (!trimmedPayload) {
+    return "";
+  }
+
+  const jsonIdentifier = extractIdentifierFromJsonPayload(trimmedPayload);
+  if (jsonIdentifier) {
+    return normalizeIdentifier(jsonIdentifier);
+  }
+
+  const urlIdentifier = extractIdentifierFromUrlPayload(trimmedPayload);
+  if (urlIdentifier) {
+    return normalizeIdentifier(urlIdentifier);
+  }
+
+  return normalizeIdentifier(trimmedPayload);
+}
+
 export function resolveCommissioningTarget(
   scannedCode: string,
   gateways: GatewayRecord[],
   assets: AssetTagRecord[]
 ): CommissioningTarget | null {
-  const normalizedCode = normalizeIdentifier(scannedCode);
+  const normalizedCode = extractIdentifierFromQrPayload(scannedCode);
   if (!normalizedCode) {
     return null;
   }
@@ -98,8 +117,8 @@ export function resolveCommissioningTarget(
 
   return {
     kind: "unknown",
-    identifier: scannedCode.trim(),
-    displayName: scannedCode.trim(),
+    identifier: normalizedCode,
+    displayName: normalizedCode,
     description: "Unknown device"
   };
 }
@@ -259,6 +278,62 @@ function areaCentroid(area: SpatialAreaRecord): SpatialPoint {
     x: clampRelativeValue(totals.x / area.points.length),
     y: clampRelativeValue(totals.y / area.points.length)
   };
+}
+
+function extractIdentifierFromJsonPayload(payload: string) {
+  if (!payload.startsWith("{")) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as Record<string, unknown>;
+    const supportedKeys = [
+      "identifier",
+      "gateway_id",
+      "gatewayId",
+      "tag_id",
+      "tagId",
+      "device_id",
+      "deviceId"
+    ];
+
+    for (const key of supportedKeys) {
+      const value = parsed[key];
+      if (typeof value === "string" && value.trim()) {
+        return value;
+      }
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function extractIdentifierFromUrlPayload(payload: string) {
+  if (!payload.includes("://")) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(payload);
+    const supportedKeys = ["identifier", "gateway_id", "tag_id", "device_id", "id"];
+    for (const key of supportedKeys) {
+      const value = parsed.searchParams.get(key);
+      if (value && value.trim()) {
+        return value;
+      }
+    }
+
+    const pathSegments = parsed.pathname
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    return lastSegment ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function dedupeWaypoints(waypoints: CalibrationWaypoint[]) {
