@@ -46,9 +46,10 @@ The system shall support two distinct user roles with specific permissions:
 | :--- | :--- |
 | **FR-ADM-001** | The system shall allow an Administrator to upload floor plan images and set real-world scaling via reference points. |
 | **FR-ADM-002** | The system shall provide a UI to place gateways corresponding to the Economic or Premium tier. |
-| **FR-ADM-003** | The system shall provide an automated calibration wizard for BLE fingerprinting (radio map creation) and baseline offset calculation. |
+| **FR-ADM-003** | The system shall provide a guided mobile calibration workflow that allows an Administrator to select site and floor context, assign zone or room context, capture floor-linked checkpoints with a visible blue-dot marker, and save a calibration session summary for later follow-up. |
 | **FR-ADM-004** | The system shall support provision of two hardware tiers: Economic (BLE RSSI/Fingerprinting) and Premium (BLE AoA/UWB) profiles. |
 | **FR-ADM-005** | The system shall allow bulk import of asset tags via CSV, allowing specification of update rates and battery profiles. |
+| **FR-ADM-006** | The system shall provide an automated calibration engine for BLE fingerprinting that ingests collected calibration samples, generates floor-level radiomap and baseline offset artifacts, persists calibration status and quality metadata, and makes the resulting artifacts available to the positioning pipeline. |
 
 ### **3.2. Real-Time Tracking & Visualization (General User & Administrator)**
 
@@ -102,15 +103,17 @@ The system shall support two distinct user roles with specific permissions:
 
 | ID | Requirement |
 | :--- | :--- |
-| **NFR-SEC-001** | MQTT transport shall use TLS authentication (mTLS) for gateway-to-broker communication. |
+| **NFR-SEC-001** | The development and pilot baseline shall support MQTT deployment on a trusted private network without mTLS, provided the broker is not publicly exposed and the environment is documented as non-production. |
 | **NFR-SEC-002** | Sensitive DB data (including user locations if classified as PII under LGPD) shall be subject to access controls and minimization. |
+| **NFR-SEC-003** | Production MQTT transport shall use TLS with broker certificate validation and mutual TLS (mTLS) for gateway-to-broker communication, including per-gateway identity and broker-enforced access controls. |
 
 ### **4.3. Usability**
 
 | ID | Requirement |
 | :--- | :--- |
 | **NFR-USA-001** | The UI for defining geofences must be a drag-and-drop/point-and-click drawing tool. |
-| **NFR-USA-002** | Commissioning workflows via mobile app must use QR scanning to reduce manual entry errors. |
+| **NFR-USA-002** | Mobile commissioning workflows shall minimize manual entry by supporting scanner-based or QR-derived device intake and floor-linked assignment in the mobile app. |
+| **NFR-USA-003** | Production mobile commissioning workflows shall support native camera-based QR scanning to reduce setup errors and avoid dependency on external scanners. |
 
 ### **4.4. Reliability & Availability**
 
