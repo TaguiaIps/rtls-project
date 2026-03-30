@@ -233,6 +233,15 @@ Extend the delivered mobile calibration baseline with a backend calibration engi
 - Maps to:
   - `FR-ADM-006`
   - `US-ADM-06`
+
+### 18. `implement-native-mobile-qr-scanning`
+
+Add native camera-based QR scanning to the delivered mobile commissioning workflow while preserving manual identifier entry for simulator and fallback usage.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+- Maps to:
+  - `US-ADM-03`
   - `NFR-USA-003`
 
 ## Why This Split Avoids Rework
@@ -286,6 +295,7 @@ This adds premium precision, mobile flows, observability, and lifecycle hardenin
 
 - `implement-production-mqtt-tls-and-mtls`
 - `implement-calibration-engine-and-radiomap-generation`
+- `implement-native-mobile-qr-scanning`
 
 This closes the remaining gap between the delivered pilot baseline and the production-grade security and calibration targets.
 

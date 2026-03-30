@@ -59,7 +59,7 @@ This section organizes our features into a narrative flow, combining the user st
 | :--- | :--- | :--- | :--- |
 | **US-ADM-01** | As **Alex**, I want to upload a floor plan image, so that I have a visual canvas for my gateway and asset layout. | User can select image; displayed as background; scale is set via reference points. | **Must-have** |
 | **US-ADM-02** | As **Alex**, I want to place and label gateway icons (Economic/Premium tier) on the map. | Drag/drop gateways; enter name/ID and tier. | **Must-have** |
-| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | Scanner input resolves the device, prompts for zone/room, and shows floor-linked commissioning context. | **Must-have** |
+| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | Camera-based QR scanning resolves the device, prompts for zone/room, and shows floor-linked commissioning context, with manual entry retained as fallback. | **Must-have** |
 | **US-ADM-04** | As **Alex**, I want to run a guided calibration assistant that records floor checkpoints and a blue-dot session summary, so that I can prepare a floor for later calibration processing without leaving the mobile workflow. | Calibration session runs in guided mode, captures checkpoints against the selected floor, and saves elapsed time, sample count, and completion progress. | **Must-have** |
 | **US-ADM-05** | As **Alex**, I want to bulk-import a list of asset tags from a CSV file. | Sample CSV available; successful batch import including tag profiles (update rate). | **Must-have** |
 | **US-ADM-06** | As **Alex**, I want the system to process collected calibration data into a radiomap and baseline offsets, so that positioning quality improves without manual tuning. | Submitted calibration data produces a persisted calibration result with status, quality score, and generated artifacts available to the positioning engine. | **Must-have** |
@@ -221,7 +221,7 @@ graph TD
 | **Sign in and route by role** | FR-SEC-001, FR-SEC-002 | Login | Enter credentials -> system validates role -> routes to role-specific home | Correct landing page plus visible role badge |
 | **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
 | **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> complete Premium modality and calibration metadata when needed -> save | Gateway marker persists with tier color and status |
-| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> Commissioning | Scan or enter QR payload -> identify device -> select floor -> assign zone/room -> confirm device context | Device identity, floor, and zone are visible in the mobile commissioning session |
+| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002, NFR-USA-003 | Mobile -> Commissioning | Open camera scanner -> scan QR payload -> identify device -> select floor -> assign zone/room -> confirm device context | Device identity, floor, and zone are visible in the mobile commissioning session |
 | **Run guided calibration capture** | US-ADM-04, FR-ADM-003, US-MOB-02 | Mobile -> Commissioning | Choose floor and target -> start session -> walk route with blue dot guidance -> tap checkpoints -> review summary | Session summary shows elapsed time, samples, and completed checkpoints for later calibration follow-up |
 | **Generate radiomap and offsets** | US-ADM-06, FR-ADM-006 | Future Calibration Engine | Submit collected calibration samples -> process run -> review quality and artifact status -> activate calibration result | Calibration result shows status, quality score, and reusable artifacts for positioning |
 | **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
@@ -495,7 +495,7 @@ Implementation baseline note:
 
 ### **5.11. Mobile App: Commissioning & Calibration**
 
-**Supports:** US-ADM-03, US-ADM-04, US-MOB-02, NFR-USA-002
+**Supports:** US-ADM-03, US-ADM-04, US-MOB-02, NFR-USA-002, NFR-USA-003
 
 ```text
 +--------------------------------------------------------------+
@@ -514,7 +514,7 @@ Implementation baseline note:
 +--------------------------------------------------------------+
 ```
 
-* The delivered baseline accepts connected-scanner or pasted QR payloads, then keeps the floor map and blue-dot capture in one-thumb reach.
+* The delivered baseline now supports native camera-based QR scanning and keeps manual or external-scanner entry available as fallback, with the floor map and blue-dot capture in one-thumb reach.
 
 ---
 

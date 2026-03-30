@@ -199,7 +199,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with native QR scanning plus local calibration-session summaries. Maintenance alerts, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -565,11 +565,11 @@ The Expo mobile baseline now also delivers an Administrator-focused commissionin
 Key delivery details:
 
 1. The same mobile session panel is reused so an Administrator can load protected admin context without waiting for the later dedicated mobile-auth change.
-2. Device intake resolves scanner-entered or pasted QR payloads against known gateway and asset-tag identifiers from the delivered registry surfaces.
+2. Device intake resolves native camera-scanned, external-scanner, or pasted QR payloads against known gateway and asset-tag identifiers from the delivered registry surfaces.
 3. The workflow lets the operator choose the current site and floor, assign the device to a room or zone, and inspect a floor-linked preview before calibration begins.
 4. The calibration walkthrough renders gateway markers, route checkpoints, and a visible blue-dot capture that updates when the operator taps the floor preview to record their current position.
 5. Completed sessions persist locally through AsyncStorage with target identity, floor and zone context, elapsed time, sample count, and checkpoint progress.
-6. Native camera-only scanning, automatic indoor positioning, radiomap generation, and backend calibration persistence remain deferred.
+6. Automatic indoor positioning, radiomap generation, and backend calibration persistence remain deferred, while manual identifier entry remains available as fallback for simulator and constrained-device workflows.
 
 ### 7.6. Onboarding Wizard
 
