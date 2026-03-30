@@ -113,6 +113,8 @@ class TableServiceTimerStatus(str, Enum):
 class AlertRuleType(str, Enum):
     TABLE_SLA = "table_sla"
     UNAUTHORIZED_GEOFENCE = "unauthorized_geofence"
+    GATEWAY_STALE = "gateway_stale"
+    GATEWAY_LOW_BATTERY = "gateway_low_battery"
 
 
 class AlertSeverity(str, Enum):

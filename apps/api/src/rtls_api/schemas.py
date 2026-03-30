@@ -725,6 +725,11 @@ class AlertRuleUpsertRequest(BaseModel):
             raise ValueError("In-app delivery must stay enabled for delivered alerts")
         if self.notify_email and not self.email_recipients:
             raise ValueError("Email recipients are required when email delivery is enabled")
+        if self.rule_type in {
+            AlertRuleType.GATEWAY_STALE,
+            AlertRuleType.GATEWAY_LOW_BATTERY,
+        }:
+            raise ValueError("System-managed maintenance alert types cannot be created manually")
         if self.rule_type == AlertRuleType.TABLE_SLA:
             if self.threshold_seconds is None:
                 raise ValueError("threshold_seconds is required for table SLA rules")

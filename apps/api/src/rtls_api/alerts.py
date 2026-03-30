@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 
 from fastapi import HTTPException, status
@@ -24,6 +24,7 @@ from rtls_api.models import (
     AlertStatus,
     DerivedZoneTransitionEvent,
     Floor,
+    Gateway,
     SpatialArea,
     SpatialAreaType,
     TableServiceTimerState,
@@ -34,6 +35,14 @@ from rtls_api.models import (
 from rtls_api.schemas import AlertRuleUpsertRequest
 
 ACTIVE_ALERT_STATUSES = [AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]
+SYSTEM_MANAGED_ALERT_RULE_TYPES = {
+    AlertRuleType.GATEWAY_STALE.value,
+    AlertRuleType.GATEWAY_LOW_BATTERY.value,
+}
+USER_MANAGED_ALERT_RULE_TYPES = {
+    AlertRuleType.TABLE_SLA.value,
+    AlertRuleType.UNAUTHORIZED_GEOFENCE.value,
+}
 
 
 def list_alert_rules(
@@ -45,6 +54,7 @@ def list_alert_rules(
     query = (
         select(AlertRule)
         .options(joinedload(AlertRule.site), joinedload(AlertRule.floor))
+        .where(AlertRule.rule_type.in_(sorted(USER_MANAGED_ALERT_RULE_TYPES)))
         .order_by(AlertRule.created_at.desc(), AlertRule.name.asc())
     )
     if site_id is not None:
@@ -71,6 +81,7 @@ def create_alert_rule(
     actor: User,
     payload: AlertRuleUpsertRequest,
 ) -> AlertRule:
+    _validate_user_managed_rule_type(payload.rule_type)
     rule_definition = _build_rule_definition(db=db, payload=payload)
     rule = AlertRule(
         name=payload.name.strip(),
@@ -110,6 +121,12 @@ def update_alert_rule(
     payload: AlertRuleUpsertRequest,
 ) -> AlertRule:
     rule = get_alert_rule(db=db, rule_id=rule_id)
+    if rule.rule_type in SYSTEM_MANAGED_ALERT_RULE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="System-managed maintenance rules cannot be edited manually",
+        )
+    _validate_user_managed_rule_type(payload.rule_type)
     rule_definition = _build_rule_definition(db=db, payload=payload)
     previous_state = {
         "name": rule.name,
@@ -404,6 +421,43 @@ def evaluate_alerts_for_position_update(
     )
 
 
+def sync_gateway_maintenance_alerts(
+    *,
+    db: Session,
+    settings: Settings,
+    site_id: str | None = None,
+    floor_id: str | None = None,
+    gateway_ids: set[str] | None = None,
+    observed_at: datetime | None = None,
+) -> None:
+    scope_gateway_ids = {gateway_id for gateway_id in (gateway_ids or set()) if gateway_id}
+    now = ensure_utc(observed_at or datetime.now(timezone.utc))
+    query = select(Gateway).options(
+        joinedload(Gateway.floor).joinedload(Floor.site),
+        joinedload(Gateway.latest_heartbeat),
+    )
+    if scope_gateway_ids:
+        query = query.where(Gateway.id.in_(sorted(scope_gateway_ids)))
+    if site_id is not None:
+        query = query.join(Gateway.floor).where(Floor.site_id == site_id)
+    if floor_id is not None:
+        query = query.where(Gateway.floor_id == floor_id)
+
+    gateways = db.scalars(
+        query.order_by(Gateway.display_name.asc(), Gateway.gateway_identifier.asc())
+    ).unique().all()
+    rule_cache: dict[tuple[str, str], AlertRule] = {}
+    for gateway in gateways:
+        _sync_gateway_maintenance_alerts_for_gateway(
+            db=db,
+            settings=settings,
+            gateway=gateway,
+            observed_at=now,
+            rule_cache=rule_cache,
+        )
+    db.flush()
+
+
 def serialize_alert_rule(rule: AlertRule) -> dict[str, object]:
     return {
         "id": rule.id,
@@ -494,11 +548,28 @@ def serialize_alert_detail(
     return payload
 
 
+def _validate_user_managed_rule_type(rule_type: AlertRuleType) -> None:
+    if rule_type.value in USER_MANAGED_ALERT_RULE_TYPES:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="System-managed maintenance alert types cannot be created manually",
+    )
+
+
 def _build_rule_definition(
     *,
     db: Session,
     payload: AlertRuleUpsertRequest,
 ) -> dict[str, object]:
+    if payload.rule_type in {
+        AlertRuleType.GATEWAY_STALE,
+        AlertRuleType.GATEWAY_LOW_BATTERY,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="System-managed maintenance alert types cannot be created manually",
+        )
     if payload.rule_type == AlertRuleType.TABLE_SLA:
         areas = _load_areas(db=db, area_ids=payload.table_area_ids or [])
         _validate_single_floor_area_scope(areas)
@@ -1052,6 +1123,167 @@ def _send_email_message(*, settings: Settings, message: EmailMessage) -> None:
         if settings.smtp_username:
             smtp.login(settings.smtp_username, settings.smtp_password or "")
         smtp.send_message(message)
+
+
+def _sync_gateway_maintenance_alerts_for_gateway(
+    *,
+    db: Session,
+    settings: Settings,
+    gateway: Gateway,
+    observed_at: datetime,
+    rule_cache: dict[tuple[str, str], AlertRule],
+) -> None:
+    stale_rule = _ensure_system_alert_rule(
+        db=db,
+        gateway=gateway,
+        rule_type=AlertRuleType.GATEWAY_STALE,
+        severity=AlertSeverity.CRITICAL,
+        rule_cache=rule_cache,
+    )
+    battery_rule = _ensure_system_alert_rule(
+        db=db,
+        gateway=gateway,
+        rule_type=AlertRuleType.GATEWAY_LOW_BATTERY,
+        severity=AlertSeverity.WARNING,
+        rule_cache=rule_cache,
+    )
+    scope_label = gateway.display_name
+    site_id = gateway.floor.site_id if gateway.floor is not None else None
+    heartbeat = gateway.latest_heartbeat
+
+    if heartbeat is None:
+        _clear_alert_scope(
+            db=db,
+            rule=stale_rule,
+            scope_key=f"gateway:{gateway.id}",
+            cleared_at=observed_at,
+            reason="heartbeat_missing",
+        )
+        _clear_alert_scope(
+            db=db,
+            rule=battery_rule,
+            scope_key=f"gateway:{gateway.id}:battery",
+            cleared_at=observed_at,
+            reason="battery_unavailable",
+        )
+        return
+
+    heartbeat_seen_at = ensure_utc(heartbeat.last_seen_at)
+    condition_key = heartbeat.message_id or heartbeat_seen_at.isoformat()
+    if observed_at - heartbeat_seen_at > timedelta(
+        seconds=settings.gateway_heartbeat_stale_after_seconds
+    ):
+        _create_or_maintain_alert(
+            db=db,
+            settings=settings,
+            rule=stale_rule,
+            scope_key=f"gateway:{gateway.id}",
+            scope_label=scope_label,
+            title=f"Gateway offline · {gateway.display_name}",
+            summary=(
+                f"{gateway.display_name} has not reported a heartbeat since "
+                f"{heartbeat_seen_at.isoformat()}."
+            ),
+            site_id=site_id,
+            floor_id=gateway.floor_id,
+            area_id=None,
+            asset_tag_id=None,
+            condition_key=condition_key,
+            context_payload={
+                "gateway_id": gateway.id,
+                "gateway_identifier": gateway.gateway_identifier,
+                "last_seen_at": heartbeat_seen_at.isoformat(),
+                "battery_level_percent": heartbeat.battery_level_percent,
+                "state": "stale",
+            },
+            observed_at=observed_at,
+        )
+    else:
+        _clear_alert_scope(
+            db=db,
+            rule=stale_rule,
+            scope_key=f"gateway:{gateway.id}",
+            cleared_at=observed_at,
+            reason="heartbeat_recovered",
+        )
+
+    battery_level = heartbeat.battery_level_percent
+    if battery_level is not None and battery_level < 20:
+        _create_or_maintain_alert(
+            db=db,
+            settings=settings,
+            rule=battery_rule,
+            scope_key=f"gateway:{gateway.id}:battery",
+            scope_label=scope_label,
+            title=f"Gateway battery low · {gateway.display_name}",
+            summary=f"{gateway.display_name} battery is at {battery_level:.0f}%.",
+            site_id=site_id,
+            floor_id=gateway.floor_id,
+            area_id=None,
+            asset_tag_id=None,
+            condition_key=condition_key,
+            context_payload={
+                "gateway_id": gateway.id,
+                "gateway_identifier": gateway.gateway_identifier,
+                "battery_level_percent": battery_level,
+                "last_seen_at": heartbeat_seen_at.isoformat(),
+                "state": "low_battery",
+            },
+            observed_at=observed_at,
+        )
+    else:
+        _clear_alert_scope(
+            db=db,
+            rule=battery_rule,
+            scope_key=f"gateway:{gateway.id}:battery",
+            cleared_at=observed_at,
+            reason="battery_recovered",
+        )
+
+
+def _ensure_system_alert_rule(
+    *,
+    db: Session,
+    gateway: Gateway,
+    rule_type: AlertRuleType,
+    severity: AlertSeverity,
+    rule_cache: dict[tuple[str, str], AlertRule],
+) -> AlertRule:
+    floor = gateway.floor
+    if floor is None:
+        raise RuntimeError("Gateway floor context is required for maintenance alerts")
+    cache_key = (floor.id, rule_type.value)
+    cached_rule = rule_cache.get(cache_key)
+    if cached_rule is not None:
+        return cached_rule
+
+    rule = db.scalar(
+        select(AlertRule)
+        .options(joinedload(AlertRule.site), joinedload(AlertRule.floor))
+        .where(AlertRule.floor_id == floor.id, AlertRule.rule_type == rule_type.value)
+    )
+    if rule is None:
+        rule = AlertRule(
+            name=(
+                "Gateway Offline Maintenance"
+                if rule_type == AlertRuleType.GATEWAY_STALE
+                else "Gateway Low Battery Maintenance"
+            ),
+            rule_type=rule_type.value,
+            severity=severity.value,
+            enabled=True,
+            site_id=floor.site_id,
+            floor_id=floor.id,
+            config={"system_managed": True, "kind": rule_type.value},
+            delivery={"in_app": True, "email": False, "email_recipients": []},
+            created_by_user_id=None,
+            updated_by_user_id=None,
+        )
+        db.add(rule)
+        db.flush()
+        rule = get_alert_rule(db=db, rule_id=rule.id)
+    rule_cache[cache_key] = rule
+    return rule
 
 
 def _seconds_between(start_at: datetime, end_at: datetime) -> float:

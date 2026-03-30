@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from rtls_api.alerts import sync_gateway_maintenance_alerts
 from rtls_api.config import Settings
 from rtls_api.ingestion_store import MessageDedupeStore
 from rtls_api.models import (
@@ -234,6 +235,13 @@ class TelemetryIngestionService:
                 gateway=gateway,
                 envelope=envelope,
                 broker_received_at=received_at,
+            )
+            db.flush()
+            sync_gateway_maintenance_alerts(
+                db=db,
+                settings=self._settings,
+                gateway_ids={gateway.id},
+                observed_at=received_at,
             )
             db.commit()
             return IngestionResult(True, message_type, "accepted", 0)

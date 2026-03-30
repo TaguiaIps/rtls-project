@@ -20,6 +20,7 @@ from rtls_api.alerts import (
     serialize_alert_detail,
     serialize_alert_list_item,
     serialize_alert_rule,
+    sync_gateway_maintenance_alerts,
     update_alert_rule,
 )
 from rtls_api.auth import get_current_user, get_settings
@@ -44,11 +45,20 @@ def read_alert_summary(
     site_id: str | None = None,
     floor_id: str | None = None,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     _: User = Depends(get_current_user),
 ) -> AlertNotificationSummaryResponse:
-    return AlertNotificationSummaryResponse.model_validate(
+    sync_gateway_maintenance_alerts(
+        db=db,
+        settings=settings,
+        site_id=site_id,
+        floor_id=floor_id,
+    )
+    payload = AlertNotificationSummaryResponse.model_validate(
         get_alert_notification_summary(db=db, site_id=site_id, floor_id=floor_id)
     )
+    db.commit()
+    return payload
 
 
 @ALERT_ROUTER.get("/rules", response_model=list[AlertRuleResponse])
@@ -117,8 +127,15 @@ def read_alerts(
     start_at: datetime | None = None,
     end_at: datetime | None = None,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     _: User = Depends(get_current_user),
 ) -> list[AlertListItemResponse]:
+    sync_gateway_maintenance_alerts(
+        db=db,
+        settings=settings,
+        site_id=site_id,
+        floor_id=floor_id,
+    )
     alerts = list_alert_instances(
         db=db,
         site_id=site_id,
@@ -130,24 +147,36 @@ def read_alerts(
         start_at=start_at,
         end_at=end_at,
     )
-    return [
+    payload = [
         AlertListItemResponse.model_validate(serialize_alert_list_item(alert))
         for alert in alerts
     ]
+    db.commit()
+    return payload
 
 
 @ALERT_ROUTER.get("/{alert_id}", response_model=AlertDetailResponse)
 def read_alert_detail(
     alert_id: str,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
     _: User = Depends(get_current_user),
 ) -> AlertDetailResponse:
     alert = get_alert_instance_detail(db=db, alert_id=alert_id)
+    sync_gateway_maintenance_alerts(
+        db=db,
+        settings=settings,
+        site_id=alert.site_id,
+        floor_id=alert.floor_id,
+    )
+    alert = get_alert_instance_detail(db=db, alert_id=alert_id)
     actions = list_alert_actions(db=db, alert_id=alert.id)
     deliveries = list_alert_deliveries(db=db, alert_id=alert.id)
-    return AlertDetailResponse.model_validate(
+    payload = AlertDetailResponse.model_validate(
         serialize_alert_detail(alert, actions=actions, deliveries=deliveries)
     )
+    db.commit()
+    return payload
 
 
 @ALERT_ROUTER.post("/{alert_id}/acknowledge", response_model=AlertDetailResponse)

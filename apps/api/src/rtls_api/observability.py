@@ -8,6 +8,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from rtls_api.alerts import sync_gateway_maintenance_alerts
 from rtls_api.audit import write_audit_event
 from rtls_api.auth import require_role
 from rtls_api.config import Settings
@@ -150,6 +151,11 @@ def get_observability_summary(
     _: User = Depends(require_role(UserRole.ADMINISTRATOR)),
 ) -> ObservabilitySummaryResponse:
     now = datetime.now(timezone.utc)
+    sync_gateway_maintenance_alerts(
+        db=db,
+        settings=settings,
+        observed_at=now,
+    )
     gateways = db.scalars(
         select(Gateway)
         .options(joinedload(Gateway.floor), joinedload(Gateway.latest_heartbeat))
@@ -206,7 +212,7 @@ def get_observability_summary(
         now=now,
     )
 
-    return ObservabilitySummaryResponse(
+    payload = ObservabilitySummaryResponse(
         generated_at=now,
         gateway_totals=ObservabilityGatewayTotalsResponse(
             total=len(gateways),
@@ -255,6 +261,8 @@ def get_observability_summary(
             "for operational tracing."
         ),
     )
+    db.commit()
+    return payload
 
 
 @OBSERVABILITY_ROUTER.post(
