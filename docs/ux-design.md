@@ -102,7 +102,7 @@ This section organizes our features into a narrative flow, combining the user st
 **Acceptance Criteria:**
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Autocomplete search centers map on last known location. | **Must-have** |
+| **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Search returns matching assets, preserves recent searches, shows a location sheet, and offers open-in-map handoff into Live Map. | **Must-have** |
 | **US-MOB-02** | As **Alex**, I want to see my own location as a "blue dot" while in calibration mode, so I can accurately map signal strengths. | Calibration mode shows user location accurately; updates as user walks. | **Must-have** |
 
 ---
@@ -441,20 +441,26 @@ Implementation baseline note:
 
 ```text
 +--------------------------------------------------------------+
+| Session Panel                                                |
+| - API base URL                                               |
+| - web base URL                                               |
+| - pasted access token                                        |
+|--------------------------------------------------------------|
 | Search asset _______________________                         |
 |--------------------------------------------------------------|
-| Result List                                                  |
+| Result List / Recent Searches                                |
 | - POS Terminal 07  | Kitchen Pass | Last seen 12s ago        |
 | - Cart 03          | Dining South | Last seen 1m ago         |
 |--------------------------------------------------------------|
-| Mini Map                                                    |
-| - highlighted destination                                   |
-| - confidence badge                                          |
-| - open full location sheet                                  |
+| Location Sheet                                               |
+| - selected asset details                                     |
+| - confidence or precision badge                              |
+| - open full location in delivered Live Map                   |
 +--------------------------------------------------------------+
 ```
 
-* The mobile flow favors speed: search, identify, orient, move.
+* The delivered baseline favors speed: search, identify, orient, move.
+* Dedicated mobile sign-in still remains deferred, so the current screen keeps an explicit session panel for API and web endpoints plus a pasted access token.
 
 ### **5.11. Mobile App: Commissioning & Calibration**
 
@@ -1353,10 +1359,11 @@ Show these as separate visible layers in Figma:
 | Region | Content |
 | :--- | :--- |
 | **Header** | Title, site/floor context, optional profile shortcut |
-| **Search Bar** | Large touch target with search icon and clear affordance |
+| **Session Panel** | API base URL, web base URL, and pasted access token until dedicated mobile auth lands |
+| **Search Bar** | Large touch target with search action and clear affordance |
 | **Recent Searches** | Last 3-5 accessed assets |
-| **Suggested Assets** | Frequently searched or active incident assets |
-| **Status Strip** | Optional alert count or live connection indicator |
+| **Selected Asset Sheet** | Last-seen, location context, precision or confidence, and open-in-map action |
+| **Status Strip** | Optional live connection or authorization indicator |
 
 #### **Required Variants**
 

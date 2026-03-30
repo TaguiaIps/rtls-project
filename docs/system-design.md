@@ -198,7 +198,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, and Premium-tier AoA or UWB telemetry support. Maintenance alerts, exports and rollups, vendor-specific provisioning, and mobile calibration workflows remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, and the first mobile Asset Finder workflow with web Live Map handoff. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and mobile calibration workflows remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -535,7 +535,19 @@ sequenceDiagram
     Frontend->>Admin: Displays "Asset created successfully" message
 ```
 
-### 7.4. Calibration Mode
+### 7.4. Mobile Asset Finder
+
+The Expo mobile baseline now delivers a single-screen Asset Finder for fast on-floor lookup without introducing a full mobile navigation stack yet.
+
+Key delivery details:
+
+1. The app accepts a current access token plus configurable API and web base URLs so operators can call the authorized live-location APIs before the later dedicated mobile-auth change lands.
+2. Asset search uses the existing `GET /api/locations/search` contract and returns shared live-location records with last-seen, floor, zone, and source-tier context.
+3. Recent searches persist locally through AsyncStorage and stay ordered by most recent access without duplicates.
+4. The selected-asset sheet shows location context plus confidence or precision metadata from the canonical live-location contract.
+5. "Open in Live Map" launches the delivered web route at `/operations/live-map` with `site_id`, `floor_id`, and `asset_tag_id` query parameters preserved.
+
+### 7.5. Calibration Mode
 
 The mobile app runs a guided calibration that uses server-derived coverage heatmaps.
 
