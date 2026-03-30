@@ -150,6 +150,25 @@ class UnauthorizedGeofenceTrigger(str, Enum):
     EXIT = "exit"
 
 
+class ExportJobFormat(str, Enum):
+    CSV = "csv"
+
+
+class ExportJobStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+
+
+class DataLifecycleRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -746,3 +765,100 @@ class AlertNotificationDelivery(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     alert: Mapped[AlertInstance] = relationship()
+
+
+class ExportJob(Base):
+    __tablename__ = "export_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    requested_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    report_kind: Mapped[str] = mapped_column(String(32), index=True)
+    export_format: Mapped[str] = mapped_column(String(16), default=ExportJobFormat.CSV.value)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        default=ExportJobStatus.PENDING.value,
+        index=True,
+    )
+    floor_id: Mapped[str | None] = mapped_column(ForeignKey("floors.id"), nullable=True, index=True)
+    site_id: Mapped[str | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    report_params: Mapped[dict[str, Any]] = mapped_column(JSON)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    storage_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    content_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        index=True,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+
+    requested_by: Mapped[User] = relationship()
+    floor: Mapped[Floor | None] = relationship()
+    site: Mapped[Site | None] = relationship()
+
+
+class DataLifecycleRun(Base):
+    __tablename__ = "data_lifecycle_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    requested_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        default=DataLifecycleRunStatus.PENDING.value,
+        index=True,
+    )
+    retention_summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    rollup_summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        index=True,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    requested_by: Mapped[User] = relationship()
+
+
+class AnalyticsHeatmapHourlyRollup(Base):
+    __tablename__ = "analytics_heatmap_hourly_rollups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    asset_category: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    bucket_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    grid_columns: Mapped[int] = mapped_column(Integer)
+    grid_rows: Mapped[int] = mapped_column(Integer)
+    row_index: Mapped[int] = mapped_column(Integer)
+    column_index: Mapped[int] = mapped_column(Integer)
+    sample_count: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    floor: Mapped[Floor] = relationship()
+
+
+class AnalyticsTableSlaHourlyRollup(Base):
+    __tablename__ = "analytics_table_sla_hourly_rollups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    table_area_id: Mapped[str] = mapped_column(ForeignKey("spatial_areas.id"), index=True)
+    bucket_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    completed_visit_count: Mapped[int] = mapped_column(Integer)
+    breach_count: Mapped[int] = mapped_column(Integer)
+    avg_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    threshold_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    floor: Mapped[Floor] = relationship()
+    table_area: Mapped[SpatialArea] = relationship()

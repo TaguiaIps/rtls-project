@@ -14,8 +14,11 @@ from rtls_api.models import (
     AssetBatteryProfile,
     AssetLocationType,
     AssetUpdateRateProfile,
+    DataLifecycleRunStatus,
     DerivedZoneEventType,
     DwellClosureReason,
+    ExportJobFormat,
+    ExportJobStatus,
     GatewayHardwareTier,
     GatewayHealthStatus,
     LocationConfidenceLevel,
@@ -136,12 +139,38 @@ class ObservabilityServiceResponse(BaseModel):
     detail: str
 
 
+class ExportRetentionPolicyResponse(BaseModel):
+    raw_readings_days: int = Field(ge=1)
+    premium_measurements_days: int = Field(ge=1)
+    location_history_days: int = Field(ge=1)
+    exports_days: int = Field(ge=1)
+
+
+class DataLifecycleRunResponse(BaseModel):
+    id: str
+    requested_by_user_id: str
+    requested_by_email: str | None
+    status: DataLifecycleRunStatus
+    retention_summary: dict[str, int] | None
+    rollup_summary: dict[str, int] | None
+    error_message: str | None
+    requested_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+
+
+class ObservabilityLifecycleSummaryResponse(BaseModel):
+    policies: ExportRetentionPolicyResponse
+    latest_run: DataLifecycleRunResponse | None
+
+
 class ObservabilitySummaryResponse(BaseModel):
     generated_at: datetime
     gateway_totals: ObservabilityGatewayTotalsResponse
     telemetry_totals: ObservabilityTelemetryTotalsResponse
     alert_totals: ObservabilityAlertTotalsResponse
     audit_totals: ObservabilityAuditTotalsResponse
+    lifecycle: ObservabilityLifecycleSummaryResponse
     risk_items: list[HealthRiskResponse]
     services: list[ObservabilityServiceResponse]
     healthcheck_path: str
@@ -568,6 +597,37 @@ class AnalyticsTrajectoryResponse(BaseModel):
     start_at: datetime
     end_at: datetime
     points: list[AssetLocationHistoryResponse]
+
+
+class AnalyticsExportRequest(BaseModel):
+    report_kind: str
+    export_format: ExportJobFormat = ExportJobFormat.CSV
+    floor_id: str
+    start_at: datetime
+    end_at: datetime
+    asset_tag_id: str | None = None
+    asset_category: str | None = None
+    zone_id: str | None = None
+    origin_zone_id: str | None = None
+    destination_zone_id: str | None = None
+    table_area_id: str | None = None
+    bucket_minutes: int | None = Field(default=None, ge=1)
+
+
+class AnalyticsExportJobResponse(BaseModel):
+    id: str
+    report_kind: str
+    export_format: ExportJobFormat
+    status: ExportJobStatus
+    floor_id: str | None
+    site_id: str | None
+    file_name: str | None
+    row_count: int | None = Field(default=None, ge=0)
+    error_message: str | None
+    requested_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    expires_at: datetime | None
 
 
 class AnalyticsSummaryResponse(BaseModel):

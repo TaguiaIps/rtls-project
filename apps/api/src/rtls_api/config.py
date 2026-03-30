@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     object_storage_secret_key: str = "minioadmin"
     object_storage_bucket: str = "rtls-floor-plans"
     object_storage_region: str = "us-east-1"
+    raw_reading_retention_days: int = 90
+    premium_measurement_retention_days: int = 90
+    location_history_retention_days: int = 30
+    export_retention_days: int = 7
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None

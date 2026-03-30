@@ -3,13 +3,19 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
+from rtls_api.audit import write_audit_event
 from rtls_api.auth import require_role
 from rtls_api.config import Settings
+from rtls_api.data_lifecycle import (
+    build_retention_policy_summary,
+    run_data_lifecycle_job,
+    serialize_lifecycle_run,
+)
 from rtls_api.db import get_db
 from rtls_api.ingestion import ensure_utc, gateway_health_status
 from rtls_api.models import (
@@ -17,6 +23,8 @@ from rtls_api.models import (
     AlertSeverity,
     AlertStatus,
     AuditEvent,
+    DataLifecycleRun,
+    DataLifecycleRunStatus,
     Gateway,
     GatewayHeartbeat,
     PremiumRawMeasurement,
@@ -27,10 +35,13 @@ from rtls_api.models import (
 from rtls_api.schemas import (
     AuditEventListResponse,
     AuditEventResponse,
+    DataLifecycleRunResponse,
+    ExportRetentionPolicyResponse,
     HealthRiskResponse,
     ObservabilityAlertTotalsResponse,
     ObservabilityAuditTotalsResponse,
     ObservabilityGatewayTotalsResponse,
+    ObservabilityLifecycleSummaryResponse,
     ObservabilityServiceResponse,
     ObservabilitySummaryResponse,
     ObservabilityTelemetryTotalsResponse,
@@ -182,6 +193,12 @@ def get_observability_summary(
         )
     ) or 0
     latest_audit_event_at = db.scalar(select(func.max(AuditEvent.created_at)))
+    latest_lifecycle_run = db.scalar(
+        select(DataLifecycleRun)
+        .options(joinedload(DataLifecycleRun.requested_by))
+        .order_by(DataLifecycleRun.requested_at.desc())
+        .limit(1)
+    )
 
     gateway_summary = summarize_gateway_risks(
         gateways,
@@ -213,6 +230,18 @@ def get_observability_summary(
             last_24h=audit_events_last_24h,
             latest_at=ensure_utc(latest_audit_event_at),
         ),
+        lifecycle=ObservabilityLifecycleSummaryResponse(
+            policies=ExportRetentionPolicyResponse.model_validate(
+                build_retention_policy_summary(settings)
+            ),
+            latest_run=(
+                DataLifecycleRunResponse.model_validate(
+                    serialize_lifecycle_run(latest_lifecycle_run)
+                )
+                if latest_lifecycle_run is not None
+                else None
+            ),
+        ),
         risk_items=gateway_summary["risk_items"][:8],
         services=[
             ObservabilityServiceResponse(name=name, status=status, detail=detail)
@@ -226,6 +255,41 @@ def get_observability_summary(
             "for operational tracing."
         ),
     )
+
+
+@OBSERVABILITY_ROUTER.post(
+    "/observability/lifecycle-runs",
+    response_model=DataLifecycleRunResponse,
+)
+def trigger_data_lifecycle_run(
+    background_tasks: BackgroundTasks,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role(UserRole.ADMINISTRATOR)),
+) -> DataLifecycleRunResponse:
+    lifecycle_run = DataLifecycleRun(
+        requested_by_user_id=admin_user.id,
+        status=DataLifecycleRunStatus.PENDING.value,
+    )
+    db.add(lifecycle_run)
+    write_audit_event(
+        db,
+        action_category="operations",
+        action_type="admin.lifecycle.run.requested",
+        actor=admin_user,
+        target_type="data_lifecycle_run",
+        target_id=lifecycle_run.id,
+        details={},
+    )
+    db.commit()
+    db.refresh(lifecycle_run)
+    background_tasks.add_task(
+        run_data_lifecycle_job,
+        request.app.state.session_factory,
+        request.app.state.settings,
+        lifecycle_run.id,
+    )
+    return DataLifecycleRunResponse.model_validate(serialize_lifecycle_run(lifecycle_run))
 
 
 @METRICS_ROUTER.get("/metrics", response_class=PlainTextResponse, include_in_schema=False)

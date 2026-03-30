@@ -59,6 +59,15 @@ export type UnauthorizedGeofenceTrigger = "entry" | "exit";
 export type HealthRiskSeverity = "critical" | "warning";
 export type HealthRiskKind = "stale_gateway" | "low_battery_gateway";
 export type ObservabilityServiceStatus = "baseline" | "healthy";
+export type ExportJobFormat = "csv";
+export type ExportJobStatus = "pending" | "running" | "completed" | "failed" | "expired";
+export type AnalyticsExportReportKind =
+  | "trajectory"
+  | "heatmap"
+  | "dwell"
+  | "round_trip"
+  | "sla";
+export type DataLifecycleRunStatus = "pending" | "running" | "completed" | "failed";
 
 export interface FloorSummary {
   id: string;
@@ -261,18 +270,60 @@ export interface ObservabilityServiceRecord {
   detail: string;
 }
 
+export interface ExportRetentionPolicyRecord {
+  raw_readings_days: number;
+  premium_measurements_days: number;
+  location_history_days: number;
+  exports_days: number;
+}
+
+export interface DataLifecycleRunRecord {
+  id: string;
+  requested_by_user_id: string;
+  requested_by_email: string | null;
+  status: DataLifecycleRunStatus;
+  retention_summary: Record<string, number> | null;
+  rollup_summary: Record<string, number> | null;
+  error_message: string | null;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ObservabilityLifecycleSummaryRecord {
+  policies: ExportRetentionPolicyRecord;
+  latest_run: DataLifecycleRunRecord | null;
+}
+
 export interface ObservabilitySummaryRecord {
   generated_at: string;
   gateway_totals: ObservabilityGatewayTotalsRecord;
   telemetry_totals: ObservabilityTelemetryTotalsRecord;
   alert_totals: ObservabilityAlertTotalsRecord;
   audit_totals: ObservabilityAuditTotalsRecord;
+  lifecycle: ObservabilityLifecycleSummaryRecord;
   risk_items: HealthRiskRecord[];
   services: ObservabilityServiceRecord[];
   healthcheck_path: string;
   metrics_path: string;
   request_id_header: string;
   tracing_status: string;
+}
+
+export interface AnalyticsExportJobRecord {
+  id: string;
+  report_kind: AnalyticsExportReportKind;
+  export_format: ExportJobFormat;
+  status: ExportJobStatus;
+  floor_id: string | null;
+  site_id: string | null;
+  file_name: string | null;
+  row_count: number | null;
+  error_message: string | null;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  expires_at: string | null;
 }
 
 export interface AssetLocationRecord {
@@ -654,4 +705,19 @@ export interface AnalyticsSlaTrendRecord {
   threshold_seconds: number | null;
   current_timer: TableServiceTimerStateRecord | null;
   buckets: AnalyticsSlaTrendBucketRecord[];
+}
+
+export interface AnalyticsExportRequestRecord {
+  report_kind: AnalyticsExportReportKind;
+  export_format: ExportJobFormat;
+  floor_id: string;
+  start_at: string;
+  end_at: string;
+  asset_tag_id?: string | null;
+  asset_category?: string | null;
+  zone_id?: string | null;
+  origin_zone_id?: string | null;
+  destination_zone_id?: string | null;
+  table_area_id?: string | null;
+  bucket_minutes?: number;
 }

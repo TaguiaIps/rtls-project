@@ -17,6 +17,8 @@ from rtls_api.derived_events import (
 from rtls_api.models import (
     AlertRule,
     AlertRuleType,
+    AnalyticsHeatmapHourlyRollup,
+    AnalyticsTableSlaHourlyRollup,
     AssetLocationHistory,
     AssetTag,
     Floor,
@@ -112,21 +114,66 @@ def get_heatmap_report(
     grid_rows: int,
 ) -> dict[str, object]:
     floor = _get_floor(db=db, floor_id=floor_id)
-    history = _list_location_history(
-        db=db,
-        floor_id=floor_id,
-        start_at=start_at,
-        end_at=end_at,
-        asset_category=asset_category,
-    )
     counts: dict[tuple[int, int], int] = defaultdict(int)
-    for entry in history:
-        point = _resolve_history_point(entry)
-        if point is None:
-            continue
-        column = min(grid_columns - 1, max(0, int(point["x"] * grid_columns)))
-        row = min(grid_rows - 1, max(0, int(point["y"] * grid_rows)))
-        counts[(row, column)] += 1
+    used_rollups = False
+
+    if grid_columns == 12 and grid_rows == 8:
+        rollup_start = _ceil_hour(start_at)
+        rollup_end = _floor_hour(end_at)
+        if rollup_start < rollup_end:
+            query = select(AnalyticsHeatmapHourlyRollup).where(
+                AnalyticsHeatmapHourlyRollup.floor_id == floor_id,
+                AnalyticsHeatmapHourlyRollup.grid_columns == grid_columns,
+                AnalyticsHeatmapHourlyRollup.grid_rows == grid_rows,
+                AnalyticsHeatmapHourlyRollup.bucket_started_at >= rollup_start,
+                AnalyticsHeatmapHourlyRollup.bucket_started_at < rollup_end,
+            )
+            if asset_category is not None:
+                query = query.where(AnalyticsHeatmapHourlyRollup.asset_category == asset_category)
+            rollup_rows = db.scalars(query).all()
+            if rollup_rows:
+                used_rollups = True
+                for row in rollup_rows:
+                    counts[(row.row_index, row.column_index)] += row.sample_count
+                _accumulate_heatmap_counts(
+                    counts=counts,
+                    history=_list_location_history(
+                        db=db,
+                        floor_id=floor_id,
+                        start_at=start_at,
+                        end_at=rollup_start,
+                        asset_category=asset_category,
+                    ),
+                    grid_columns=grid_columns,
+                    grid_rows=grid_rows,
+                )
+                _accumulate_heatmap_counts(
+                    counts=counts,
+                    history=_list_location_history(
+                        db=db,
+                        floor_id=floor_id,
+                        start_at=rollup_end,
+                        end_at=end_at,
+                        asset_category=asset_category,
+                    ),
+                    grid_columns=grid_columns,
+                    grid_rows=grid_rows,
+                )
+
+    if not used_rollups:
+        history = _list_location_history(
+            db=db,
+            floor_id=floor_id,
+            start_at=start_at,
+            end_at=end_at,
+            asset_category=asset_category,
+        )
+        _accumulate_heatmap_counts(
+            counts=counts,
+            history=history,
+            grid_columns=grid_columns,
+            grid_rows=grid_rows,
+        )
 
     max_density = max(counts.values(), default=0)
     cells = [
@@ -330,30 +377,62 @@ def get_sla_trend_report(
     )
 
     buckets: dict[datetime, list[float]] = defaultdict(list)
-    for record in records:
-        bucket = _bucket_start(record.ended_at, bucket_minutes)
-        buckets[bucket].append(float(record.duration_seconds))
+    used_rollups = False
+    if bucket_minutes == 60 and _is_hour_aligned(start_at, end_at):
+        rollup_rows = db.scalars(
+            select(AnalyticsTableSlaHourlyRollup).where(
+                AnalyticsTableSlaHourlyRollup.floor_id == floor_id,
+                AnalyticsTableSlaHourlyRollup.table_area_id == table_area_id,
+                AnalyticsTableSlaHourlyRollup.bucket_started_at >= start_at,
+                AnalyticsTableSlaHourlyRollup.bucket_started_at <= _bucket_start(end_at, 60),
+            )
+        ).all()
+        if rollup_rows:
+            used_rollups = True
 
-    serialized_buckets = []
-    current_bucket = _bucket_start(start_at, bucket_minutes)
-    final_bucket = _bucket_start(end_at, bucket_minutes)
-    bucket_delta = timedelta(minutes=bucket_minutes)
-    while current_bucket <= final_bucket:
-        durations = buckets.get(current_bucket, [])
-        serialized_buckets.append(
-            {
-                "bucket_started_at": current_bucket,
-                "completed_visit_count": len(durations),
-                "breach_count": sum(
-                    1
-                    for duration in durations
-                    if threshold_seconds is not None and duration > threshold_seconds
-                ),
-                "avg_duration_seconds": _average(durations),
-                "max_duration_seconds": max(durations, default=None),
-            }
-        )
-        current_bucket += bucket_delta
+    if used_rollups:
+        serialized_buckets = []
+        current_bucket = _bucket_start(start_at, bucket_minutes)
+        final_bucket = _bucket_start(end_at, bucket_minutes)
+        bucket_delta = timedelta(minutes=bucket_minutes)
+        rollup_map = {ensure_utc(row.bucket_started_at): row for row in rollup_rows}
+        while current_bucket <= final_bucket:
+            row = rollup_map.get(current_bucket)
+            serialized_buckets.append(
+                {
+                    "bucket_started_at": current_bucket,
+                    "completed_visit_count": row.completed_visit_count if row is not None else 0,
+                    "breach_count": row.breach_count if row is not None else 0,
+                    "avg_duration_seconds": row.avg_duration_seconds if row is not None else None,
+                    "max_duration_seconds": row.max_duration_seconds if row is not None else None,
+                }
+            )
+            current_bucket += bucket_delta
+    else:
+        for record in records:
+            bucket = _bucket_start(record.ended_at, bucket_minutes)
+            buckets[bucket].append(float(record.duration_seconds))
+
+        serialized_buckets = []
+        current_bucket = _bucket_start(start_at, bucket_minutes)
+        final_bucket = _bucket_start(end_at, bucket_minutes)
+        bucket_delta = timedelta(minutes=bucket_minutes)
+        while current_bucket <= final_bucket:
+            durations = buckets.get(current_bucket, [])
+            serialized_buckets.append(
+                {
+                    "bucket_started_at": current_bucket,
+                    "completed_visit_count": len(durations),
+                    "breach_count": sum(
+                        1
+                        for duration in durations
+                        if threshold_seconds is not None and duration > threshold_seconds
+                    ),
+                    "avg_duration_seconds": _average(durations),
+                    "max_duration_seconds": max(durations, default=None),
+                }
+            )
+            current_bucket += bucket_delta
 
     timer_state = db.get(TableServiceTimerState, table_area_id)
     serialized_timer = (
@@ -482,3 +561,45 @@ def _bucket_start(value: datetime, bucket_minutes: int) -> datetime:
     normalized = ensure_utc(value)
     minute = (normalized.minute // bucket_minutes) * bucket_minutes
     return normalized.replace(minute=minute, second=0, microsecond=0)
+
+
+def _ceil_hour(value: datetime) -> datetime:
+    normalized = ensure_utc(value)
+    bucket = normalized.replace(minute=0, second=0, microsecond=0)
+    if bucket == normalized:
+        return bucket
+    return bucket + timedelta(hours=1)
+
+
+def _floor_hour(value: datetime) -> datetime:
+    normalized = ensure_utc(value)
+    return normalized.replace(minute=0, second=0, microsecond=0)
+
+
+def _is_hour_aligned(start_at: datetime, end_at: datetime) -> bool:
+    normalized_start = ensure_utc(start_at)
+    normalized_end = ensure_utc(end_at)
+    return (
+        normalized_start.minute == 0
+        and normalized_start.second == 0
+        and normalized_start.microsecond == 0
+        and normalized_end.minute == 0
+        and normalized_end.second == 0
+        and normalized_end.microsecond == 0
+    )
+
+
+def _accumulate_heatmap_counts(
+    *,
+    counts: dict[tuple[int, int], int],
+    history: list[AssetLocationHistory],
+    grid_columns: int,
+    grid_rows: int,
+) -> None:
+    for entry in history:
+        point = _resolve_history_point(entry)
+        if point is None:
+            continue
+        column = min(grid_columns - 1, max(0, int(point["x"] * grid_columns)))
+        row = min(grid_rows - 1, max(0, int(point["y"] * grid_rows)))
+        counts[(row, column)] += 1
