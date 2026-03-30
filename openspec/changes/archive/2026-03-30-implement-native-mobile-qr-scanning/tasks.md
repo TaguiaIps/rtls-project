@@ -1,0 +1,4 @@
+- [x] Add native camera scanning support and Expo app configuration for the mobile workspace.
+- [x] Extend commissioning identifier parsing and the commissioning screen to support camera-first QR scanning with manual fallback.
+- [x] Add or update mobile tests covering supported QR payload normalization and commissioning helper behavior.
+- [x] Update product docs and planning artifacts to reflect delivered native QR scanning behavior and the follow-on backlog split.
