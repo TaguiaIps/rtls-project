@@ -11,6 +11,7 @@ import {
   buildCalibrationProgress,
   buildCalibrationWaypoints,
   buildCommissioningSummary,
+  extractIdentifierFromQrPayload,
   resolveCommissioningTarget,
   upsertCommissioningSummary
 } from "../src/commissioning";
@@ -154,8 +155,18 @@ describe("commissioning helpers", () => {
       resolveCommissioningTarget("missing-01", floor.gateways, [createAsset()])
     ).toMatchObject({
       kind: "unknown",
-      identifier: "missing-01"
+      identifier: "MISSING-01"
     });
+  });
+
+  it("extracts identifiers from supported QR payload shapes", () => {
+    expect(extractIdentifierFromQrPayload("gw-dining-01")).toBe("GW-DINING-01");
+    expect(
+      extractIdentifierFromQrPayload('{"gateway_id":"gw-kitchen-01"}')
+    ).toBe("GW-KITCHEN-01");
+    expect(
+      extractIdentifierFromQrPayload("https://rtls.example/scan?tag_id=tag-002")
+    ).toBe("TAG-002");
   });
 
   it("builds calibration waypoints from the selected zone and known floor context", () => {
