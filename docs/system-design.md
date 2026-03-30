@@ -199,7 +199,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -240,28 +240,31 @@ sequenceDiagram
 | **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
 | **Admin - Health & Audit** | `GET` | `/api/admin/observability/summary` | Returns the administrator Health workspace summary including gateway-risk cards, telemetry totals, alert pressure, audit totals, and delivered observability metadata. |
 | | `GET` | `/api/admin/audit-events` | Returns persisted audit history using bounded newest-first pagination and supported actor, category, action, target, and time filters. |
+| | `POST` | `/api/admin/observability/lifecycle-runs` | Creates a lifecycle run that applies retention windows and refreshes supported analytics rollups. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
 | | `GET` | `/api/analytics/dwells` | Retrieves dwell-time report data derived from canonical dwell history for the selected scope (FR-ANL-004). |
 | | `GET` | `/api/analytics/round-trips` | Retrieves completed route cycles and summary metrics for a selected origin and destination pair (FR-ANL-003). |
 | | `GET` | `/api/analytics/sla-trends` | Retrieves time-bucketed table SLA trend data using the configured alert-rule threshold baseline when available (FR-ANL-006). |
+| | `POST` | `/api/analytics/exports` | Queues an async CSV export for a supported analytics scope and returns the created job record. |
+| | `GET` | `/api/analytics/exports` | Lists recent export jobs visible to the current user, optionally filtered by floor. |
+| | `GET` | `/api/analytics/exports/{job_id}` | Returns the current status and metadata for one export job. |
+| | `GET` | `/api/analytics/exports/{job_id}/file` | Downloads the completed export artifact when it is still retained. |
 | **Admin - Gateways** | `GET` | `/api/gateways` | Retrieves a list of all configured gateways. |
 | | `POST` | `/api/gateways` | Registers a new gateway and its location (US-ADM-02). |
 | | `PUT` | `/api/gateways/{id}` | Updates a gateway's configuration. |
 | **Admin - Zones & POIs** | `GET` | `/api/zones` | Retrieves a list of all geofences and Points of Interest. |
 | | `POST` | `/api/zones` | Creates a new geofence or POI (US-ANL-02). |
 | | `PUT` | `/api/zones/{id}` | Updates a zone's geometry or name. |
-| **Data Export** | `POST` | `/api/export/request` | Requests an async export of raw data. Returns a job ID. |
-| | `GET` | `/api/export/status/{job_id}` | Checks the status of an export job and provides a download URL when complete. |
 | **Real-time** | `WS` | `/ws/locations` | WebSocket endpoint for streaming real-time location updates. |
 | **Observability** | `GET` | `/metrics` | Returns a text-based local metrics payload for current gateway, alert, telemetry, and audit counters. |
 
 ### **3.4. Analytics & Inference Service**
 
-- **Implementation:** A set of scheduled tasks managed by a job queue like **Celery** with a scheduler like Celery Beat.
+- **Implementation:** The delivered baseline uses durable export-job records plus application-managed background tasks for async CSV generation, and administrator-triggered lifecycle runs for retention and hourly rollup refresh.
 - **Core Jobs:**
-  - **Data Aggregation (Nightly):** Purges raw data older than 90 days after creating permanent hourly summaries.
-  - **Insight Generation (Scheduled):** Populates the `analytics_insights` table with actionable information.
+  - **Analytics Export (On Demand):** Replays a supported analytics query, writes a CSV artifact into object storage, and retains it for the configured export window.
+  - **Data Lifecycle (Manual baseline):** Applies delivered retention windows to raw telemetry, Premium measurements, location history, and export artifacts, then rebuilds supported hourly rollups.
 
 ---
 
@@ -336,8 +339,12 @@ sequenceDiagram
     - `source_modality` (VARCHAR),
     - `precision_meters` (nullable FLOAT).
 - **Data Lifecycle Management:**
-  - A TimescaleDB **retention policy** will automatically delete raw data older than **90 days**.
-  - Rollups: hourly/daily tables for dwell time, zone counts, avg_rssi
+  - The delivered lifecycle run currently enforces these application-managed retention windows:
+    - raw readings: **90 days**
+    - premium raw measurements: **90 days**
+    - location history: **30 days**
+    - export jobs and artifacts: **7 days**
+  - The delivered rollup baseline persists hourly heatmap density and hourly table SLA aggregates so compatible analytics requests can avoid rescanning only raw history.
 
 ### **Data Model (Entity-Relationship Diagram)**
 

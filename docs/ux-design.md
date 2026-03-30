@@ -370,8 +370,8 @@ Implementation baseline note:
 Implementation baseline note:
 
 * The delivered Analytics workspace now supports trajectory replay, heatmap generation, dwell reporting, round-trip reporting, and table SLA trend views inside the shared monitoring shell.
-* The first delivery keeps analytics interactive and read-only: bounded time windows, report switching, and explicit empty-state handling are included now.
-* Export jobs, saved presets, compare-period workflows, and scheduled report delivery remain later work.
+* The current delivery also supports async CSV export jobs from the parameter rail, plus a recent-export queue that exposes pending, completed, and failed states with download access for retained artifacts.
+* Saved presets, compare-period workflows, and scheduled report delivery remain later work.
 
 ```text
 +------------------------------------------------------------------------------------------------+
@@ -382,12 +382,12 @@ Implementation baseline note:
 | - time range                           | - chart / legend / report table                             |
 | - compare by shift / daypart           | - annotation layer                                          |
 |------------------------------------------------------------------------------------------------|
-| Insight Footer: export | save preset | compare with previous period | share link                |
+| Insight Footer: save preset | compare with previous period | share link                 |
 +------------------------------------------------------------------------------------------------+
 ```
 
 * The workspace uses one mental model for all delivered analytics: choose scope, choose time, generate, inspect.
-* Deeper export, preset, and cross-period comparison workflows remain deferred even though the IA already reserves room for them.
+* Presets and cross-period comparison workflows remain deferred even though the IA already reserves room for them.
 
 ### **5.6. Web App: Zone & POI Editor**
 

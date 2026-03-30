@@ -14,7 +14,9 @@ This package provides:
 - typed alert rule management plus protected `/api/alerts/*` contracts for queue, detail, acknowledgement, resolution, and shell summary workflows
 - durable in-app notification records and optional email-delivery attempt tracking for delivered table-SLA and unauthorized-geofence alerts
 - inline alert evaluation that reuses the derived-event and table-timer foundation instead of reparsing raw telemetry
-- an explicit scope boundary where Analytics remains interactive and read-only for now, while exports, rollups, vendor-specific Premium provisioning, and maintenance alerts remain deferred to later changes
+- async `/api/analytics/exports*` workflows that generate durable CSV artifacts for supported report scopes
+- administrator-triggered lifecycle runs that apply retention windows and refresh hourly heatmap and SLA rollups
+- an explicit scope boundary where scheduled delivery, richer report presets, vendor-specific Premium provisioning, and maintenance alerts remain deferred to later changes
 - the backend lint, test, and build baseline for future OpenSpec changes
 
 Bootstrap the first Administrator account with:
