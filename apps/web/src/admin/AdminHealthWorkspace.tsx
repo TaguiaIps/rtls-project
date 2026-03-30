@@ -81,7 +81,9 @@ export function AdminHealthWorkspace() {
   const { fetchWithAuth } = useAuth();
   const [summary, setSummary] = useState<ObservabilitySummaryRecord | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lifecycle = summary?.lifecycle;
 
   async function loadSummary() {
     setLoading(true);
@@ -105,6 +107,23 @@ export function AdminHealthWorkspace() {
   }, [fetchWithAuth]);
 
   const services = mergeServices(summary?.services ?? []);
+
+  async function triggerLifecycleRun() {
+    setLifecycleBusy(true);
+    try {
+      const response = await fetchWithAuth("/api/admin/observability/lifecycle-runs", {
+        method: "POST"
+      });
+      if (!response.ok) {
+        throw new Error("Unable to start lifecycle run.");
+      }
+      await loadSummary();
+    } catch {
+      setError("Unable to start lifecycle run.");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  }
 
   return (
     <section className="shell-page health-page">
@@ -202,6 +221,45 @@ export function AdminHealthWorkspace() {
               <div>
                 <dt>Latest audit event</dt>
                 <dd>{formatTimestamp(summary?.audit_totals.latest_at ?? null)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="panel">
+            <div className="stack-card__header">
+              <div>
+                <p className="eyebrow">Lifecycle</p>
+                <h2>Retention and rollups</h2>
+              </div>
+              <button
+                className="secondary-button"
+                disabled={lifecycleBusy}
+                onClick={() => void triggerLifecycleRun()}
+                type="button"
+              >
+                {lifecycleBusy ? "Running..." : "Run Lifecycle Job"}
+              </button>
+            </div>
+            <dl className="definition-list">
+              <div>
+                <dt>Raw readings retention</dt>
+                <dd>{lifecycle?.policies.raw_readings_days ?? 90} days</dd>
+              </div>
+              <div>
+                <dt>Location history retention</dt>
+                <dd>{lifecycle?.policies.location_history_days ?? 30} days</dd>
+              </div>
+              <div>
+                <dt>Export artifact retention</dt>
+                <dd>{lifecycle?.policies.exports_days ?? 7} days</dd>
+              </div>
+              <div>
+                <dt>Latest run</dt>
+                <dd>{formatTimestamp(lifecycle?.latest_run?.completed_at ?? null)}</dd>
+              </div>
+              <div>
+                <dt>Latest status</dt>
+                <dd>{lifecycle?.latest_run?.status ?? "Never run"}</dd>
               </div>
             </dl>
           </section>

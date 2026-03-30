@@ -972,6 +972,8 @@ body {
   background: rgba(251, 113, 133, 0.18);
 }
 
+.status-badge--pending,
+.status-badge--running,
 .status-badge--delivered,
 .status-badge--open,
 .status-badge--resolved {
@@ -981,7 +983,9 @@ body {
 
 .status-badge--acknowledged,
 .status-badge--cleared,
-.status-badge--skipped {
+.status-badge--skipped,
+.status-badge--completed,
+.status-badge--expired {
   color: #cbd5e1;
   background: rgba(148, 163, 184, 0.14);
 }
@@ -1172,6 +1176,17 @@ body {
   color: #e5eef8;
   cursor: pointer;
   font-weight: 600;
+}
+
+.analytics-export-panel,
+.analytics-export-list,
+.analytics-export-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.analytics-export-actions {
+  justify-items: end;
 }
 
 .tool-button--active {

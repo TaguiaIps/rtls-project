@@ -1,6 +1,8 @@
 import type {
+  AnalyticsExportJobRecord,
   AnalyticsDwellReportRecord,
   AnalyticsHeatmapRecord,
+  AnalyticsExportRequestRecord,
   AnalyticsRoundTripReportRecord,
   AnalyticsSlaTrendRecord,
   AnalyticsTrajectoryRecord,
@@ -29,6 +31,9 @@ export function AnalyticsWorkspacePage() {
   const [floorDetail, setFloorDetail] = useState<FloorDetail | null>(null);
   const [liveAssets, setLiveAssets] = useState<AssetLocationRecord[]>([]);
   const [reportData, setReportData] = useState<AnalyticsReportData | null>(null);
+  const [exportJobs, setExportJobs] = useState<AnalyticsExportJobRecord[]>([]);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,6 +213,102 @@ export function AnalyticsWorkspacePage() {
     tableAreaId,
     zoneId
   ]);
+
+  async function loadExportJobs() {
+    if (!selectedFloor?.id) {
+      setExportJobs([]);
+      return;
+    }
+    try {
+      const response = await fetchWithAuth(`/api/analytics/exports?floor_id=${selectedFloor.id}`);
+      if (!response.ok) {
+        throw new Error("Unable to load export jobs");
+      }
+      const payload = (await response.json()) as AnalyticsExportJobRecord[];
+      setExportJobs(payload);
+      setExportError(null);
+    } catch {
+      setExportJobs([]);
+      setExportError("Unable to load export jobs.");
+    }
+  }
+
+  useEffect(() => {
+    void loadExportJobs();
+  }, [fetchWithAuth, selectedFloor?.id]);
+
+  async function queueExport() {
+    if (!selectedFloor?.id || !startAt || !endAt || missingPrompt) {
+      return;
+    }
+    setExportBusy(true);
+    try {
+      const payload: AnalyticsExportRequestRecord = {
+        report_kind: report,
+        export_format: "csv",
+        floor_id: selectedFloor.id,
+        start_at: startAt,
+        end_at: endAt
+      };
+      if (assetTagId) {
+        payload.asset_tag_id = assetTagId;
+      }
+      if (assetCategory) {
+        payload.asset_category = assetCategory;
+      }
+      if (zoneId) {
+        payload.zone_id = zoneId;
+      }
+      if (originZoneId) {
+        payload.origin_zone_id = originZoneId;
+      }
+      if (destinationZoneId) {
+        payload.destination_zone_id = destinationZoneId;
+      }
+      if (tableAreaId) {
+        payload.table_area_id = tableAreaId;
+      }
+      if (report === "sla") {
+        payload.bucket_minutes = Number(bucketMinutes);
+      }
+
+      const response = await fetchWithAuth("/api/analytics/exports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(payload?.detail ?? "Unable to queue export");
+      }
+      await loadExportJobs();
+      setExportError(null);
+    } catch (queueError) {
+      setExportError(queueError instanceof Error ? queueError.message : "Unable to queue export.");
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function downloadExport(job: AnalyticsExportJobRecord) {
+    if (job.status !== "completed") {
+      return;
+    }
+    const response = await fetchWithAuth(`/api/analytics/exports/${job.id}/file`);
+    if (!response.ok) {
+      setExportError("Unable to download export artifact.");
+      return;
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = job.file_name ?? `${job.report_kind}-export.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="analytics-layout">
@@ -389,8 +490,54 @@ export function AnalyticsWorkspacePage() {
           ) : null}
 
           <p className="muted-text analytics-controls__hint">
-            Interactive Analytics stays bounded to report windows and delivered read-only views. Exports and rollups remain later work.
+            Interactive Analytics now supports async CSV exports for delivered report scopes while lifecycle rollups remain managed from Health.
           </p>
+
+          <div className="analytics-export-panel">
+            <div className="stack-card__header">
+              <div>
+                <p className="eyebrow">Exports</p>
+                <h2>Recent CSV jobs</h2>
+              </div>
+            </div>
+            <button
+              className="primary-button"
+              disabled={Boolean(missingPrompt) || exportBusy}
+              onClick={() => void queueExport()}
+              type="button"
+            >
+              {exportBusy ? "Queueing..." : "Queue CSV Export"}
+            </button>
+            {exportError ? <p className="form-error">{exportError}</p> : null}
+            <div className="analytics-export-list">
+              {exportJobs.length ? (
+                exportJobs.map((job) => (
+                  <div key={job.id} className="activity-row activity-row--static">
+                    <div>
+                      <strong>{job.report_kind}</strong>
+                      <span>{formatExportTimestamp(job.requested_at)}</span>
+                    </div>
+                    <div className="analytics-export-actions">
+                      <span className={`status-badge status-badge--${job.status}`}>{job.status}</span>
+                      {job.status === "completed" ? (
+                        <button
+                          className="secondary-button"
+                          onClick={() => void downloadExport(job)}
+                          type="button"
+                        >
+                          Download
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="muted-text">
+                  Queue a report export to keep a durable artifact outside the interactive view.
+                </p>
+              )}
+            </div>
+          </div>
         </aside>
 
         <section className="analytics-results">
@@ -452,6 +599,10 @@ export function AnalyticsWorkspacePage() {
       </div>
     </div>
   );
+}
+
+function formatExportTimestamp(value: string) {
+  return new Date(value).toLocaleString();
 }
 
 function TrajectoryReportPanel({
