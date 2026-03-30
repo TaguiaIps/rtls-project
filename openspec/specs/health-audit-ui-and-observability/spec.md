@@ -9,7 +9,7 @@ The RTLS Analytics Platform SHALL provide a protected administrator Health works
 
 #### Scenario: Administrator opens the Health workspace
 - **WHEN** an authenticated Administrator opens the delivered Health view in the admin area
-- **THEN** the web app SHALL show a current health summary including stale-gateway, low-battery, alert-pressure, and ingestion or metrics baseline context
+- **THEN** the web app SHALL show a current health summary including stale-gateway, low-battery, alert-pressure, ingestion or metrics baseline context, and the latest lifecycle-run status
 
 #### Scenario: General User attempts to open the Health workspace
 - **WHEN** an authenticated General User requests the delivered admin Health workspace
@@ -43,3 +43,10 @@ The RTLS Analytics Platform SHALL expose a minimal metrics and request-tracing b
 #### Scenario: Client makes an API request
 - **WHEN** the platform handles an API request through the delivered backend
 - **THEN** the response SHALL include a request identifier that operators can use for tracing and support follow-up
+
+### Requirement: Administrators can trigger lifecycle refresh from Health
+The RTLS Analytics Platform SHALL let an authenticated Administrator start the delivered retention and rollup refresh from the Health workspace.
+
+#### Scenario: Administrator triggers retention and rollup refresh
+- **WHEN** an authenticated Administrator requests the delivered lifecycle action from Health
+- **THEN** the system SHALL start a lifecycle run and surface its pending or completed state in the administrator Health workspace

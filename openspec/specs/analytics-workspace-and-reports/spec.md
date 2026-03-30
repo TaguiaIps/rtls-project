@@ -8,7 +8,7 @@ The RTLS Analytics Platform SHALL provide an Analytics workspace inside the prot
 
 #### Scenario: Authorized user opens the Analytics route
 - **WHEN** an authorized user navigates to the delivered Analytics route with a supported site or floor context
-- **THEN** the application SHALL render the Analytics workspace with a report switcher, parameter controls, and the preserved shell context
+- **THEN** the application SHALL render the Analytics workspace with a report switcher, parameter controls, export actions, and the preserved shell context
 
 #### Scenario: User switches report type inside Analytics
 - **WHEN** the user changes from one delivered analytics report type to another inside the Analytics workspace
@@ -67,3 +67,7 @@ The RTLS Analytics Platform SHALL distinguish empty historical results, sparse c
 #### Scenario: Report request cannot be fulfilled as requested
 - **WHEN** an analytics request fails validation or exceeds supported bounds for the delivered product phase
 - **THEN** the workspace SHALL show a clear validation or unsupported-scope treatment instead of silently dropping data
+
+#### Scenario: User queues an export from Analytics
+- **WHEN** an authorized user requests an export for the current supported analytics scope
+- **THEN** the workspace SHALL show the created export job in a recent-export queue with pending, completed, or failed state plus download access when ready
