@@ -59,7 +59,7 @@ This section organizes our features into a narrative flow, combining the user st
 | :--- | :--- | :--- | :--- |
 | **US-ADM-01** | As **Alex**, I want to upload a floor plan image, so that I have a visual canvas for my gateway and asset layout. | User can select image; displayed as background; scale is set via reference points. | **Must-have** |
 | **US-ADM-02** | As **Alex**, I want to place and label gateway icons (Economic/Premium tier) on the map. | Drag/drop gateways; enter name/ID and tier. | **Must-have** |
-| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | App scans QR; prompts for zone/room; records rough coordinates. | **Must-have** |
+| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | Scanner input resolves the device, prompts for zone/room, and shows floor-linked commissioning context. | **Must-have** |
 | **US-ADM-04** | As **Alex**, I want to run an automated calibration assistant that collects data to calculate offsets and build the initial radiomap. | Calibration runs in background; collects RSSI; confirms map generation. | **Must-have** |
 | **US-ADM-05** | As **Alex**, I want to bulk-import a list of asset tags from a CSV file. | Sample CSV available; successful batch import including tag profiles (update rate). | **Must-have** |
 
@@ -103,7 +103,7 @@ This section organizes our features into a narrative flow, combining the user st
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
 | **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Search returns matching assets, preserves recent searches, shows a location sheet, and offers open-in-map handoff into Live Map. | **Must-have** |
-| **US-MOB-02** | As **Alex**, I want to see my own location as a "blue dot" while in calibration mode, so I can accurately map signal strengths. | Calibration mode shows user location accurately; updates as user walks. | **Must-have** |
+| **US-MOB-02** | As **Alex**, I want to see my own location as a "blue dot" while in calibration mode, so I can accurately map signal strengths. | Calibration mode updates a visible blue-dot capture as the user records floor checkpoints and reviews a session summary. | **Must-have** |
 
 ---
 
@@ -220,8 +220,8 @@ graph TD
 | **Sign in and route by role** | FR-SEC-001, FR-SEC-002 | Login | Enter credentials -> system validates role -> routes to role-specific home | Correct landing page plus visible role badge |
 | **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
 | **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> complete Premium modality and calibration metadata when needed -> save | Gateway marker persists with tier color and status |
-| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> QR Scanner | Scan QR -> identify device -> select zone/room -> confirm placement -> sync to web | Device appears in registry and map draft layer |
-| **Run automated calibration** | US-ADM-04, FR-ADM-003, US-MOB-02 | Admin Console -> Calibration Wizard | Choose floor and gateways -> start session -> walk route with blue dot guidance -> collect signal data -> process radiomap | Wizard returns quality score, offsets, and completion summary |
+| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> Commissioning | Scan or enter QR payload -> identify device -> select floor -> assign zone/room -> confirm device context | Device identity, floor, and zone are visible in the mobile commissioning session |
+| **Run automated calibration** | US-ADM-04, FR-ADM-003, US-MOB-02 | Mobile -> Commissioning | Choose floor and target -> start session -> walk route with blue dot guidance -> tap checkpoints -> review summary | Session summary shows elapsed time, samples, and completed checkpoints for later calibration follow-up |
 | **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
 | **See operations overview on login** | US-GEN-01 | Operations Overview | Review KPI cards, live alerts, SLA snapshot, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
 | **Monitor assets in real time** | US-GEN-02, FR-VIS-001, FR-VIS-002, FR-VIS-003 | Live Map Workspace | Choose floor -> watch live movement -> inspect confidence state -> open asset drawer | Map shows current position or zone fallback with last update time |
@@ -468,20 +468,22 @@ Implementation baseline note:
 
 ```text
 +--------------------------------------------------------------+
-| QR Scanner / Calibration Session                            |
+| Scanner Input / Calibration Session                         |
 |--------------------------------------------------------------|
-| Camera or Map View                                           |
-| - scan frame OR blue dot map                                 |
+| Floor Map Preview                                            |
+| - gateways                                                    |
+| - route checkpoints                                           |
+| - blue dot capture                                            |
 |--------------------------------------------------------------|
 | Bottom Sheet                                                 |
 | - detected device                                             |
 | - zone selector                                               |
-| - start / pause / finish collection                           |
-| - quality and progress                                        |
+| - start / finish collection                                   |
+| - progress and session summary                                |
 +--------------------------------------------------------------+
 ```
 
-* The bottom sheet keeps one-thumb actions reachable while the main canvas stays dedicated to camera or map context.
+* The delivered baseline accepts connected-scanner or pasted QR payloads, then keeps the floor map and blue-dot capture in one-thumb reach.
 
 ---
 
@@ -637,10 +639,10 @@ Build the `04 Mobile App` page using separate sections for general-user and admi
 | **MOB-03** | Asset Search Results | Fast shortlist of candidate assets | Results, no result, low-confidence result |
 | **MOB-04** | Asset Location Sheet | Last known location and context | Precise location, zone fallback, stale timestamp |
 | **MOB-05** | Mobile Map Focus | Centered map for finding asset | Normal, destination highlighted, no live update |
-| **MOB-06** | QR Scanner | Scan gateway/tag code | Idle camera, detected code, invalid code |
-| **MOB-07** | Assign Zone / Room | Attach scanned device to place | Selection, validation error, success |
-| **MOB-08** | Calibration Mode | Blue-dot guided collection | Ready, collecting, paused, weak signal |
-| **MOB-09** | Calibration Session Summary | Confirm results and sync | Success, warning quality, retry required |
+| **MOB-06** | QR Scanner | Resolve gateway/tag code into a commissioning target | Empty input, resolved target, invalid code |
+| **MOB-07** | Assign Zone / Room | Attach scanned device to a selected floor context | Selection, validation error, success |
+| **MOB-08** | Calibration Mode | Blue-dot guided checkpoint capture | Ready, collecting, checkpoints complete |
+| **MOB-09** | Calibration Session Summary | Confirm recent samples and checkpoint coverage | Success, low-sample warning, retry required |
 
 ### **7.5. Prototype Flow Map**
 
@@ -1395,13 +1397,13 @@ Show these as separate visible layers in Figma:
 | State | Content |
 | :--- | :--- |
 | **Idle** | `Point the camera at a gateway or tag QR code.` |
-| **Detected** | Device type, device ID, confidence of read, CTA `Assign Zone` |
-| **Invalid** | Error copy, CTA `Try Again` |
+| **Detected** | Device type, device ID, current floor context, CTA `Assign Zone` |
+| **Invalid** | Error copy, CTA `Try Again` or `Edit Payload` |
 
 #### **Required Variants**
 
-* Idle camera
-* QR detected successfully
+* Empty scanner input
+* QR payload resolved successfully
 * Unsupported or unreadable QR
 * Network sync delayed but local scan retained
 

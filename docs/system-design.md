@@ -197,8 +197,8 @@ sequenceDiagram
 - **Two-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements for the Economic path, and normalized AoA or UWB measurements plus Premium gateway calibration state for the Premium path. Canonical live-location outputs now include source-tier, source-modality, and optional precision metadata so downstream clients can distinguish Premium precision from Economic fallback behavior.
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
-- **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, and the first mobile Asset Finder workflow with web Live Map handoff. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and mobile calibration workflows remain deferred.
+- **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -547,43 +547,20 @@ Key delivery details:
 4. The selected-asset sheet shows location context plus confidence or precision metadata from the canonical live-location contract.
 5. "Open in Live Map" launches the delivered web route at `/operations/live-map` with `site_id`, `floor_id`, and `asset_tag_id` query parameters preserved.
 
-### 7.5. Calibration Mode
+### 7.5. Commissioning & Calibration Mode
 
-The mobile app runs a guided calibration that uses server-derived coverage heatmaps.
+The Expo mobile baseline now also delivers an Administrator-focused commissioning workflow that reuses the existing admin sites, floor-detail, gateway, zone, and asset-registry APIs.
 
-Steps:
+Key delivery details:
 
-1. Register site and start calibration.
-2. Carry a calibration beacon/tag and walk the area; app streams actions to server and receives coverage updates.
-3. App displays coverage heatmap and completion metrics derived from `broker_received_timestamp`.
+1. The same mobile session panel is reused so an Administrator can load protected admin context without waiting for the later dedicated mobile-auth change.
+2. Device intake resolves scanner-entered or pasted QR payloads against known gateway and asset-tag identifiers from the delivered registry surfaces.
+3. The workflow lets the operator choose the current site and floor, assign the device to a room or zone, and inspect a floor-linked preview before calibration begins.
+4. The calibration walkthrough renders gateway markers, route checkpoints, and a visible blue-dot capture that updates when the operator taps the floor preview to record their current position.
+5. Completed sessions persist locally through AsyncStorage with target identity, floor and zone context, elapsed time, sample count, and checkpoint progress.
+6. Native camera-only scanning, automatic indoor positioning, radiomap generation, and backend calibration persistence remain deferred.
 
-```mermaid
-flowchart LR
-  User[Installer] --> Mobile[Calibration App]
-  Mobile -->|start| API[Server API]
-  Mobile -->|publish beacon| Gateway
-  Gateway -->|MQTT| Ingest[Ingestion Service]
-  Ingest --> DB[TimescaleDB]
-  DB --> Mobile
-```
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Mobile
-    participant Gateway
-    participant Ingest
-    participant Database
-
-    User->>Mobile: Register site and start calibration
-    Mobile->>Gateway: Publish beacon data
-    Gateway->>Ingest: Update beacon location data
-    Ingest->>Database: Calibration information
-    Ingest-->>Mobile: Updates beacon location on map
-    Mobile->>User: Presents updated map
-```
-
-### 7.5. Onboarding Wizard
+### 7.6. Onboarding Wizard
 
 Admin registers gateways (gateway_id, location label, firmware) in the UI. Gateway metadata is used for mapping and diagnostics.
 
