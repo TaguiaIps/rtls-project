@@ -62,6 +62,7 @@ graph TD
 - **API & WS Service (FastAPI)**: authentication, REST APIs, WebSocket streaming.
 - **Redis**: dedupe cache, pub/sub/streams, job coordination.
 - **TimescaleDB**: primary storage for readings and locations.
+- **Observability baseline**: the API now exposes a local `/metrics` endpoint and attaches `X-Request-ID` to every response so operators can trace health and audit requests without a separate telemetry stack.
 
 ### 2.3 **Message sequence**
 
@@ -198,7 +199,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with local calibration-session summaries. Maintenance alerts, exports and rollups, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -237,6 +238,8 @@ sequenceDiagram
 | | `DELETE` | `/api/assets/{id}` | Deletes an asset. |
 | | `POST` | `/api/assets/bulk_import` | Imports assets from a CSV file (US-ADM-05). |
 | **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
+| **Admin - Health & Audit** | `GET` | `/api/admin/observability/summary` | Returns the administrator Health workspace summary including gateway-risk cards, telemetry totals, alert pressure, audit totals, and delivered observability metadata. |
+| | `GET` | `/api/admin/audit-events` | Returns persisted audit history using bounded newest-first pagination and supported actor, category, action, target, and time filters. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
 | | `GET` | `/api/analytics/dwells` | Retrieves dwell-time report data derived from canonical dwell history for the selected scope (FR-ANL-004). |
@@ -251,6 +254,7 @@ sequenceDiagram
 | **Data Export** | `POST` | `/api/export/request` | Requests an async export of raw data. Returns a job ID. |
 | | `GET` | `/api/export/status/{job_id}` | Checks the status of an export job and provides a download URL when complete. |
 | **Real-time** | `WS` | `/ws/locations` | WebSocket endpoint for streaming real-time location updates. |
+| **Observability** | `GET` | `/metrics` | Returns a text-based local metrics payload for current gateway, alert, telemetry, and audit counters. |
 
 ### **3.4. Analytics & Inference Service**
 

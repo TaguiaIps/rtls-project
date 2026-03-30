@@ -286,6 +286,34 @@ Implementation baseline note:
 * Designed for first-glance triage in under 10 seconds.
 * Every card has a direct action: `View on map`, `Open report`, or `Acknowledge`.
 
+### **5.2.A. Web App: Admin Health and Audit Baseline**
+
+**Supports:** NFR-REL-001, NFR-REL-002, FR-SEC-003
+
+Implementation baseline note:
+
+* The delivered administrator shell now exposes three route-aware views: Spatial, Health, and Audit.
+* Health summarizes gateway heartbeat risk, battery risk, telemetry totals, alert pressure, audit totals, and the local observability contract (`/health`, `/metrics`, and `X-Request-ID`).
+* Audit uses server-side filtering for recent persisted events by actor email, category, action type, and target type.
+* Rich diff rendering, date-range controls, packet-loss analysis, and external dashboards remain follow-on work.
+
+```text
++--------------------------------------------------------------------------------+
+| Admin Rail: Spatial | Health | Audit                                          |
+|--------------------------------------------------------------------------------|
+| Health Summary: Gateways | Gateway Risks | Telemetry | Audit + Alerts          |
+|--------------------------------------------------------------------------------|
+| Gateway Risks Panel                   | Observability Baseline                 |
+| - stale / missing heartbeat cards     | - /health                              |
+| - low battery cards                   | - /metrics                             |
+| - floor and gateway identifiers       | - X-Request-ID                         |
+|--------------------------------------------------------------------------------|
+| Audit Filters: Actor | Category | Action Type | Target Type | Apply / Clear    |
+|--------------------------------------------------------------------------------|
+| Newest-first bounded audit rows with persisted detail payload                  |
++--------------------------------------------------------------------------------+
+```
+
 ### **5.3. Web App: Live Operations Map**
 
 **Supports:** US-GEN-02, US-GEN-03, US-GEN-04, FR-VIS-001, FR-VIS-002, FR-VIS-003, FR-VIS-004, US-MOB-01
