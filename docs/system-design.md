@@ -199,7 +199,7 @@ sequenceDiagram
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
 - **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with native QR scanning plus local calibration-session summaries. Maintenance alerts, vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, system-managed maintenance alerts for stale or low-battery gateways, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with native QR scanning plus local calibration-session summaries. Vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -454,10 +454,11 @@ erDiagram
 
 - The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
 - The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
+- Active-alert KPI cards and SLA summary cards on the Overview remain deferred to a later follow-on change so the delivered landing screen only depends on currently shipped live-location and health signals.
 - The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
 - Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
 - Analytics workspace delivery now includes trajectory replay, heatmap visualization, dwell reporting, round-trip reporting, and table SLA trends backed by bounded read-only queries.
-- Maintenance alerts, assignments, exports, scheduled reports, and richer incident workflows remain follow-on backlog items.
+- Assignments, scheduled reports, and richer incident workflows remain follow-on backlog items.
 
 ### **5.1. General User Flow Diagram**
 
@@ -570,6 +571,7 @@ Key delivery details:
 4. The calibration walkthrough renders gateway markers, route checkpoints, and a visible blue-dot capture that updates when the operator taps the floor preview to record their current position.
 5. Completed sessions persist locally through AsyncStorage with target identity, floor and zone context, elapsed time, sample count, and checkpoint progress.
 6. Automatic indoor positioning, radiomap generation, and backend calibration persistence remain deferred, while manual identifier entry remains available as fallback for simulator and constrained-device workflows.
+7. True device self-location for the calibration blue dot remains deferred; the delivered baseline uses tap-driven checkpoint capture instead of live operator positioning.
 
 ### 7.6. Onboarding Wizard
 

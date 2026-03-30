@@ -244,6 +244,38 @@ Add native camera-based QR scanning to the delivered mobile commissioning workfl
   - `US-ADM-03`
   - `NFR-USA-003`
 
+### 19. `implement-maintenance-alert-generation`
+
+Close the remaining reliability gap by turning delivered gateway stale and low-battery health signals into durable maintenance alerts that flow through the existing Alerts Center.
+
+- Depends on:
+  - `implement-health-audit-ui-and-observability`
+  - `implement-alert-rules-and-alerts-center`
+- Maps to:
+  - `NFR-REL-001`
+
+### 20. `implement-mobile-self-location-blue-dot`
+
+Extend the delivered mobile calibration baseline so the blue dot follows live device self-location during calibration instead of relying on tap-driven checkpoint capture.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+  - `implement-calibration-engine-and-radiomap-generation`
+- Maps to:
+  - `US-MOB-03`
+
+### 21. `expand-operations-overview-alert-and-sla-kpis`
+
+Extend the delivered Operations Overview with active-alert and SLA summary KPI cards while preserving the current live map and priority-queue landing workflow.
+
+- Depends on:
+  - `deliver-web-shell-operations-overview-and-live-map`
+  - `implement-alert-rules-and-alerts-center`
+  - `implement-analytics-workspace-and-reports`
+  - `implement-maintenance-alert-generation`
+- Maps to:
+  - `US-GEN-05`
+
 ## Why This Split Avoids Rework
 
 - Spatial ownership lives in change 3 only. Later changes consume sites/floors/zones instead of redefining them.
@@ -296,8 +328,16 @@ This adds premium precision, mobile flows, observability, and lifecycle hardenin
 - `implement-production-mqtt-tls-and-mtls`
 - `implement-calibration-engine-and-radiomap-generation`
 - `implement-native-mobile-qr-scanning`
+- `implement-maintenance-alert-generation`
 
-This closes the remaining gap between the delivered pilot baseline and the production-grade security and calibration targets.
+This closes the remaining gap between the delivered pilot baseline and the production-grade security, calibration, and reliability targets.
+
+### Wave 6
+
+- `implement-mobile-self-location-blue-dot`
+- `expand-operations-overview-alert-and-sla-kpis`
+
+This extends the delivered baseline UX after the core reliability and calibration primitives are complete.
 
 ## Recommended OpenSpec Creation Order
 
@@ -310,4 +350,4 @@ After that is approved, create:
 2. `implement-identity-rbac-and-audit-foundation`
 3. `implement-sites-floorplans-and-zone-editor`
 
-Do not create all 15 changes at once unless you intentionally want a large backlog tree. It is more manageable to create the next change only after the current foundation is settled.
+Do not create all 21 changes at once unless you intentionally want a large backlog tree. It is more manageable to create the next change only after the current foundation is settled.

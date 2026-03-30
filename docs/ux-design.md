@@ -75,10 +75,11 @@ This section organizes our features into a narrative flow, combining the user st
 **Acceptance Criteria:**
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-GEN-01** | As **Carlos**, I want to see a high-level dashboard with key metrics (e.g., active assets, Table Service SLAs) upon login. | Displays "Active Assets", "Active Alerts", and "SLA Metrics"; auto-refreshes. | **Must-have** |
+| **US-GEN-01** | As **Carlos**, I want to see a high-level dashboard with key live-location and infrastructure metrics upon login, so I can decide where to investigate first. | Displays "Active Assets", "Low Confidence", "Restricted Zone Hits", and "Stale Gateways"; auto-refreshes. | **Must-have** |
 | **US-GEN-02** | As **Carlos**, I want to see moving assets in real-time on a map with confidence scores. | Icons update live (0.5-20Hz); low confidence estimates fall back to Zone highlighting. | **Must-have** |
 | **US-GEN-03** | As **Carlos**, I want to filter the map view by asset type (e.g., "waiter," "cooking equipment") to reduce clutter. | Filter toggles asset categories on/off perfectly. | **Should-have** |
 | **US-GEN-04** | As **Carlos**, I want to receive an alert when a high-value asset or staff member exceeds a time limit in a specific zone (e.g., table SLA violation). | Alerts trigger on dwell-time thresholds; in-app and optional email notification. | **Must-have** |
+| **US-GEN-05** | As **Carlos**, I want the Operations Overview to also surface active-alert and SLA summary cards, so I can judge service pressure without leaving the landing dashboard. | Displays overview cards for active alerts and SLA trend or breach metrics with one-click drill-ins into Alerts Center or Analytics. | **Should-have** |
 
 ### **3.3. Activity 3: Deep-Dive Analysis (Carlos)**
 
@@ -104,7 +105,8 @@ This section organizes our features into a narrative flow, combining the user st
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
 | **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Search returns matching assets, preserves recent searches, shows a location sheet, and offers open-in-map handoff into Live Map. | **Must-have** |
-| **US-MOB-02** | As **Alex**, I want to see a visible blue-dot capture while in calibration mode, so I can record floor checkpoints and review a session summary. | Calibration mode updates a visible blue-dot capture as the user records floor checkpoints and reviews a session summary. | **Must-have** |
+| **US-MOB-02** | As **Alex**, I want to see a visible blue-dot capture while in calibration mode, so I can record floor checkpoints and review a session summary. | Calibration mode updates a tap-driven blue-dot capture as the operator records floor checkpoints and reviews a session summary. | **Must-have** |
+| **US-MOB-03** | As **Alex**, I want the blue dot in calibration mode to follow my actual device location, so I can validate the calibration walk without manually tapping the floor preview. | Calibration mode derives the blue dot from live self-location and updates checkpoint progress without requiring manual floor taps. | **Should-have** |
 
 ---
 
@@ -222,10 +224,12 @@ graph TD
 | **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
 | **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> complete Premium modality and calibration metadata when needed -> save | Gateway marker persists with tier color and status |
 | **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002, NFR-USA-003 | Mobile -> Commissioning | Open camera scanner -> scan QR payload -> identify device -> select floor -> assign zone/room -> confirm device context | Device identity, floor, and zone are visible in the mobile commissioning session |
-| **Run guided calibration capture** | US-ADM-04, FR-ADM-003, US-MOB-02 | Mobile -> Commissioning | Choose floor and target -> start session -> walk route with blue dot guidance -> tap checkpoints -> review summary | Session summary shows elapsed time, samples, and completed checkpoints for later calibration follow-up |
+| **Run guided calibration capture** | US-ADM-04, FR-ADM-003, US-MOB-02 | Mobile -> Commissioning | Choose floor and target -> start session -> use the tap-driven blue-dot capture -> tap checkpoints -> review summary | Session summary shows elapsed time, samples, and completed checkpoints for later calibration follow-up |
+| **Use live self-location during calibration** | US-MOB-03 | Future Mobile Calibration Guidance | Start calibration -> device estimates current position -> blue dot follows the operator -> checkpoint progress updates without floor taps | Operator can complete the calibration walk without manually placing the blue dot |
 | **Generate radiomap and offsets** | US-ADM-06, FR-ADM-006 | Future Calibration Engine | Submit collected calibration samples -> process run -> review quality and artifact status -> activate calibration result | Calibration result shows status, quality score, and reusable artifacts for positioning |
 | **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
-| **See operations overview on login** | US-GEN-01 | Operations Overview | Review KPI cards, live alerts, SLA snapshot, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
+| **See operations overview on login** | US-GEN-01 | Operations Overview | Review current KPI cards, gateway snapshot, priority queue, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
+| **Review alert and SLA overview cards** | US-GEN-05 | Future Operations Overview Expansion | Open Operations Overview -> inspect active-alert and SLA summary cards -> drill into alerts or analytics | User understands alert pressure and SLA drift without leaving the landing dashboard |
 | **Monitor assets in real time** | US-GEN-02, FR-VIS-001, FR-VIS-002, FR-VIS-003 | Live Map Workspace | Choose floor -> watch live movement -> inspect confidence state -> open asset drawer | Map shows current position or zone fallback with last update time |
 | **Filter and search assets** | US-GEN-03, FR-VIS-004, US-MOB-01 | Live Map or Mobile Asset Finder | Search by name/tag/type -> apply category filters -> focus one asset or cohort | Map centers on result and clutter is reduced |
 | **Respond to SLA or geofence alerts** | US-GEN-04, FR-NOT-001, FR-NOT-002, FR-NOT-003, FR-ANL-006 | Alert tray or Alerts Center | Open alert -> map recenters on affected table/zone/asset -> inspect context -> acknowledge/escalate | Alert status changes and audit trail records action |
