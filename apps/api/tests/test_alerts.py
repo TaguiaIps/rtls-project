@@ -23,6 +23,7 @@ from rtls_api.models import (
     Floor,
     FloorPlanAsset,
     Gateway,
+    GatewayHeartbeat,
     Site,
     SpatialArea,
     SpatialAreaType,
@@ -275,6 +276,69 @@ def test_alert_rule_validation_and_summary_queries(tmp_path: Path) -> None:
         )
         assert summary_response.status_code == 200
         assert summary_response.json()["unresolved_count"] == 0
+
+
+def test_alert_summary_and_list_include_gateway_maintenance_alerts(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path, gateway_heartbeat_stale_after_seconds=60)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+
+        seeded = seed_alert_environment(app)
+        now = datetime.now(timezone.utc)
+        with app.state.session_factory() as db:
+            gateways = {
+                gateway.gateway_identifier: gateway
+                for gateway in db.scalars(select(Gateway)).all()
+            }
+            db.add_all(
+                [
+                    GatewayHeartbeat(
+                        gateway_id=gateways["gw-table-01"].id,
+                        last_seen_at=now - timedelta(minutes=5),
+                        message_id="hb-stale-01",
+                        firmware_version="1.0.0",
+                        battery_level_percent=9,
+                    ),
+                    GatewayHeartbeat(
+                        gateway_id=gateways["gw-table-02"].id,
+                        last_seen_at=now,
+                        message_id="hb-healthy-01",
+                        firmware_version="1.0.0",
+                        battery_level_percent=82,
+                    ),
+                ]
+            )
+            db.commit()
+
+        token = issue_access_token(client, "ops@example.com", "StrongPass123")
+        summary_response = client.get(
+            "/api/alerts/summary",
+            headers=auth_headers(token),
+            params={"floor_id": seeded["floor_id"]},
+        )
+        assert summary_response.status_code == 200
+        assert summary_response.json()["active_critical_count"] == 1
+        assert summary_response.json()["active_warning_count"] == 1
+
+        list_response = client.get(
+            "/api/alerts",
+            headers=auth_headers(token),
+            params={"floor_id": seeded["floor_id"]},
+        )
+        assert list_response.status_code == 200
+        rule_types = {item["rule_type"] for item in list_response.json()}
+        assert "gateway_stale" in rule_types
+        assert "gateway_low_battery" in rule_types
 
 
 def test_table_sla_alerts_deduplicate_and_clear(tmp_path: Path) -> None:

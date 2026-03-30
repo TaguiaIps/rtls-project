@@ -10,10 +10,6 @@ from rtls_api.config import Settings
 from rtls_api.data_lifecycle import run_data_lifecycle_job
 from rtls_api.main import create_app
 from rtls_api.models import (
-    AlertInstance,
-    AlertRule,
-    AlertSeverity,
-    AlertStatus,
     AssetBatteryProfile,
     AssetTag,
     AssetUpdateRateProfile,
@@ -143,40 +139,6 @@ def seed_observability_state(app) -> dict[str, str]:
             )
         )
 
-        rule = AlertRule(
-            name="Gateway Stale Warning",
-            rule_type="unauthorized_geofence",
-            severity=AlertSeverity.CRITICAL.value,
-            enabled=True,
-            site_id=site.id,
-            floor_id=floor.id,
-            config={"area_ids": [], "trigger_on": "entry", "asset_category": None},
-            delivery={"in_app": True, "email": False, "email_recipients": []},
-        )
-        db.add(rule)
-        db.flush()
-
-        db.add(
-            AlertInstance(
-                rule_id=rule.id,
-                rule_type=rule.rule_type,
-                severity=rule.severity,
-                status=AlertStatus.OPEN.value,
-                title="Gateway stale",
-                summary="South Dining Gateway is stale.",
-                scope_key=f"gateway:{stale_gateway.id}",
-                scope_label=stale_gateway.display_name,
-                site_id=site.id,
-                floor_id=floor.id,
-                area_id=None,
-                asset_tag_id=None,
-                condition_key="heartbeat",
-                context_payload={"gateway_id": stale_gateway.id},
-                first_triggered_at=now - timedelta(minutes=4),
-                last_triggered_at=now - timedelta(minutes=1),
-            )
-        )
-
         db.add_all(
             [
                 AuditEvent(
@@ -247,7 +209,7 @@ def test_observability_summary_returns_health_and_audit_totals(tmp_path: Path) -
         "premium_measurements": 1,
         "heartbeat_snapshots": 2,
     }
-    assert payload["alert_totals"] == {"active": 1, "critical": 1, "warning": 0}
+    assert payload["alert_totals"] == {"active": 2, "critical": 1, "warning": 1}
     assert payload["audit_totals"]["total"] >= 3
     assert payload["audit_totals"]["last_24h"] >= 3
     assert payload["lifecycle"]["policies"] == {
