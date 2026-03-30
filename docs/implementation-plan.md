@@ -172,7 +172,7 @@ Implement mobile search, recent searches, asset location sheet, and open-in-map 
 
 ### 13. `implement-mobile-commissioning-and-calibration`
 
-Implement QR scanner, assign zone/room flow, guided calibration mode, blue-dot calibration workflow, and session summary.
+Implement scanner-based or QR-derived device intake, assign zone/room flow, guided calibration mode, blue-dot calibration workflow, and session summary.
 
 - Depends on:
   - `implement-sites-floorplans-and-zone-editor`
@@ -181,6 +181,7 @@ Implement QR scanner, assign zone/room flow, guided calibration mode, blue-dot c
   - `implement-economic-tier-positioning-and-live-location`
 - Maps to:
   - `FR-ADM-003`
+  - `US-ADM-04`
   - `US-MOB-02`
   - `NFR-USA-002`
 
@@ -211,6 +212,28 @@ Implement async exports, retention policies, rollup tables, and report accelerat
 - Maps to:
   - `NFR-PER-003`
   - data lifecycle items from the system design
+
+### 16. `implement-production-mqtt-tls-and-mtls`
+
+Move the gateway-to-broker path from trusted pilot or private-network MQTT to production-grade TLS with broker certificate validation, mutual TLS, and broker-enforced gateway identity controls.
+
+- Depends on:
+  - `implement-ingestion-pipeline-and-raw-readings`
+- Maps to:
+  - `NFR-SEC-003`
+
+### 17. `implement-calibration-engine-and-radiomap-generation`
+
+Extend the delivered mobile calibration baseline with a backend calibration engine that generates reusable radiomap and offset artifacts for the positioning pipeline.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+  - `implement-ingestion-pipeline-and-raw-readings`
+  - `implement-economic-tier-positioning-and-live-location`
+- Maps to:
+  - `FR-ADM-006`
+  - `US-ADM-06`
+  - `NFR-USA-003`
 
 ## Why This Split Avoids Rework
 
@@ -258,6 +281,13 @@ This adds the operational intelligence layer.
 - `implement-exports-retention-and-rollups`
 
 This adds premium precision, mobile flows, observability, and lifecycle hardening.
+
+### Wave 5
+
+- `implement-production-mqtt-tls-and-mtls`
+- `implement-calibration-engine-and-radiomap-generation`
+
+This closes the remaining gap between the delivered pilot baseline and the production-grade security and calibration targets.
 
 ## Recommended OpenSpec Creation Order
 
