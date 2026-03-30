@@ -49,7 +49,11 @@ export type OperationsPriorityKind =
   | "restricted_zone_asset"
   | "low_confidence_asset"
   | "stale_gateway";
-export type AlertRuleType = "table_sla" | "unauthorized_geofence";
+export type AlertRuleType =
+  | "table_sla"
+  | "unauthorized_geofence"
+  | "gateway_stale"
+  | "gateway_low_battery";
 export type AlertSeverity = "critical" | "warning";
 export type AlertStatus = "open" | "acknowledged" | "resolved" | "cleared";
 export type AlertDeliveryChannel = "in_app" | "email";

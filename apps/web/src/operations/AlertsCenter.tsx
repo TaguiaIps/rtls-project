@@ -397,7 +397,7 @@ export function AlertsCenterPage() {
           <p className="eyebrow">Alerts Center</p>
           <h2>{selectedFloor?.name ?? selectedSite?.name ?? "Operational alerts"}</h2>
           <p className="muted-text">
-            Triage table SLA and unauthorized geofence alerts without leaving the delivered operations shell.
+            Triage SLA, geofence, and maintenance alerts without leaving the delivered operations shell.
           </p>
         </div>
         <div className="alerts-header__meta">
@@ -457,6 +457,8 @@ export function AlertsCenterPage() {
           <option value="">All alert types</option>
           <option value="table_sla">Table SLA</option>
           <option value="unauthorized_geofence">Unauthorized geofence</option>
+          <option value="gateway_stale">Gateway offline</option>
+          <option value="gateway_low_battery">Gateway low battery</option>
         </select>
         <select
           aria-label="Alert severity"
