@@ -45,6 +45,35 @@ const observabilitySummaryResponse = {
     last_24h: 4,
     latest_at: "2026-03-29T14:50:00Z"
   },
+  lifecycle: {
+    policies: {
+      raw_readings_days: 90,
+      premium_measurements_days: 90,
+      location_history_days: 30,
+      exports_days: 7
+    },
+    latest_run: {
+      id: "lifecycle-1",
+      requested_by_user_id: "user-1",
+      requested_by_email: "admin@example.com",
+      status: "completed",
+      retention_summary: {
+        raw_readings_deleted: 0,
+        premium_measurements_deleted: 0,
+        location_history_deleted: 0,
+        export_jobs_deleted: 0,
+        export_files_deleted: 0
+      },
+      rollup_summary: {
+        heatmap_rollups_refreshed: 1,
+        sla_rollups_refreshed: 1
+      },
+      error_message: null,
+      requested_at: "2026-03-29T14:55:00Z",
+      started_at: "2026-03-29T14:55:02Z",
+      completed_at: "2026-03-29T14:55:05Z"
+    }
+  },
   risk_items: [
     {
       id: "risk-1",
@@ -129,6 +158,7 @@ describe("Admin workspaces", () => {
     expect(
       screen.getByText(/request identifiers are attached to every api response/i)
     ).toBeInTheDocument();
+    expect(screen.getByText(/90 days/i)).toBeInTheDocument();
   });
 
   it("renders the audit workspace and submits filters", async () => {

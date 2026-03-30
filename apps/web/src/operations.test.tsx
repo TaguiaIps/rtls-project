@@ -387,6 +387,24 @@ const analyticsHeatmapResponse = {
   ]
 };
 
+const analyticsExportJobsResponse = [
+  {
+    id: "export-1",
+    report_kind: "trajectory",
+    export_format: "csv",
+    status: "completed",
+    floor_id: "floor-1",
+    site_id: "site-1",
+    file_name: "trajectory-20260326T120000Z.csv",
+    row_count: 2,
+    error_message: null,
+    requested_at: "2026-03-26T12:00:00Z",
+    started_at: "2026-03-26T12:00:01Z",
+    completed_at: "2026-03-26T12:00:03Z",
+    expires_at: "2026-04-02T12:00:03Z"
+  }
+];
+
 describe("operations shell", () => {
   beforeEach(() => {
     cleanup();
@@ -462,8 +480,10 @@ describe("operations shell", () => {
   it("updates the live map from WebSocket events and applies search filters", async () => {
     window.history.pushState({}, "", "/operations/live-map?site_id=site-1&floor_id=floor-1&confidence_level=low");
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    let exportJobs = [...analyticsExportJobsResponse];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
 
       if (url.endsWith("/api/me")) {
         return jsonResponse({
@@ -702,8 +722,10 @@ describe("operations shell", () => {
       "/operations/analytics?site_id=site-1&floor_id=floor-1&analytics_report=trajectory&analytics_start_at=2026-03-26T08%3A00%3A00Z&analytics_end_at=2026-03-26T12%3A00%3A00Z&analytics_asset_tag_id=asset-1"
     );
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    let exportJobs = [...analyticsExportJobsResponse];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
 
       if (url.endsWith("/api/me")) {
         return jsonResponse({
@@ -732,6 +754,28 @@ describe("operations shell", () => {
       if (url === "/api/locations/live?floor_id=floor-1" || url.endsWith("/api/locations/live?floor_id=floor-1")) {
         return jsonResponse(liveLocationsResponse);
       }
+      if (url.includes("/api/analytics/exports?") && method === "GET") {
+        return jsonResponse(exportJobs);
+      }
+      if (url.endsWith("/api/analytics/exports") && method === "POST") {
+        const queuedJob = {
+          ...analyticsExportJobsResponse[0],
+          id: "export-2",
+          status: "pending",
+          file_name: null,
+          row_count: null,
+          completed_at: null,
+          expires_at: null
+        };
+        exportJobs = [queuedJob, ...exportJobs];
+        return jsonResponse(queuedJob, 200);
+      }
+      if (url.endsWith("/api/analytics/exports/export-1/file")) {
+        return new Response("observed_at,zone_name\n", {
+          status: 200,
+          headers: { "Content-Type": "text/csv" }
+        });
+      }
       if (url.includes("/api/analytics/trajectory")) {
         return jsonResponse(analyticsTrajectoryResponse);
       }
@@ -754,8 +798,19 @@ describe("operations shell", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Traffic density" })).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: /queue csv export/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/pending|completed/i).length).toBeGreaterThan(0);
+    });
     expect(
       fetchSpy.mock.calls.some(([input]) => String(input).includes("/api/analytics/heatmap"))
+    ).toBe(true);
+    expect(
+      fetchSpy.mock.calls.some(
+        ([input, init]) =>
+          String(input).includes("/api/analytics/exports") && (init?.method ?? "GET") === "POST"
+      )
     ).toBe(true);
   });
 });

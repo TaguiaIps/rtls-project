@@ -4,9 +4,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from rtls_api.auth import create_user
 from rtls_api.config import Settings
+from rtls_api.data_lifecycle import refresh_rollups
+from rtls_api.exports import process_export_job
 from rtls_api.main import create_app
 from rtls_api.models import (
     AlertRule,
@@ -458,3 +461,131 @@ def test_sla_trends_use_alert_rule_thresholds_and_return_empty_buckets(tmp_path:
         empty_payload = empty_response.json()
         assert empty_payload["threshold_source"] == "alert_rule"
         assert all(bucket["completed_visit_count"] == 0 for bucket in empty_payload["buckets"])
+
+
+def test_analytics_exports_queue_list_and_download_csv(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+        seeded = seed_analytics_environment(app)
+        token = issue_access_token(client, "ops@example.com", "StrongPass123")
+
+        create_response = client.post(
+            "/api/analytics/exports",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "report_kind": "trajectory",
+                "export_format": "csv",
+                "floor_id": seeded["floor_id"],
+                "asset_tag_id": seeded["waiter_id"],
+                "start_at": "2026-03-29T12:00:00Z",
+                "end_at": "2026-03-29T12:20:00Z",
+            },
+        )
+        assert create_response.status_code == 200
+        created_payload = create_response.json()
+        assert created_payload["report_kind"] == "trajectory"
+        assert created_payload["status"] == "pending"
+
+        process_export_job(
+            app.state.session_factory,
+            app.state.settings,
+            created_payload["id"],
+        )
+
+        list_response = client.get(
+            "/api/analytics/exports",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"floor_id": seeded["floor_id"]},
+        )
+        assert list_response.status_code == 200
+        list_payload = list_response.json()
+        assert len(list_payload) == 1
+        assert list_payload[0]["id"] == created_payload["id"]
+        assert list_payload[0]["status"] == "completed"
+        assert list_payload[0]["row_count"] == 3
+        assert list_payload[0]["file_name"].endswith(".csv")
+
+        detail_response = client.get(
+            f"/api/analytics/exports/{created_payload['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert detail_response.status_code == 200
+        assert detail_response.json()["status"] == "completed"
+
+        download_response = client.get(
+            f"/api/analytics/exports/{created_payload['id']}/file",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert download_response.status_code == 200
+        assert download_response.headers["content-type"].startswith("text/csv")
+        assert "observed_at,zone_name,floor_name" in download_response.text
+
+
+def test_hourly_heatmap_and_sla_reports_can_read_from_rollups(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+        seeded = seed_analytics_environment(app)
+        token = issue_access_token(client, "ops@example.com", "StrongPass123")
+
+        with app.state.session_factory() as db:
+            rollup_summary = refresh_rollups(db=db)
+            assert rollup_summary["heatmap_rollups_refreshed"] >= 2
+            assert rollup_summary["sla_rollups_refreshed"] >= 1
+
+            for record in db.scalars(select(AssetLocationHistory)).all():
+                db.delete(record)
+            for record in db.scalars(select(DerivedZoneDwellRecord)).all():
+                db.delete(record)
+            db.commit()
+
+        heatmap_response = client.get(
+            "/api/analytics/heatmap",
+            headers={"Authorization": f"Bearer {token}"},
+            params={
+                "floor_id": seeded["floor_id"],
+                "start_at": "2026-03-29T12:00:00Z",
+                "end_at": "2026-03-29T13:00:00Z",
+            },
+        )
+        assert heatmap_response.status_code == 200
+        heatmap_payload = heatmap_response.json()
+        assert heatmap_payload["total_samples"] == 4
+        assert heatmap_payload["max_density"] >= 1
+
+        trend_response = client.get(
+            "/api/analytics/sla-trends",
+            headers={"Authorization": f"Bearer {token}"},
+            params={
+                "floor_id": seeded["floor_id"],
+                "table_area_id": seeded["table_id"],
+                "start_at": "2026-03-29T12:00:00Z",
+                "end_at": "2026-03-29T13:00:00Z",
+                "bucket_minutes": 60,
+            },
+        )
+        assert trend_response.status_code == 200
+        trend_payload = trend_response.json()
+        assert any(bucket["completed_visit_count"] == 1 for bucket in trend_payload["buckets"])
+        assert any(bucket["breach_count"] == 1 for bucket in trend_payload["buckets"])

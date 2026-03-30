@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from rtls_api.auth import create_user
 from rtls_api.config import Settings
+from rtls_api.data_lifecycle import run_data_lifecycle_job
 from rtls_api.main import create_app
 from rtls_api.models import (
     AlertInstance,
@@ -249,6 +250,13 @@ def test_observability_summary_returns_health_and_audit_totals(tmp_path: Path) -
     assert payload["alert_totals"] == {"active": 1, "critical": 1, "warning": 0}
     assert payload["audit_totals"]["total"] >= 3
     assert payload["audit_totals"]["last_24h"] >= 3
+    assert payload["lifecycle"]["policies"] == {
+        "raw_readings_days": 90,
+        "premium_measurements_days": 90,
+        "location_history_days": 30,
+        "exports_days": 7,
+    }
+    assert payload["lifecycle"]["latest_run"] is None
     assert payload["metrics_path"] == "/metrics"
     assert payload["request_id_header"] == "X-Request-ID"
     assert len(payload["services"]) == 7
@@ -331,3 +339,55 @@ def test_metrics_and_request_id_headers_are_exposed(tmp_path: Path) -> None:
     assert "rtls_gateways_stale_total 2" in metrics_response.text
     assert "rtls_request_id_header_enabled 1" in metrics_response.text
     assert health_response.headers["X-Request-ID"]
+
+
+def test_admin_can_trigger_lifecycle_run_and_summary_exposes_latest_run(tmp_path: Path) -> None:
+    app = create_app(build_settings(tmp_path))
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="admin@example.com",
+                password="StrongPass123",
+                role=UserRole.ADMINISTRATOR,
+                display_name="Alex",
+            )
+            db.commit()
+
+        seed_observability_state(app)
+        access_token = issue_access_token(client, "admin@example.com", "StrongPass123")
+
+        trigger_response = client.post(
+            "/api/admin/observability/lifecycle-runs",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert trigger_response.status_code == 200
+        trigger_payload = trigger_response.json()
+        assert trigger_payload["status"] == "pending"
+
+        run_data_lifecycle_job(
+            app.state.session_factory,
+            app.state.settings,
+            trigger_payload["id"],
+        )
+
+        run_detail_response = client.get(
+            "/api/admin/observability/summary",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert run_detail_response.status_code == 200
+        latest_run = run_detail_response.json()["lifecycle"]["latest_run"]
+        assert latest_run["id"] == trigger_payload["id"]
+        assert latest_run["status"] == "completed"
+        assert latest_run["retention_summary"] == {
+            "raw_readings_deleted": 0,
+            "premium_measurements_deleted": 0,
+            "location_history_deleted": 0,
+            "export_jobs_deleted": 0,
+            "export_files_deleted": 0,
+        }
+        assert latest_run["rollup_summary"] == {
+            "heatmap_rollups_refreshed": 0,
+            "sla_rollups_refreshed": 0,
+        }
