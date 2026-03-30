@@ -528,7 +528,7 @@ sequenceDiagram
 
 ### **7.3. Administrator Adds a New Asset**
 
-This diagram illustrates the flow for fulfilling user story US-ADM-04.
+This diagram illustrates the flow for fulfilling user story US-ADM-05.
 
 ```mermaid
 sequenceDiagram
