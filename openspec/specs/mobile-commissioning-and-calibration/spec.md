@@ -38,15 +38,15 @@ The RTLS Analytics Platform SHALL let an authorized Administrator assign the sel
 - **THEN** the mobile app SHALL show the selected floor, zone, and target context together in the commissioning detail view
 
 ### Requirement: Mobile commissioning provides a guided blue-dot calibration workflow
-The RTLS Analytics Platform SHALL provide a guided calibration walkthrough that renders floor-linked checkpoints and updates a visible blue-dot position as the operator captures progress through the route.
+The RTLS Analytics Platform SHALL provide a guided calibration walkthrough that renders floor-linked checkpoints and updates a visible tap-driven blue-dot position as the operator captures progress through the route.
 
 #### Scenario: Administrator starts a calibration walk
 - **WHEN** the Administrator starts calibration for a selected floor and commissioning target with supported context loaded
-- **THEN** the mobile app SHALL show a floor-linked route, the current checkpoint state, and a visible blue-dot position for the active sample capture
+- **THEN** the mobile app SHALL show a floor-linked route, the current checkpoint state, and a visible tap-driven blue-dot position for the active sample capture
 
 #### Scenario: Administrator captures calibration progress
 - **WHEN** the Administrator records a supported blue-dot capture during the calibration walk
-- **THEN** the app SHALL update the calibration progress and sample count instead of leaving the session state unchanged
+- **THEN** the app SHALL update the calibration progress and sample count from the selected floor tap instead of leaving the session state unchanged
 
 ### Requirement: Mobile commissioning preserves local session summaries
 The RTLS Analytics Platform SHALL preserve recent commissioning and calibration session summaries on the mobile device for later review.

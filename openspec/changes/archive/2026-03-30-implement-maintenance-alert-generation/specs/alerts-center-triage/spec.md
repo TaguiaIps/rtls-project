@@ -1,8 +1,5 @@
-# alerts-center-triage Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change implement-alert-rules-and-alerts-center. Update Purpose after archive.
-## Requirements
 ### Requirement: Authorized users can review active and historical operational alerts
 The RTLS Analytics Platform SHALL provide an Alerts Center where authorized users can review current and historical operational and maintenance alerts.
 
@@ -13,17 +10,6 @@ The RTLS Analytics Platform SHALL provide an Alerts Center where authorized user
 #### Scenario: User filters or searches alert history
 - **WHEN** an authorized user applies supported filters such as status, alert type, site, floor, severity, or time range
 - **THEN** the Alerts Center SHALL reduce the visible alert list to the matching alert instances and history entries, including system-managed maintenance alert types
-
-### Requirement: Authorized users can inspect alert detail and triage actions
-The RTLS Analytics Platform SHALL let authorized users inspect alert detail and perform supported triage actions on alert instances.
-
-#### Scenario: User acknowledges an unresolved alert
-- **WHEN** an authorized user acknowledges an alert that is still unresolved
-- **THEN** the system SHALL persist the acknowledgement state, actor context, and action time for that alert instance
-
-#### Scenario: User resolves an alert
-- **WHEN** an authorized user resolves an alert instance through the Alerts Center
-- **THEN** the system SHALL persist the resolution state, actor context, and action time and move the alert into history instead of leaving it in the active queue
 
 ### Requirement: Alert detail exposes operational context and action history
 The RTLS Analytics Platform SHALL present enough alert detail for later investigation and operational learning.

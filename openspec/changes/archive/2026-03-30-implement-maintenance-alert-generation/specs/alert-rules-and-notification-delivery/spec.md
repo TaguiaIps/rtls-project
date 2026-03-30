@@ -1,18 +1,4 @@
-# alert-rules-and-notification-delivery Specification
-
-## Purpose
-TBD - created by archiving change implement-alert-rules-and-alerts-center. Update Purpose after archive.
-## Requirements
-### Requirement: Authorized users can manage delivered operational alert rules
-The RTLS Analytics Platform SHALL allow authorized users to create, update, enable, disable, and review alert rules for the delivered operational alert types.
-
-#### Scenario: Authorized user creates a table SLA rule
-- **WHEN** an authorized user configures a rule for an SLA-eligible table scope with a threshold and supported delivery channels
-- **THEN** the system SHALL persist the rule as an enabled or disabled alert rule that later alert evaluation can consume
-
-#### Scenario: Authorized user updates or disables a delivered rule
-- **WHEN** an authorized user changes the configuration or enabled state of an existing delivered alert rule
-- **THEN** the system SHALL persist the updated rule without requiring changes to the underlying derived-event model
+## MODIFIED Requirements
 
 ### Requirement: Delivered alert rules generate durable alert instances from canonical operational signals
 The RTLS Analytics Platform SHALL evaluate delivered alert rules from canonical derived-event, gateway-health, and table-timer signals and persist alert instances when a rule condition is matched.
@@ -51,6 +37,8 @@ The RTLS Analytics Platform SHALL support durable in-app notification delivery f
 #### Scenario: Rule enables email delivery but runtime email delivery is unavailable
 - **WHEN** a delivered rule enables email delivery but outbound email delivery is not configured or an attempt fails
 - **THEN** the system SHALL preserve the alert instance and in-app notification state without requiring successful email delivery
+
+## ADDED Requirements
 
 ### Requirement: System-managed maintenance rules remain platform-owned
 The RTLS Analytics Platform SHALL reserve maintenance alert rules for platform-managed gateway-health evaluation instead of treating them as user-authored editable rules.

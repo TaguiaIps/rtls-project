@@ -15,7 +15,7 @@ The RTLS Analytics Platform SHALL summarize operational state using live-locatio
 
 #### Scenario: Overview data is available
 - **WHEN** the overview loads with current live-location and operational-health data
-- **THEN** the screen SHALL show KPI-style summary values and a short triage list derived from those current signals
+- **THEN** the screen SHALL show KPI-style summary values for active assets, low-confidence assets, restricted-zone presence, and stale gateways together with a short triage list derived from those current signals
 
 #### Scenario: Overview data is partially degraded or empty
 - **WHEN** the overview lacks live positions, receives stale feed status, or has no current priority items
@@ -33,5 +33,4 @@ The RTLS Analytics Platform SHALL limit the Operations Overview to the operation
 
 #### Scenario: Later alerting or analytics capabilities are not yet delivered
 - **WHEN** the current product phase does not yet include full alert-center or analytics behavior
-- **THEN** the Overview SHALL remain usable by relying on delivered live-location and health data rather than blocking on those later capabilities
-
+- **THEN** the Overview SHALL remain usable by relying on delivered live-location and health data rather than blocking on those later capabilities, and SHALL NOT require overview-level active-alert or SLA summary cards to render

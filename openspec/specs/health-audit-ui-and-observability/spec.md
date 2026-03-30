@@ -9,7 +9,7 @@ The RTLS Analytics Platform SHALL provide a protected administrator Health works
 
 #### Scenario: Administrator opens the Health workspace
 - **WHEN** an authenticated Administrator opens the delivered Health view in the admin area
-- **THEN** the web app SHALL show a current health summary including stale-gateway, low-battery, alert-pressure, ingestion or metrics baseline context, and the latest lifecycle-run status
+- **THEN** the web app SHALL show a current health summary including stale-gateway, low-battery, alert-pressure, ingestion or metrics baseline context, the latest lifecycle-run status, and maintenance alerts synchronized from the current gateway-risk state
 
 #### Scenario: General User attempts to open the Health workspace
 - **WHEN** an authenticated General User requests the delivered admin Health workspace
@@ -20,7 +20,7 @@ The RTLS Analytics Platform SHALL let an authenticated Administrator inspect gat
 
 #### Scenario: Stale or low-battery gateways exist
 - **WHEN** the delivered health summary detects gateways with stale heartbeat state or low battery state
-- **THEN** the administrator Health workspace SHALL present those gateway risks with enough floor and device context for follow-up
+- **THEN** the administrator Health workspace SHALL present those gateway risks with enough floor and device context for follow-up and SHALL synchronize corresponding maintenance alerts into the delivered alert model
 
 ### Requirement: Administrators can review audit history through a filterable Audit Log
 The RTLS Analytics Platform SHALL provide a protected administrator Audit Log that supports server-side filtering of persisted audit events.
