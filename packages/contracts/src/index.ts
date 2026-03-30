@@ -56,6 +56,9 @@ export type AlertDeliveryChannel = "in_app" | "email";
 export type AlertDeliveryStatus = "delivered" | "failed" | "skipped";
 export type AlertActionType = "triggered" | "acknowledged" | "resolved" | "cleared";
 export type UnauthorizedGeofenceTrigger = "entry" | "exit";
+export type HealthRiskSeverity = "critical" | "warning";
+export type HealthRiskKind = "stale_gateway" | "low_battery_gateway";
+export type ObservabilityServiceStatus = "baseline" | "healthy";
 
 export interface FloorSummary {
   id: string;
@@ -192,6 +195,84 @@ export interface FloorDetail {
 export interface AdminSummary {
   current_user: AuthenticatedUser;
   managed_roles: UserRole[];
+}
+
+export interface AuditEventRecord {
+  id: string;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  actor_role: string | null;
+  action_category: string;
+  action_type: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface AuditEventListRecord {
+  items: AuditEventRecord[];
+  total_count: number;
+}
+
+export interface HealthRiskRecord {
+  id: string;
+  kind: HealthRiskKind;
+  severity: HealthRiskSeverity;
+  gateway_id: string;
+  gateway_identifier: string;
+  display_name: string;
+  floor_id: string;
+  floor_name: string;
+  summary: string;
+  observed_at: string | null;
+  battery_level_percent: number | null;
+}
+
+export interface ObservabilityGatewayTotalsRecord {
+  total: number;
+  healthy: number;
+  stale: number;
+  low_battery: number;
+  without_heartbeat: number;
+}
+
+export interface ObservabilityTelemetryTotalsRecord {
+  raw_readings: number;
+  premium_measurements: number;
+  heartbeat_snapshots: number;
+}
+
+export interface ObservabilityAlertTotalsRecord {
+  active: number;
+  critical: number;
+  warning: number;
+}
+
+export interface ObservabilityAuditTotalsRecord {
+  total: number;
+  last_24h: number;
+  latest_at: string | null;
+}
+
+export interface ObservabilityServiceRecord {
+  name: RuntimeServiceName;
+  status: ObservabilityServiceStatus;
+  detail: string;
+}
+
+export interface ObservabilitySummaryRecord {
+  generated_at: string;
+  gateway_totals: ObservabilityGatewayTotalsRecord;
+  telemetry_totals: ObservabilityTelemetryTotalsRecord;
+  alert_totals: ObservabilityAlertTotalsRecord;
+  audit_totals: ObservabilityAuditTotalsRecord;
+  risk_items: HealthRiskRecord[];
+  services: ObservabilityServiceRecord[];
+  healthcheck_path: string;
+  metrics_path: string;
+  request_id_header: string;
+  tracing_status: string;
 }
 
 export interface AssetLocationRecord {

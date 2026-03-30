@@ -72,6 +72,84 @@ class AdminSummaryResponse(BaseModel):
     managed_roles: list[str]
 
 
+class AuditEventResponse(BaseModel):
+    id: str
+    actor_user_id: str | None
+    actor_email: str | None
+    actor_role: str | None
+    action_category: str
+    action_type: str
+    target_type: str | None
+    target_id: str | None
+    details: dict[str, object] | None
+    created_at: datetime
+
+
+class AuditEventListResponse(BaseModel):
+    items: list[AuditEventResponse]
+    total_count: int = Field(ge=0)
+
+
+class HealthRiskResponse(BaseModel):
+    id: str
+    kind: str
+    severity: str
+    gateway_id: str
+    gateway_identifier: str
+    display_name: str
+    floor_id: str
+    floor_name: str
+    summary: str
+    observed_at: datetime | None
+    battery_level_percent: float | None
+
+
+class ObservabilityGatewayTotalsResponse(BaseModel):
+    total: int = Field(ge=0)
+    healthy: int = Field(ge=0)
+    stale: int = Field(ge=0)
+    low_battery: int = Field(ge=0)
+    without_heartbeat: int = Field(ge=0)
+
+
+class ObservabilityTelemetryTotalsResponse(BaseModel):
+    raw_readings: int = Field(ge=0)
+    premium_measurements: int = Field(ge=0)
+    heartbeat_snapshots: int = Field(ge=0)
+
+
+class ObservabilityAlertTotalsResponse(BaseModel):
+    active: int = Field(ge=0)
+    critical: int = Field(ge=0)
+    warning: int = Field(ge=0)
+
+
+class ObservabilityAuditTotalsResponse(BaseModel):
+    total: int = Field(ge=0)
+    last_24h: int = Field(ge=0)
+    latest_at: datetime | None
+
+
+class ObservabilityServiceResponse(BaseModel):
+    name: str
+    status: str
+    detail: str
+
+
+class ObservabilitySummaryResponse(BaseModel):
+    generated_at: datetime
+    gateway_totals: ObservabilityGatewayTotalsResponse
+    telemetry_totals: ObservabilityTelemetryTotalsResponse
+    alert_totals: ObservabilityAlertTotalsResponse
+    audit_totals: ObservabilityAuditTotalsResponse
+    risk_items: list[HealthRiskResponse]
+    services: list[ObservabilityServiceResponse]
+    healthcheck_path: str
+    metrics_path: str
+    request_id_header: str
+    tracing_status: str
+
+
 class SpatialPoint(BaseModel):
     x: float = Field(ge=0, le=1)
     y: float = Field(ge=0, le=1)

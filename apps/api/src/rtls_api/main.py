@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,7 @@ from rtls_api.derived_event_queries import DERIVED_EVENT_ROUTER
 from rtls_api.gateway_health import GATEWAY_HEALTH_ROUTER
 from rtls_api.ingestion_store import create_message_dedupe_store
 from rtls_api.live_locations import LIVE_LOCATION_ROUTER
+from rtls_api.observability import METRICS_ROUTER, OBSERVABILITY_ROUTER
 from rtls_api.operations_overview import OPERATIONS_OVERVIEW_ROUTER
 from rtls_api.session_store import create_refresh_session_store
 from rtls_api.spatial_admin import SPATIAL_ADMIN_ROUTER
@@ -49,6 +51,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def attach_request_id(request, call_next):
+        request_id = request.headers.get("X-Request-ID") or str(uuid4())
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
     @app.get("/")
     def read_root() -> dict[str, object]:
         return {
@@ -76,6 +85,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ADMIN_ROUTER)
     app.include_router(SPATIAL_ADMIN_ROUTER)
     app.include_router(GATEWAY_HEALTH_ROUTER)
+    app.include_router(OBSERVABILITY_ROUTER)
+    app.include_router(METRICS_ROUTER)
     app.include_router(LIVE_LOCATION_ROUTER)
     app.include_router(DERIVED_EVENT_ROUTER)
     app.include_router(ANALYTICS_ROUTER)
