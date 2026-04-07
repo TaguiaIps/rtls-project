@@ -24,6 +24,9 @@ import {
 } from "react";
 
 import { useAuth } from "../auth";
+import { CommandInput, FormMessage } from "../components/FormErgonomics";
+import { inputMasks, useTechnicalValidation } from "../components/formUtils";
+import { IconCheckCircle } from "../components/Icons";
 
 type ScaleTarget = "point_a" | "point_b" | null;
 type EditorMode = ScaleTarget | "polygon" | "gateway";
@@ -310,6 +313,7 @@ export function AdminSpatialWorkspace() {
   const [isBusy, setIsBusy] = useState(false);
   const [isFloorLoading, setIsFloorLoading] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const { errors, validateTagId, validateMacAddress, clearError, setError: setValidationError } = useTechnicalValidation();
 
   const selectedSite =
     sites.find((site) => site.id === selectedSiteId) ??
@@ -2057,34 +2061,37 @@ export function AdminSpatialWorkspace() {
               </div>
 
               <div className="admin-form">
-                <label>
-                  <span>Gateway Identifier</span>
-                  <input
-                    disabled={Boolean(gatewayDraft.id)}
-                    placeholder="gw-dining-01"
-                    value={gatewayDraft.gatewayIdentifier}
-                    onChange={(event) =>
-                      setGatewayDraft((current) => ({
-                        ...current,
-                        gatewayIdentifier: event.target.value
-                      }))
-                    }
-                  />
-                </label>
+                <CommandInput
+                  disabled={Boolean(gatewayDraft.id)}
+                  error={errors.gatewayIdentifier}
+                  label="Gateway Identifier"
+                  placeholder="AA:BB:CC:DD:EE:FF"
+                  value={gatewayDraft.gatewayIdentifier}
+                  onBlur={() => {
+                    const err = validateMacAddress(gatewayDraft.gatewayIdentifier);
+                    setValidationError("gatewayIdentifier", err);
+                  }}
+                  onChange={(event) => {
+                    const val = inputMasks.macAddress(event.target.value);
+                    setGatewayDraft((current) => ({
+                      ...current,
+                      gatewayIdentifier: val
+                    }));
+                    if (errors.gatewayIdentifier) clearError("gatewayIdentifier");
+                  }}
+                />
 
-                <label>
-                  <span>Display Name</span>
-                  <input
-                    placeholder="Dining Gateway"
-                    value={gatewayDraft.displayName}
-                    onChange={(event) =>
-                      setGatewayDraft((current) => ({
-                        ...current,
-                        displayName: event.target.value
-                      }))
-                    }
-                  />
-                </label>
+                <CommandInput
+                  label="Display Name"
+                  placeholder="Dining Gateway"
+                  value={gatewayDraft.displayName}
+                  onChange={(event) =>
+                    setGatewayDraft((current) => ({
+                      ...current,
+                      displayName: event.target.value
+                    }))
+                  }
+                />
 
                 <label>
                   <span>Hardware Tier</span>
@@ -2107,8 +2114,7 @@ export function AdminSpatialWorkspace() {
                   </select>
                 </label>
 
-                <div className="coordinate-grid">
-                  <label>
+                <div className="coordinate-grid">                  <label>
                     <span>Placement X</span>
                     <input
                       type="number"
@@ -2259,49 +2265,49 @@ export function AdminSpatialWorkspace() {
               </div>
 
               <div className="admin-form">
-                <label>
-                  <span>Tag Identifier</span>
-                  <input
-                    disabled={Boolean(assetDraft.id)}
-                    placeholder="waiter-tag-01"
-                    value={assetDraft.tagIdentifier}
-                    onChange={(event) =>
-                      setAssetDraft((current) => ({
-                        ...current,
-                        tagIdentifier: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Display Name</span>
-                  <input
-                    placeholder="Waiter Tag 01"
-                    value={assetDraft.displayName}
-                    onChange={(event) =>
-                      setAssetDraft((current) => ({
-                        ...current,
-                        displayName: event.target.value
-                      }))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>Asset Category</span>
-                  <input
-                    placeholder="staff"
-                    value={assetDraft.assetCategory}
-                    onChange={(event) =>
-                      setAssetDraft((current) => ({
-                        ...current,
-                        assetCategory: event.target.value
-                      }))
-                    }
-                  />
-                </label>
+                <CommandInput
+                  disabled={Boolean(assetDraft.id)}
+                  error={errors.tagIdentifier}
+                  label="Tag Identifier"
+                  placeholder="waiter-tag-01"
+                  value={assetDraft.tagIdentifier}
+                  onBlur={() => {
+                    const err = validateTagId(assetDraft.tagIdentifier);
+                    setValidationError("tagIdentifier", err);
+                  }}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    setAssetDraft((current) => ({
+                      ...current,
+                      tagIdentifier: val
+                    }));
+                    if (errors.tagIdentifier) clearError("tagIdentifier");
+                  }}
+                />
+                <CommandInput
+                  label="Display Name"
+                  placeholder="Waiter Tag 01"
+                  value={assetDraft.displayName}
+                  onChange={(event) =>
+                    setAssetDraft((current) => ({
+                      ...current,
+                      displayName: event.target.value
+                    }))
+                  }
+                />
+                <CommandInput
+                  label="Asset Category"
+                  placeholder="staff"
+                  value={assetDraft.assetCategory}
+                  onChange={(event) =>
+                    setAssetDraft((current) => ({
+                      ...current,
+                      assetCategory: event.target.value
+                    }))
+                  }
+                />
 
-                <div className="coordinate-grid">
-                  <label>
+                <div className="coordinate-grid">                  <label>
                     <span>Update Rate Profile</span>
                     <select
                       value={assetDraft.updateRateProfile}

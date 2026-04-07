@@ -14,6 +14,7 @@ import { AdminHealthWorkspace } from "./admin/AdminHealthWorkspace";
 import { AdminShell } from "./admin/AdminShell";
 import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
+import { CommandInput, PasswordInput } from "./components/FormErgonomics";
 import { AlertsCenterPage } from "./operations/AlertsCenter";
 import { AnalyticsWorkspacePage } from "./operations/AnalyticsWorkspace";
 import {
@@ -77,26 +78,21 @@ function LoginPage() {
         </div>
 
         <form className="login-form" onSubmit={onSubmit}>
-          <label>
-            <span>Email</span>
-            <input
-              autoComplete="email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Password</span>
-            <input
-              autoComplete="current-password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
+          <CommandInput
+            autoComplete="email"
+            label="Email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <PasswordInput
+            autoComplete="current-password"
+            label="Password"
+            name="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
           {error ? <p className="form-error">{error}</p> : null}
           <button className="primary-button" disabled={submitting} type="submit">
             {submitting ? "Signing In..." : "Sign In"}
