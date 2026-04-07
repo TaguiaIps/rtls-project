@@ -524,42 +524,52 @@ Implementation baseline note:
 
 ## **6. Visual Design & Interaction States**
 
-### **6.1. Suggested Theme**
+### **6.1. Design System: Industrial Command Deck**
 
-**Theme Name:** **Industrial Command Deck**
+**Philosophy: The Sentinel Interface**
+This design system is engineered for mission-critical environments where split-second decisions rely on data clarity and structural authority. We move away from the "playful SaaS" aesthetic toward a sophisticated, industrial-grade console that monitors, alerts, and commands.
 
-**Design stance:** A restrained, high-technology operations console that feels precise and mission-critical without drifting into unreadable sci-fi HUD styling.
+#### **6.1.1. Colors & Surface Architecture (Deep Void)**
+The palette recedes to let active telemetry pop with surgical precision. Traditional 1px borders are strictly prohibited for structural layout; boundaries are defined through background color shifts.
 
-**Why this direction fits:**
-
-* The product is spatial, real-time, and data-dense, so the interface should feel like a live control surface.
-* Administrators need trust and precision more than decorative flourish.
-* Operations managers need strong contrast between normal flow, risk, and incident states.
-
-**Differentiation anchor:** If a screenshot is shared without branding, it should still read as a **location intelligence command surface** because of the layered floor-plan map, telemetry accents, and crisp confidence/alert treatment.
-
-### **6.2. Color System & Typography**
-
-| Token Group | Use | Value |
+| **Token** | **Hex Value** | **Role** |
 | :--- | :--- | :--- |
-| **Background / Base** | App chrome | `#060B14` |
-| **Background / Surface** | Cards, side rails, drawers | `#0F1724` |
-| **Background / Elevated** | Active panels, modals | `#152235` |
-| **Stroke / Subtle** | Dividers, grids, inactive map outlines | `#24364D` |
-| **Text / Primary** | Primary labels and body copy | `#EAF2FF` |
-| **Text / Secondary** | Supporting labels and metadata | `#9FB1C8` |
-| **Accent / Telemetry** | Live states, focused actions, precise locations | `#21D4FD` |
-| **Accent / Depth** | Secondary emphasis, selected tabs, charts | `#2F6BFF` |
-| **Success** | Healthy devices, completed calibration | `#22C55E` |
-| **Warning** | SLA risk, low confidence caution, battery drop | `#F59E0B` |
-| **Critical** | Violations, unauthorized geofence, offline status | `#F04438` |
-| **Info Wash** | Large translucent map overlays | `rgba(33, 212, 253, 0.14)` |
+| `--surface-base` | `#0e131e` | Primary application canvas |
+| `--surface-container` | `#1b1f2b` | Major functional areas (Sidebars, Map overlays) |
+| `--surface-container-low` | `#171b27` | Recessed "milled" panels |
+| `--surface-container-lowest`| `#090e19` | Data card backgrounds |
+| `--surface-container-high` | `#303541` | Elevated modules & active elements |
+| `--primary` | `#00f0ff` | Telemetry Cyan (status, active links) |
+| `--on-surface` | `#dee2f2` | Primary text (reduced strain) |
+| `--on-surface-variant`| `#8ea2bc` | Muted labels and metadata |
 
-**Typography system:**
+#### **6.1.2. Typography**
+The type system balances technical precision with rapid scanning.
 
-* **Headings:** `Space Grotesk` for a technical, modern voice with enough personality for a premium product.
-* **Body/UI text:** `Inter` for compact readability in dense dashboard layouts.
-* **Optional utility text:** Monospaced numerals for coordinates, IDs, and timestamps only.
+*   **Headings:** `Space Grotesk` for a technical, modern voice with enough personality for a premium product.
+*   **Body/UI text:** `Inter` for compact readability in dense dashboard layouts.
+*   **Optional utility text:** Monospaced numerals for coordinates, IDs, and timestamps only.
+
+#### **6.1.3. Geometry & Elevation**
+Depth is achieved through tonal layering rather than traditional shadows.
+
+*   **Radius Tokens:** `--radius-xl` (8px) for major containers; `--radius-sm` (2px) for technical status chips.
+*   **The "No-Line" Rule:** Structural borders are replaced by color transitions. Where extreme density requires separation, use `--outline-variant` (`rgba(59, 73, 75, 0.15)`).
+*   **Glassmorphism:** HUD elements utilize `.hud-glass` (60% opacity background with 24px backdrop blur) to integrate telemetry into the map view.
+*   **Presence Pulse:** Low-confidence estimations are visualized with a pulsing glassmorphism circle (`.presence-pulse`) to communicate "honest" uncertainty.
+*   **Position Transitions:** All asset markers utilize hardware-accelerated CSS transitions (300ms ease-out) for coordinate updates to eliminate visual "teleportation."
+
+#### **6.1.4. Mobile Pleasurable Interactions**
+The mobile platform utilizes native capabilities to transform routine maintenance tasks into satisfying, gamified workflows.
+
+*   **Tactile Confirmation:** Critical data capture events (QR scanning, Calibration checkpoints) trigger standard haptic patterns to reduce reliance on continuous visual monitoring.
+*   **Segmented Progress:** Workflows are broken into discrete "chunks" using industrial segmented indicators to provide a clear narrative of achievement.
+*   **Meaningful Transitions:** Completion of complex spatial setup is rewarded with technical "Celebration" animations that visually confirm the establishment of system accuracy.
+
+#### **6.1.5. Components**
+*   **Primary Actions:** Solid Cyan gradient with a 1px "inner glow" inset box-shadow to simulate a backlit physical button.
+*   **Input Fields:** "Command" style with bottom-border only, transitioning from variant grey to primary Cyan on focus.
+*   **Command Rail:** High-density vertical sidebar (80px) using monoline icons and minimized labels.
 
 ### **6.3. Visual Language**
 
