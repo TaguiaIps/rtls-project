@@ -1,7 +1,7 @@
 # user-authentication Specification
 
 ## Purpose
-TBD - created by archiving change implement-identity-rbac-and-audit-foundation. Update Purpose after archive.
+Define the local JWT-based authentication flow, refresh-session lifecycle, and bootstrap access needed to enter and operate the RTLS Analytics Platform.
 ## Requirements
 ### Requirement: Local credential authentication
 The RTLS Analytics Platform SHALL authenticate platform users with local email-and-password credentials and issue JWT-based sessions for successful sign-in attempts.
@@ -46,4 +46,3 @@ The RTLS Analytics Platform SHALL provide a web login experience for authenticat
 #### Scenario: User signs out
 - **WHEN** an authenticated user signs out from the web application
 - **THEN** the system SHALL invalidate the active refresh session and clear the web application's authenticated state
-

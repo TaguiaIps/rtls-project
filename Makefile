@@ -1,30 +1,37 @@
+SHELL := /bin/bash
 PYTHON ?= python3
 NPM ?= npm
+UV ?= uv
+VENV_DIR ?= .venv
+VENV_ACTIVATE = source $(VENV_DIR)/bin/activate
+UV_API_SYNC = $(VENV_ACTIVATE) && $(UV) sync --project apps/api --extra dev --active
+UV_API_RUN = $(VENV_ACTIVATE) && $(UV) run --project apps/api --active
 
 .PHONY: install api-install js-install lint test build format compose-up compose-down compose-reset bootstrap-admin
 
 install: api-install js-install
 
 api-install:
-	$(PYTHON) -m pip install -e ./apps/api[dev]
+	$(UV) venv $(VENV_DIR)
+	$(UV_API_SYNC)
 
 js-install:
 	$(NPM) install
 
 lint:
-	$(PYTHON) -m ruff check apps/api
+	$(UV_API_RUN) python -m ruff check apps/api
 	$(NPM) run lint
 
 test:
-	$(PYTHON) -m pytest apps/api/tests
+	$(UV_API_RUN) python -m pytest apps/api/tests
 	$(NPM) run test
 
 build:
-	$(PYTHON) -m build ./apps/api
+	$(UV_API_RUN) python -m build ./apps/api
 	$(NPM) run build
 
 format:
-	$(PYTHON) -m ruff format apps/api
+	$(UV_API_RUN) python -m ruff format apps/api
 	$(NPM) run format
 
 compose-up:
@@ -37,4 +44,4 @@ compose-reset:
 	docker compose down -v --remove-orphans
 
 bootstrap-admin:
-	$(PYTHON) -m rtls_api.bootstrap_admin --email "$(EMAIL)" --password "$(PASSWORD)" --display-name "$(DISPLAY_NAME)"
+	$(UV_API_RUN) python -m rtls_api.bootstrap_admin --email "$(EMAIL)" --password "$(PASSWORD)" --display-name "$(DISPLAY_NAME)"

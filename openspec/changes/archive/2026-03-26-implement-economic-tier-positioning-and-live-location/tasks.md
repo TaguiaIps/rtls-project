@@ -1,0 +1,11 @@
+- [x] 1.1 Define the economic-tier positioning domain contract, including current-location, location-history, confidence, and zone-fallback semantics.
+- [x] 1.2 Add shared backend and client-facing position contracts for latest location, search/filter results, and trajectory queries.
+- [x] 1.3 Document the assumed economic-tier reference-data dependency that exists before the later mobile calibration workflow.
+- [x] 2.1 Implement backend persistence for latest known asset location and append-only location history derived from accepted raw readings.
+- [x] 2.2 Implement the economic-tier estimation flow that consumes raw readings and produces confidence-aware location outputs on mapped floors.
+- [x] 2.3 Enforce fallback behavior so low-confidence estimates return zone-level results instead of stale or misleading point precision.
+- [x] 3.1 Expose authorized APIs for latest live locations, asset search/filtering, and asset trajectory history.
+- [x] 3.2 Expose an authorized live-update stream that publishes new location results for downstream operations clients.
+- [x] 3.3 Add regression coverage for confidence semantics, fallback behavior, and current-state versus history queries.
+- [x] 4.1 Update system and workflow documentation to describe the delivered economic-tier positioning baseline and its out-of-scope follow-on work.
+- [x] 4.2 Validate the change with `openspec validate implement-economic-tier-positioning-and-live-location --strict`.

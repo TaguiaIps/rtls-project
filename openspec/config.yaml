@@ -14,9 +14,9 @@ context: |
   - Carlos Mendes: Operations Manager responsible for monitoring, triage, and analytics.
 
   Current project phase:
-  - There is no production implementation baseline yet.
-  - The repository currently contains requirements, system design, UX design, and prototype HTML outputs.
-  - OpenSpec artifacts should not assume an existing working application unless the repo actually contains it.
+  - The repository already contains an implemented platform baseline across backend, web, shared contracts, and local runtime tooling.
+  - Delivered foundations include authentication, RBAC, audit logging, spatial administration, gateway and asset registry, MQTT ingestion, economic-tier positioning, and the baseline operations web shell.
+  - OpenSpec artifacts should distinguish clearly between already implemented behavior and newly proposed or modified behavior.
 
   Authoritative repository documents:
   - docs/requirements-document.md: functional and non-functional requirements

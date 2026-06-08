@@ -1,8 +1,22 @@
 import { PRODUCT_NAME } from "@rtls/config";
-import { useEffect, useState, type FormEvent, type PropsWithChildren } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useState, type FormEvent, type PropsWithChildren } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate
+} from "react-router-dom";
 
+import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
+import { AlertsCenterPage } from "./operations/AlertsCenter";
+import {
+  LiveMapPage,
+  OperationsOverviewPage,
+  OperationsShellLayout
+} from "./operations/OperationsShell";
 
 function LoadingScreen() {
   return (
@@ -128,95 +142,13 @@ function ShellLayout({
   );
 }
 
-function OperationsHome() {
-  const { user } = useAuth();
-
-  return (
-    <ShellLayout
-      title="Operations Overview"
-      subtitle="Live service readiness, alert triage, and quick routing into map and analytics."
-    >
-      <section className="content-grid">
-        <article className="panel">
-          <p className="eyebrow">Role Routing</p>
-          <h1>Operations Console</h1>
-          <p className="panel-copy">
-            General Users land in the operational workspace after login. This route is protected
-            and only renders for authenticated sessions.
-          </p>
-        </article>
-        <article className="panel panel--compact">
-          <p className="eyebrow">Current User</p>
-          <dl className="definition-list">
-            <div>
-              <dt>Email</dt>
-              <dd>{user?.email}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{user?.status}</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
-    </ShellLayout>
-  );
-}
-
 function AdminHome() {
-  const { fetchWithAuth, user } = useAuth();
-  const [managedRoles, setManagedRoles] = useState<string[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSummary() {
-      const response = await fetchWithAuth("/api/admin/summary");
-      if (!response.ok) {
-        return;
-      }
-
-      const payload = (await response.json()) as { managed_roles: string[] };
-      if (!cancelled) {
-        setManagedRoles(payload.managed_roles);
-      }
-    }
-
-    void loadSummary();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchWithAuth]);
-
   return (
     <ShellLayout
       title="Admin Console"
-      subtitle="Secure setup, role-aware administration, and auditable configuration handling."
+      subtitle="Spatial hierarchy, floor plans, scale confirmation, and operational zone setup."
     >
-      <section className="content-grid">
-        <article className="panel">
-          <p className="eyebrow">Administrator Workspace</p>
-          <h1>System Access Foundation</h1>
-          <p className="panel-copy">
-            Administrator routes stay protected at both the API and web-shell level. This page
-            confirms the role-aware landing behavior defined in the UX specification.
-          </p>
-        </article>
-        <article className="panel panel--compact">
-          <p className="eyebrow">Authorization State</p>
-          <dl className="definition-list">
-            <div>
-              <dt>User</dt>
-              <dd>{user?.email}</dd>
-            </div>
-            <div>
-              <dt>Managed Roles</dt>
-              <dd>{managedRoles.join(", ") || "Loading..."}</dd>
-            </div>
-          </dl>
-        </article>
-      </section>
+      <AdminSpatialWorkspace />
     </ShellLayout>
   );
 }
@@ -269,10 +201,14 @@ function AppRoutes() {
         path="/operations"
         element={
           <ProtectedRoute allowedRoles={["Administrator", "General User"]}>
-            <OperationsHome />
+            <OperationsShellLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<OperationsOverviewPage />} />
+        <Route path="alerts" element={<AlertsCenterPage />} />
+        <Route path="live-map" element={<LiveMapPage />} />
+      </Route>
       <Route
         path="*"
         element={

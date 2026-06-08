@@ -1,7 +1,7 @@
 # role-based-access Specification
 
 ## Purpose
-TBD - created by archiving change implement-identity-rbac-and-audit-foundation. Update Purpose after archive.
+Define the role-based authorization model and protected application-routing behavior that separates Administrator setup capabilities from General User operations access.
 ## Requirements
 ### Requirement: Two-role authorization model
 The RTLS Analytics Platform SHALL enforce a two-role authorization model with `Administrator` and `General User` roles.
@@ -46,4 +46,3 @@ The RTLS Analytics Platform SHALL restrict protected web application navigation 
 #### Scenario: Authenticated user opens a disallowed area
 - **WHEN** an authenticated user navigates to a web route not permitted for their role
 - **THEN** the web application SHALL prevent access and route the user to an allowed destination or authorization error state
-

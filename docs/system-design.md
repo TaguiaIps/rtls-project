@@ -93,29 +93,48 @@ sequenceDiagram
 ### **3.1. Gateway Communication Layer**
 
 - **Protocol:** MQTT
-- **MQTT Topic Structure:** `rtls/data/{gateway_id}`
-- **Payload Format (JSON):** Each message published by a gateway will contain a list of observed beacons.
+- **MQTT Topic Structure:**
+  - telemetry: `rtls/data/{gateway_id}`
+  - heartbeat: `rtls/heartbeat/{gateway_id}`
+- **Identity Rule:** The topic gateway identifier must match the payload `gateway_id` and an existing registered gateway.
+- **Payload Format (JSON):** Each telemetry message published by a gateway contains one message envelope and one or more observed tag readings.
 
     ```json
     {
-      "gatewayId": "gw-01-lobby",
-      "timestamp": "2025-10-29T18:30:00Z",
-      "beacons": [
-        { "tagId": "A1:B2:C3:D4:E5:F6", "rssi": -65 },
-        { "tagId": "B2:C3:D4:E5:F6:A1", "rssi": -72 }
+      "gateway_id": "gw-01-lobby",
+      "message_id": "msg-001",
+      "gateway_timestamp": "2026-03-25T18:30:00Z",
+      "firmware_version": "1.4.0",
+      "readings": [
+        { "tag_id": "A1:B2:C3:D4:E5:F6", "rssi": -65, "tx_power": -8, "channel": 37 },
+        { "tag_id": "B2:C3:D4:E5:F6:A1", "rssi": -72 }
       ]
+    }
+    ```
+
+- **Heartbeat Format (JSON):** Each heartbeat publishes latest-known gateway liveness metadata without location computation.
+
+    ```json
+    {
+      "gateway_id": "gw-01-lobby",
+      "message_id": "hb-001",
+      "gateway_timestamp": "2026-03-25T18:30:05Z",
+      "firmware_version": "1.4.0",
+      "battery_level_percent": 88
     }
     ```
 
 ### **3.2. Data Ingestion & Positioning Service**
 
-- **Language/Framework:** Python (using a high-performance library like `asyncio` for concurrency).
+- **Language/Framework:** Python worker process.
 - **Core Logic:**
-    1. The service subscribes to the MQTT topic `rtls/data/#`.
-    2. Incoming beacon readings are stored in an in-memory buffer.
-    3. **Aggregation Window:** A process runs every **3 seconds** (configurable), averaging RSSI values for each tag from each gateway.
-    4. **Position Calculation:** The service calculates the asset's (X, Y) coordinates using the **Weighted Centroid Localization (WCL)** algorithm.
-    5. **Data Persistence:** The service writes the raw readings to the `raw_readings` table and the calculated position to the `location_history` table.
+    1. The worker subscribes to `rtls/data/+` and `rtls/heartbeat/+`.
+    2. Each message is parsed and validated before any durable state is written.
+    3. The worker verifies that the MQTT topic gateway identifier matches the payload `gateway_id` and a registered gateway record.
+    4. The worker deduplicates MQTT retries using the tuple `(gateway_id, message_id)` in Redis with a 10-second TTL.
+    5. Accepted telemetry is persisted as one `raw_readings` row per observed tag with `broker_received_at` as canonical time.
+    6. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
+    7. Accepted live-location updates derived from recent raw readings now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
 
 #### MQTT payload schema (canonical)
 
@@ -142,15 +161,21 @@ sequenceDiagram
 #### Ingestion rules
 
 - QoS = 1 for MQTT publishes.
-- Ingestion service appends `broker_received_timestamp` (UTC) and uses it as canonical time.
-- Deduplicate by `message_id` using Redis with 10s TTL.
-- Clock skew policy: 200 ms threshold; messages diff >200ms marked `suspect_gateway_time`.
-- Reorder buffer: configurable 500ms; stale messages >10s are archived.
+- Ingestion appends `broker_received_at` (UTC) and uses it as canonical time.
+- Deduplicate by `(gateway_id, message_id)` using Redis with a 10-second TTL.
+- Gateway-provided `gateway_timestamp` remains optional metadata and never replaces canonical time.
+- Unknown gateways, topic/payload mismatches, invalid payloads, and duplicate retries are rejected before durable writes.
+- The current economic-tier baseline derives latest known asset locations and append-only location history from recent accepted raw readings on mapped floors.
 
 #### Key operational notes
 
-- **Time canonicalization:** The ingestion service appends `broker_received_timestamp` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
+- **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
+- **Economic-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements to compute confidence-aware floor locations. Low-confidence outputs fall back to mapped zones when possible instead of implying point precision.
+- **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
+- **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
+- **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, and the delivered Alerts Center for table SLA and unauthorized geofence workflows. Maintenance alerts, analytics workspaces, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -166,12 +191,29 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Authentication** | `POST` | `/api/token` | Authenticates user with credentials, returns access/refresh tokens. |
 | | `POST` | `/api/token/refresh` | Obtains a new access token using a valid refresh token. |
+| **Live Locations** | `GET` | `/api/locations/live` | Returns the latest known live locations with supported site, floor, asset, and confidence filters. |
+| | `GET` | `/api/locations/search` | Searches tracked assets and returns the latest known location context for matches. |
+| | `GET` | `/api/locations/assets/{asset_tag_id}/history` | Returns durable location history for a selected asset and time range. |
+| **Derived Events** | `GET` | `/api/derived/zone-events` | Returns canonical zone-entry and zone-exit events filtered by site, floor, zone, asset, and time range. |
+| | `GET` | `/api/derived/dwells` | Returns durable dwell windows closed from canonical zone occupancy. |
+| | `GET` | `/api/derived/table-timers` | Returns current timer snapshots for SLA-eligible tables within a supported site or floor scope. |
+| | `GET` | `/api/derived/round-trips` | Evaluates origin-destination-origin cycles from canonical zone-entry history for a requested route and time scope. |
+| **Alerts** | `GET` | `/api/alerts/summary` | Returns unresolved and unread in-app alert counts for the current operational shell context. |
+| | `GET` | `/api/alerts/rules` | Returns delivered alert rule definitions for the selected operational scope. |
+| | `POST` | `/api/alerts/rules` | Creates a delivered alert rule for table SLA or unauthorized geofence workflows. |
+| | `PATCH` | `/api/alerts/rules/{rule_id}` | Updates an existing delivered alert rule and reconciles active alert state. |
+| | `GET` | `/api/alerts` | Returns the Alerts Center queue and history using supported status, type, severity, scope, and time filters. |
+| | `GET` | `/api/alerts/{alert_id}` | Returns alert detail including rule summary, delivery attempts, and persisted action history. |
+| | `POST` | `/api/alerts/{alert_id}/acknowledge` | Persists acknowledgement state and actor context for an alert instance. |
+| | `POST` | `/api/alerts/{alert_id}/resolve` | Persists resolution state and moves the alert into history. |
+| **Operations Shell** | `GET` | `/api/operations/overview` | Returns the current operations overview snapshot for the selected site/floor using delivered live-location and gateway-health signals. |
 | **Assets** | `GET` | `/api/assets` | Retrieves a paginated list of all assets. Supports filtering by type. |
 | | `POST` | `/api/assets` | Creates a new asset (US-ADM-04). |
 | | `GET` | `/api/assets/{id}` | Retrieves details for a single asset. |
 | | `PUT` | `/api/assets/{id}` | Updates details for a single asset. |
 | | `DELETE` | `/api/assets/{id}` | Deletes an asset. |
 | | `POST` | `/api/assets/bulk_import` | Imports assets from a CSV file (US-ADM-05). |
+| **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
 | | `GET` | `/api/analytics/visit_count` | Retrieves a report of visits to specified POIs by an asset (US-ANL-03). |
@@ -223,12 +265,25 @@ sequenceDiagram
     - `readings` (JSONB),
     - `asset_id` (FK to assets),
     - `gateway_id` (FK to gateways).
-  - **`location_history`** (TimescaleDB Hypertable):
+  - **`asset_current_locations`**:
+    - `asset_id` (PK / FK to assets),
+    - `floor_id` (FK to floors),
+    - `zone_id` (nullable FK to zones),
+    - `observed_at` (TIMESTAMPTZ),
+    - `location_type` (`point` or `zone`),
+    - `location_x` (FLOAT, nullable),
+    - `location_y` (FLOAT, nullable),
+    - `confidence_level` (VARCHAR),
+    - `confidence_score` (FLOAT).
+  - **`location_history`** (TimescaleDB Hypertable / append-only history pattern):
     - `id` (PK),
     - `timestamp` (TIMESTAMPTZ),
     - `location_x` (FLOAT),
     - `location_y` (FLOAT).
     - `asset_id` (FK to assets),
+    - `zone_id` (nullable FK to zones),
+    - `confidence_level` (VARCHAR),
+    - `confidence_score` (FLOAT).
 - **Data Lifecycle Management:**
   - A TimescaleDB **retention policy** will automatically delete raw data older than **90 days**.
   - Rollups: hourly/daily tables for dwell time, zone counts, avg_rssi
@@ -333,8 +388,17 @@ erDiagram
 ## **5. Frontend Design**
 
 - **Framework:** React.js (using Vite for the build tool).
-- **State Management:** **Zustand**.
-- **Key Components:** `MapView`, `DashboardView`, `AnalyticsPanel`, `AdminPanel`.
+- **Current State Management:** React Router plus route-local and page-local state. A dedicated client store remains optional future work, not a delivered requirement.
+- **Delivered Shell Baseline:** protected login, administrator spatial setup workspace, shared operations shell, Operations Overview, and Live Map.
+- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`.
+
+### **5.0. Delivered Web Baseline Scope**
+
+- The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
+- The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
+- The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
+- Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
+- Maintenance alerts, analytics workspaces, SLA trends, assignments, exports, and richer incident workflows remain follow-on backlog items.
 
 ### **5.1. General User Flow Diagram**
 
@@ -577,3 +641,39 @@ The pipeline will execute the following steps for each relevant service:
     2. After the CI pipeline successfully pushes a new Docker image, a step will automatically update the corresponding Deployment manifest in the GitOps repository with the new image tag.
     3. Argo CD, running in the Kubernetes cluster, will detect the change in the GitOps repository.
     4. Argo CD will automatically apply the updated manifest to the cluster, triggering a **rolling update** of the service. This ensures zero-downtime deployments.
+  - **`alert_rules`**:
+    - `id` (PK),
+    - `rule_type` (VARCHAR),
+    - `severity` (VARCHAR),
+    - `enabled` (BOOLEAN),
+    - `site_id` (FK to sites),
+    - `floor_id` (FK to floors),
+    - `config` (JSONB),
+    - `delivery` (JSONB).
+  - **`alert_instances`**:
+    - `id` (PK),
+    - `rule_id` (FK to alert_rules),
+    - `status` (VARCHAR),
+    - `scope_key` (VARCHAR),
+    - `site_id` (FK to sites),
+    - `floor_id` (FK to floors),
+    - `area_id` (FK to zones),
+    - `asset_tag_id` (FK to assets),
+    - `condition_key` (VARCHAR),
+    - `first_triggered_at` (TIMESTAMPTZ),
+    - `last_triggered_at` (TIMESTAMPTZ).
+  - **`alert_actions`**:
+    - `id` (PK),
+    - `alert_id` (FK to alert_instances),
+    - `action_type` (VARCHAR),
+    - `actor_user_id` (FK to users),
+    - `notes` (TEXT),
+    - `details` (JSONB).
+  - **`alert_notification_deliveries`**:
+    - `id` (PK),
+    - `alert_id` (FK to alert_instances),
+    - `channel` (VARCHAR),
+    - `destination` (VARCHAR),
+    - `status` (VARCHAR),
+    - `error_message` (TEXT),
+    - `read_at` (TIMESTAMPTZ).

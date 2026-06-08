@@ -9,7 +9,7 @@ from rtls_api.auth import create_user
 from rtls_api.bootstrap_admin import run_bootstrap
 from rtls_api.config import Settings
 from rtls_api.main import create_app
-from rtls_api.models import AuditEvent, User, UserRole, UserStatus
+from rtls_api.models import AuditEvent, RefreshSession, User, UserRole, UserStatus
 
 
 def build_settings(tmp_path: Path) -> Settings:
@@ -19,6 +19,7 @@ def build_settings(tmp_path: Path) -> Settings:
         redis_url="memory://auth-tests",
         web_origin="http://localhost:5173",
         jwt_secret_key="test-secret",
+        object_storage_endpoint=f"file://{tmp_path / 'objects'}",
     )
 
 
@@ -74,11 +75,69 @@ def test_authentication_refresh_logout_and_audit_events(tmp_path: Path) -> None:
         assert logout_response.status_code == 204
 
         with app.state.session_factory() as db:
-            audit_actions = db.scalars(select(AuditEvent.action_type)).all()
+            audit_events = db.scalars(
+                select(AuditEvent).order_by(AuditEvent.created_at.asc())
+            ).all()
+            refresh_session = db.scalar(select(RefreshSession))
 
-        assert "auth.login.success" in audit_actions
-        assert "auth.refresh.success" in audit_actions
-        assert "auth.logout" in audit_actions
+        assert refresh_session is not None
+        assert "auth.login.success" in [event.action_type for event in audit_events]
+        assert "auth.refresh.success" in [event.action_type for event in audit_events]
+        assert "auth.logout" in [event.action_type for event in audit_events]
+
+        login_audit = next(
+            event for event in audit_events if event.action_type == "auth.login.success"
+        )
+        assert login_audit.target_type == "refresh_session"
+        assert login_audit.target_id == refresh_session.id
+
+
+def test_logout_rejects_rotated_refresh_tokens(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="admin@example.com",
+                password="StrongPass123",
+                role=UserRole.ADMINISTRATOR,
+                display_name="Alex",
+            )
+            db.commit()
+
+        login_response = client.post(
+            "/api/auth/token",
+            json={"email": "admin@example.com", "password": "StrongPass123"},
+        )
+        assert login_response.status_code == 200
+        login_payload = login_response.json()
+
+        refresh_response = client.post(
+            "/api/auth/refresh",
+            json={"refresh_token": login_payload["refresh_token"]},
+        )
+        assert refresh_response.status_code == 200
+        rotated_payload = refresh_response.json()
+
+        stale_logout_response = client.post(
+            "/api/auth/logout",
+            json={"refresh_token": login_payload["refresh_token"]},
+        )
+        assert stale_logout_response.status_code == 401
+
+        active_refresh_response = client.post(
+            "/api/auth/refresh",
+            json={"refresh_token": rotated_payload["refresh_token"]},
+        )
+        assert active_refresh_response.status_code == 200
+
+        valid_logout_response = client.post(
+            "/api/auth/logout",
+            json={"refresh_token": active_refresh_response.json()["refresh_token"]},
+        )
+        assert valid_logout_response.status_code == 204
 
 
 def test_role_protection_and_admin_user_update_audit(tmp_path: Path) -> None:
