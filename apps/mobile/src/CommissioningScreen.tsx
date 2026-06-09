@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   ImageBackground,
@@ -28,11 +28,19 @@ import {
   upsertCommissioningSummary
 } from "./commissioning";
 import { MobileQrScanner } from "./MobileQrScanner";
+import {
+  CalibrationStepIndicator,
+  HapticService,
+  IndustrialCompletionOverlay
+} from "./components/AffectiveFeedback";
+import { SelfLocationMarker } from "./components/SelfLocationMarker";
+import { applyMinimumMovementThreshold, createKalmanFilter } from "./kalmanFilter";
 import { normalizeApiBaseUrl } from "./session";
 import {
   loadCommissioningSummaries,
   saveCommissioningSummaries
 } from "./storage";
+import { useSelfLocation, type SelfLocationState } from "./useSelfLocation";
 
 type CommissioningScreenProps = {
   apiBaseUrl: string;
@@ -57,8 +65,15 @@ export function CommissioningScreen({
   const [capturedPoints, setCapturedPoints] = useState<SpatialPoint[]>([]);
   const [currentPosition, setCurrentPosition] = useState<SpatialPoint | null>(null);
   const [calibrationStartedAt, setCalibrationStartedAt] = useState<string | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [sessionSummaries, setSessionSummaries] = useState<CommissioningSessionSummary[]>([]);
   const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
+  const [liveTrackingEnabled, setLiveTrackingEnabled] = useState(false);
+  const [carryOnTagId, setCarryOnTagId] = useState<string | null>(null);
+  const [liveLocation, setLiveLocation] = useState<SelfLocationState | null>(null);
+  const kalmanFilter = useRef(createKalmanFilter());
+  const lastCapturedLiveRef = useRef<SpatialPoint | null>(null);
+  const autoCaptureIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,6 +105,32 @@ export function CommissioningScreen({
   const waypoints = buildCalibrationWaypoints(floorDetail, selectedZoneId);
   const progress = buildCalibrationProgress(waypoints, capturedPoints);
 
+  const { connectionStatus } = useSelfLocation({
+    apiBaseUrl: normalizedApiBaseUrl,
+    accessToken,
+    enabled: calibrationStartedAt != null && liveTrackingEnabled && carryOnTagId != null,
+    assetTagId: carryOnTagId ?? undefined,
+    floorId: selectedFloorId || undefined,
+    onLocationUpdate: (loc) => {
+      const smoothed = kalmanFilter.current.update({ x: loc.x, y: loc.y });
+      const thresholded = applyMinimumMovementThreshold(smoothed, lastCapturedLiveRef.current);
+      setLiveLocation({ ...loc, x: thresholded.x, y: thresholded.y });
+    }
+  });
+
+  useEffect(() => {
+    if (calibrationStartedAt && liveTrackingEnabled && liveLocation) {
+      const point: SpatialPoint = { x: liveLocation.x, y: liveLocation.y };
+      const prev = lastCapturedLiveRef.current;
+      if (!prev || Math.hypot(point.x - prev.x, point.y - prev.y) >= 0.06) {
+        setCurrentPosition(point);
+        setCapturedPoints((current) => [...current, point]);
+        lastCapturedLiveRef.current = point;
+        HapticService.impact();
+      }
+    }
+  }, [calibrationStartedAt, liveTrackingEnabled, liveLocation]);
+
   useEffect(() => {
     if (!selectedSite && sites.length > 0) {
       setSelectedSiteId(sites[0].id);
@@ -113,6 +154,10 @@ export function CommissioningScreen({
     setCapturedPoints([]);
     setCurrentPosition(null);
     setCalibrationStartedAt(null);
+    setLiveTrackingEnabled(false);
+    setLiveLocation(null);
+    kalmanFilter.current.reset();
+    lastCapturedLiveRef.current = null;
   }, [selectedFloorId]);
 
   const loadContext = async (floorIdOverride?: string) => {
@@ -212,6 +257,9 @@ export function CommissioningScreen({
     if (!calibrationStartedAt || mapSize.width <= 0 || mapSize.height <= 0) {
       return;
     }
+    if (liveTrackingEnabled) {
+      return;
+    }
 
     const point = {
       x: Number((event.nativeEvent.locationX / mapSize.width).toFixed(4)),
@@ -220,6 +268,8 @@ export function CommissioningScreen({
 
     setCurrentPosition(point);
     setCapturedPoints((current) => [...current, point]);
+    lastCapturedLiveRef.current = point;
+    HapticService.impact();
   };
 
   const handleCompleteCalibration = () => {
@@ -227,20 +277,26 @@ export function CommissioningScreen({
       return;
     }
 
-    const completedAt = new Date().toISOString();
-    const summary = buildCommissioningSummary({
-      target: resolvedTarget,
-      site: selectedSite,
-      floor: floorDetail,
-      zone: selectedZone,
-      startedAt: calibrationStartedAt,
-      completedAt,
-      captures: capturedPoints,
-      progress
-    });
+    setIsFinishing(true);
+    HapticService.success();
 
-    setSessionSummaries((current) => upsertCommissioningSummary(current, summary));
-    setCalibrationStartedAt(null);
+    setTimeout(() => {
+      const completedAt = new Date().toISOString();
+      const summary = buildCommissioningSummary({
+        target: resolvedTarget,
+        site: selectedSite,
+        floor: floorDetail,
+        zone: selectedZone,
+        startedAt: calibrationStartedAt,
+        completedAt,
+        captures: capturedPoints,
+        progress
+      });
+
+      setSessionSummaries((current) => upsertCommissioningSummary(current, summary));
+      setCalibrationStartedAt(null);
+      setIsFinishing(false);
+    }, 3000);
   };
 
   const handleMapLayout = (event: LayoutChangeEvent) => {
@@ -431,6 +487,62 @@ export function CommissioningScreen({
       </View>
 
       <View style={styles.panel}>
+        <Text style={styles.panelTitle}>Self-Location</Text>
+        <Text style={styles.helperText}>
+          Select the asset tag you are carrying to enable live blue-dot tracking during calibration.
+        </Text>
+        {assets.length > 0 ? (
+          <View style={styles.chipWrap}>
+            {assets.slice(0, 8).map((asset) => (
+              <Pressable
+                key={asset.id}
+                onPress={() => setCarryOnTagId(carryOnTagId === asset.id ? null : asset.id)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  carryOnTagId === asset.id && styles.chipSelected,
+                  pressed ? styles.resultCardPressed : null
+                ]}
+              >
+                <Text style={styles.chipLabel}>{asset.display_name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.helperText}>Load context to see available asset tags.</Text>
+        )}
+        {calibrationStartedAt ? (
+          <View style={styles.buttonRow}>
+            <Pressable
+              onPress={() => {
+                setLiveTrackingEnabled((current) => !current);
+                if (liveTrackingEnabled) {
+                  kalmanFilter.current.reset();
+                  lastCapturedLiveRef.current = null;
+                }
+              }}
+              style={({ pressed }) => [
+                liveTrackingEnabled ? styles.secondaryButton : styles.primaryButton,
+                pressed ? (liveTrackingEnabled ? styles.secondaryButtonPressed : styles.primaryButtonPressed) : null
+              ]}
+            >
+              <Text style={liveTrackingEnabled ? styles.secondaryButtonLabel : styles.primaryButtonLabel}>
+                {liveTrackingEnabled ? "Switch to Manual" : "Live Tracking"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {calibrationStartedAt && liveTrackingEnabled && connectionStatus !== "connected" && (
+          <Text style={styles.warningText}>
+            {connectionStatus === "reconnecting"
+              ? "Reconnecting to location stream..."
+              : connectionStatus === "connecting"
+                ? "Connecting..."
+                : "Location stream disconnected. Use manual mode."}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.panel}>
         <Text style={styles.panelTitle}>Calibration Walkthrough</Text>
         {!floorDetail?.floor_plan ? (
           <Text style={styles.helperText}>
@@ -442,6 +554,14 @@ export function CommissioningScreen({
               Tap the floor preview as you move to capture your current position and advance the
               blue-dot calibration route.
             </Text>
+
+            {calibrationStartedAt ? (
+              <CalibrationStepIndicator
+                current={progress.completedCount + 1}
+                total={waypoints.length}
+              />
+            ) : null}
+
             <Pressable
               onLayout={handleMapLayout}
               onPress={handleMapPress}
@@ -494,7 +614,18 @@ export function CommissioningScreen({
                     ]}
                   />
                 ) : null}
-                {currentPosition ? (
+                {currentPosition && liveTrackingEnabled && liveLocation ? (
+                  <SelfLocationMarker
+                    x={liveLocation.x}
+                    y={liveLocation.y}
+                    confidenceLevel={liveLocation.confidenceLevel}
+                    confidenceScore={liveLocation.confidenceScore}
+                    precisionMeters={liveLocation.precisionMeters}
+                    mapWidth={mapSize.width}
+                    mapHeight={mapSize.height}
+                    floorPixelsPerMeter={floorDetail.scale?.pixels_per_meter ?? null}
+                  />
+                ) : currentPosition ? (
                   <View
                     style={[
                       styles.blueDot,
@@ -506,17 +637,17 @@ export function CommissioningScreen({
             </Pressable>
 
             <View style={styles.resultCard}>
-              <Text style={styles.resultTitle}>Progress</Text>
+              <Text style={styles.resultTitle}>Telemetry Status</Text>
               <Text style={styles.resultMeta}>
                 {progress.completedCount}/{progress.totalCount} checkpoints reached
               </Text>
               <Text style={styles.resultMeta}>
-                Samples captured {capturedPoints.length}
+                Signals captured {capturedPoints.length}
               </Text>
               <Text style={styles.resultMeta}>
                 {progress.nextWaypoint
-                  ? `Next checkpoint: ${progress.nextWaypoint.label}`
-                  : "All route checkpoints are complete."}
+                  ? `Targeting checkpoint: ${progress.nextWaypoint.label}`
+                  : "Calibration baseline saturated."}
               </Text>
             </View>
 
@@ -547,6 +678,8 @@ export function CommissioningScreen({
           </>
         )}
       </View>
+
+      <IndustrialCompletionOverlay visible={isFinishing} />
 
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Session Summary</Text>
