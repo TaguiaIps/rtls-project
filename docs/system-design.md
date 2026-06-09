@@ -14,55 +14,57 @@ This design covers the four primary tiers of the RTLS system: the backend micros
 
 ## **2. System Architecture Overview**
 
-The system will be implemented using a microservices architecture, containerized with Docker, and orchestrated by Kubernetes. This approach ensures scalability, resilience, and maintainability.
+The system is implemented using a microservices architecture, containerized with Docker, and orchestrated locally via Docker Compose (with Kubernetes/k3s for production). This approach ensures scalability, resilience, and maintainability.
 
 ### **2.1. Architectural Diagram (Container View)**
 
 ```mermaid
 graph TD
     subgraph User Interaction
-        User[User<br>Alex / Carlos]
-        Dashboard[Web Dashboard / Mobile Apps<br>React on Nginx]
+        User[User<br>Administrator / General User]
+        Web[Web Application<br>React + Vite]
+        Mobile[Mobile App<br>Expo / React Native]
     end
 
     subgraph Infrastructure
-        Tags[BLE Tags]
-        Gateways[BLE Gateways]
+        Tags[BLE Tags<br>Economic & Premium]
+        Gateways[BLE Gateways<br>Economic & Premium]
     end
 
     subgraph Backend Services
-        API[API & WebSocket Service<br>HTTPS/React SPA<br>FastAPI]
-        MQTTBroker[MQTT Broker<br>Mosquitto]
-        Ingest[Ingestion Service<br>FastAPI]
-        Stream[Internal Stream<br>Redis Streams or Kafka]
-        Positioning[Positioning Engine]
+        API[API & WebSocket Service<br>FastAPI]
+        MQTTBroker[MQTT Broker<br>Mosquitto / EMQX]
+        Worker[Worker Process<br>FastAPI]
+        Redis[Redis<br>Dedupe + Streams + Sessions]
         Timescale[TimescaleDB]
+        ObjectStore[Object Storage<br>Floor Plans + Exports]
     end
 
-    User -->|HTTPS/React SPA| Dashboard
-    Dashboard -->|REST API<br>HTTPS| API
+    User -->|HTTPS| Web
+    Mobile -->|HTTPS / Handoff| Web
+    Web -->|REST + WebSocket| API
     Tags --> Gateways
-
     Gateways -->|MQTT QoS=1| MQTTBroker
-    MQTTBroker --> Ingest
-    Ingest --> Stream
-    Stream --> Positioning
-    Positioning --> Timescale
-    Timescale --> API
-    API --> Dashboard
+    MQTTBroker --> Worker
+    Worker --> Redis
+    Worker --> Timescale
+    Worker -->|Derived Events| Timescale
+    API --> Timescale
+    API --> ObjectStore
+    API -->|WebSocket| Web
 ```
 
 ### 2.2 **Components**
 
-- **BLE Tags (beacons)**: emit advertisements at configured intervals.
-- **BLE Gateways**: publish JSON to MQTT topics (QoS=1). Minimal capabilities assumed.
-- **MQTT Broker**: TLS, per-topic ACLs.
-- **Ingestion Service (FastAPI)**: subscribes to topics, validates payloads, dedupes, tags with `broker_received_timestamp`, writes to TimescaleDB and streams data to Positioning Engine.
-- **Positioning Engine**: computes positions and stores `location_history`.
-- **API & WS Service (FastAPI)**: authentication, REST APIs, WebSocket streaming.
-- **Redis**: dedupe cache, pub/sub/streams, job coordination.
-- **TimescaleDB**: primary storage for readings and locations.
-- **Observability baseline**: the API now exposes a local `/metrics` endpoint and attaches `X-Request-ID` to every response so operators can trace health and audit requests without a separate telemetry stack.
+- **BLE Tags (beacons)**: emit advertisements at configured intervals. Economic tags use BLE RSSI (0.5–2 Hz); Premium tags use AoA/UWB (5–20 Hz).
+- **BLE Gateways**: publish JSON to MQTT topics (QoS=1). Economic gateways forward RSSI readings; Premium gateways forward AoA phase data or UWB ToF measurements.
+- **MQTT Broker**: TLS, per-topic ACLs. Topics: `rtls/data/{gateway_id}`, `rtls/premium/{gateway_id}`, `rtls/heartbeat/{gateway_id}`.
+- **Worker Process (FastAPI)**: subscribes to MQTT topics, validates payloads, deduplicates in Redis, persists raw readings to TimescaleDB, runs positioning engine (Economic and Premium), derives zone transitions, dwell records, round-trips, and SLA timers.
+- **API & WS Service (FastAPI)**: authentication (JWT), REST APIs, WebSocket streaming (`/ws/locations`), alert rules, analytics queries, export jobs, admin audit/health endpoints.
+- **Redis**: dedupe cache, internal streams, JWT session store, concurrent refresh serialization.
+- **TimescaleDB**: primary storage for raw readings, premium measurements, location history, derived events, alert instances, audit events, and analytics rollups.
+- **Object Storage**: floor-plan binaries and analytics export artifacts.
+- **Observability**: local `/metrics` endpoint, `X-Request-ID` tracing, administrator Health and Audit workspaces.
 
 ### 2.3 **Message sequence**
 
@@ -445,20 +447,35 @@ erDiagram
 
 ## **5. Frontend Design**
 
-- **Framework:** React.js (using Vite for the build tool).
-- **Current State Management:** React Router plus route-local and page-local state. A dedicated client store remains optional future work, not a delivered requirement.
-- **Delivered Shell Baseline:** protected login, administrator spatial setup workspace, shared operations shell, Operations Overview, and Live Map.
-- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`.
+- **Framework:** React.js with Vite.
+- **State Management:** React Router plus route-local and page-local state.
+- **Design System:** "Deep Void" theme engine with "Command" interaction standards (focus-responsive Cyan borders, semantic form feedback, real-time validation).
+- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`, `AlertsCenter`, `AnalyticsWorkspace`, `HealthWorkspace`, `AuditWorkspace`.
 
 ### **5.0. Delivered Web Baseline Scope**
 
-- The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
-- The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
-- Active-alert KPI cards and SLA summary cards on the Overview remain deferred to a later follow-on change so the delivered landing screen only depends on currently shipped live-location and health signals.
-- The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
-- Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
-- Analytics workspace delivery now includes trajectory replay, heatmap visualization, dwell reporting, round-trip reporting, and table SLA trends backed by bounded read-only queries.
-- Assignments, scheduled reports, and richer incident workflows remain follow-on backlog items.
+The web application is a protected single-page application with role-aware routing:
+
+**Shared Infrastructure:**
+- JWT authentication with refresh-token rotation
+- "Command Rail" navigation layout
+- Role-aware routing (Administrator → setup area, General User → operations area)
+- In-app notification system for active alerts
+
+**Administrator Workspaces:**
+- Spatial setup (sites, floors, floor plans, scale calibration, zones/POIs/tables)
+- Gateway placement and tier management
+- Asset tag registry with CSV bulk import
+- Alert rule configuration (Table SLA, unauthorized geofence)
+- Health workspace (gateway risk cards, telemetry totals, alert pressure)
+- Audit workspace (event history with actor, category, action, target, time filters)
+- Data lifecycle management (retention runs, rollup refresh)
+
+**General User Workspaces:**
+- Operations Overview (live operational state, floor-linked map preview, priority queue)
+- Live Map (floor-linked with glassmorphism HUD, search/filter, confidence visualization, selected-asset drawer)
+- Alerts Center (active and historical alert review, acknowledgement, resolution)
+- Analytics Workspace (trajectory replay, heatmaps, dwell reports, round-trip reports, SLA trends, CSV export)
 
 ### **5.1. General User Flow Diagram**
 
@@ -467,21 +484,48 @@ graph TD
     A[Start] --> B{User Authenticated?};
     B -- No --> C[Login Page];
     C -- Submits Credentials --> D[API Authenticates];
-    D -- Success --> E[Dashboard View];
+    D -- Success --> E[Operations Overview];
     B -- Yes --> E;
-    E -- Clicks 'View Map' --> F[Real-Time Map View];
-    F -- Selects an Asset --> G[Asset Details Panel Appears];
-    G -- Clicks 'View Trajectory' --> H[Analytics Panel];
-    H -- Selects Time Range & Runs Report --> I[Map Displays Asset Trajectory];
-    F -- Clicks 'Analytics' --> H;
+    E -- Clicks Live Map --> F[Live Map View];
+    F -- Selects an Asset --> G[Asset Details Drawer];
+    G -- Clicks View Trajectory --> H[Analytics Workspace];
+    H -- Selects Time Range --> I[Trajectory / Heatmap / Dwell Reports];
+    F -- Clicks Alerts --> J[Alerts Center];
+    J -- Selects Alert --> K[Alert Detail + Triage Actions];
+    E -- Clicks Analytics --> H;
 ```
 
 ---
 
 ## **6. Mobile Application Design**
 
-- **Framework:** A cross-platform framework like **Flutter** or **React Native**.
-- **Core Logic:** On-device pathfinding using the **A* (A-star) algorithm** with a pre-downloaded map graph.
+- **Framework:** Expo (React Native).
+- **Authentication:** Accepts a current access token plus configurable API and web base URLs (dedicated mobile auth flow deferred).
+
+### **6.1. Asset Finder (Delivered)**
+
+Single-screen workflow for fast on-floor asset lookup:
+
+- Search by name or tag identifier using `GET /api/locations/search`
+- Recent searches persisted locally via AsyncStorage
+- Location sheet with confidence/precision metadata
+- "Open in Live Map" handoff to web `/operations/live-map`
+
+### **6.2. Commissioning & Calibration (Delivered)**
+
+Administrator-focused device commissioning workflow:
+
+- Native camera-based QR scanning, external scanner, or manual identifier entry
+- Site and floor selection, zone/room assignment
+- Floor-linked preview with gateway markers and route checkpoints
+- Tap-driven checkpoint capture (blue-dot calibration baseline)
+- Session persistence with target identity, floor/zone context, elapsed time, sample count, and checkpoint progress
+
+### **6.3. Deferred Mobile Features**
+
+- Dedicated mobile sign-in flow
+- Live device self-positioning during calibration (blue dot follows real position)
+- Full mobile navigation stack with deep linking
 
 ---
 

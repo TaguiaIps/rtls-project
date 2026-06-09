@@ -1,7 +1,7 @@
 # mobile-asset-finder Specification
 
 ## Purpose
-TBD - created by archiving change implement-mobile-asset-finder. Update Purpose after archive.
+Enable mobile operators to search for tracked assets by name or identifier, view recent searches, and access location context in a mobile-optimized interface.
 
 ## Requirements
 ### Requirement: Authorized users can search for assets in the mobile app

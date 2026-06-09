@@ -1,7 +1,7 @@
 # analytics-workspace-and-reports Specification
 
 ## Purpose
-TBD - created by archiving change implement-analytics-workspace-and-reports. Update Purpose after archive.
+Provide trajectory replay, floor heatmap generation, and operational reporting capabilities within the protected monitoring shell for authorized analysts and operators.
 ## Requirements
 ### Requirement: Authorized users can open the Analytics workspace
 The RTLS Analytics Platform SHALL provide an Analytics workspace inside the protected monitoring shell for authorized General Users and Administrators.

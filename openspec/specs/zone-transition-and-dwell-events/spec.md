@@ -1,7 +1,7 @@
 # zone-transition-and-dwell-events Specification
 
 ## Purpose
-TBD - created by archiving change implement-derived-events-dwell-roundtrip-and-sla-primitives. Update Purpose after archive.
+Derive canonical zone-entry and zone-exit events from live location updates and produce durable dwell records for operational analytics and SLA evaluation.
 ## Requirements
 ### Requirement: Accepted live-location updates produce canonical zone transition events
 The RTLS Analytics Platform SHALL derive canonical zone-entry and zone-exit events from accepted live-location updates when the resolved zone meaning for a tracked asset changes.

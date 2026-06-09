@@ -1,7 +1,7 @@
 # live-location-query-and-streaming Specification
 
 ## Purpose
-TBD - created by archiving change implement-economic-tier-positioning-and-live-location. Update Purpose after archive.
+Expose real-time asset locations, search, trajectory history, and WebSocket streaming to authorized clients across all positioning tiers.
 ## Requirements
 ### Requirement: Authorized clients can query latest live locations
 The RTLS Analytics Platform SHALL provide authorized query access to the latest known asset locations produced by the supported Economic-tier and Premium-tier positioning flows.

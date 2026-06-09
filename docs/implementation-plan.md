@@ -1,8 +1,21 @@
 # Implementation Plan
 
-This document captures the recommended phased implementation plan for the RTLS Analytics Platform and the proposed segmentation into future OpenSpec changes.
+This document captures the recommended phased implementation plan for the RTLS Analytics Platform and the proposed segmentation into OpenSpec changes.
 
-It is intended as a planning artifact only. It does not create any OpenSpec changes by itself.
+It is intended as a planning artifact. OpenSpec specifications under `openspec/specs/` define the detailed acceptance criteria for each implemented capability.
+
+## Implementation Status
+
+All specification changes have been implemented and archived under `openspec/changes/archive/`. The 25 active specs under `openspec/specs/` represent the current delivered baseline.
+
+| Wave | Changes | Status |
+| :--- | :--- | :--- |
+| Wave 1 | Bootstrap workspace, identity/RBAC/audit, sites/floors/zones, gateway & asset registry | Implemented |
+| Wave 2 | Ingestion pipeline, economic positioning & live location, web shell & live map | Implemented |
+| Wave 3 | Derived events, alert rules & alerts center, analytics workspace | Implemented |
+| Wave 4 | Premium tier AoA/UWB, mobile asset finder, mobile commissioning, health & audit UI, exports & rollups | Implemented |
+| Wave 5 | Production MQTT TLS/mTLS, calibration engine & radiomap, native QR scanning, maintenance alerts | Implemented |
+| Wave 6 | Mobile self-location blue dot, expand operations overview with alert/SLA KPIs | Implemented |
 
 ## Planning Rules
 
@@ -275,6 +288,16 @@ Extend the delivered Operations Overview with active-alert and SLA summary KPI c
   - `implement-maintenance-alert-generation`
 - Maps to:
   - `US-GEN-05`
+
+## Change Archive Checklist
+
+Every change archive MUST verify the following before merging into the baseline:
+
+- [ ] Implementation status updated in this document (`docs/implementation-plan.md`).
+- [ ] Specification `## Purpose` statements finalized (no "TBD" placeholders remain).
+- [ ] Terminology aligns with `openspec/GLOSSARY.md`.
+- [ ] Delta specs successfully merged into main specs.
+- [ ] Requirement-to-change traceability verified.
 
 ## Why This Split Avoids Rework
 

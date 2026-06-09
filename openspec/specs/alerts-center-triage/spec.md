@@ -1,7 +1,7 @@
 # alerts-center-triage Specification
 
 ## Purpose
-TBD - created by archiving change implement-alert-rules-and-alerts-center. Update Purpose after archive.
+Enable authorized users to review, filter, inspect, and triage active and historical operational alerts with detailed context, severity management, and action history.
 ## Requirements
 ### Requirement: Authorized users can review active and historical operational alerts
 The RTLS Analytics Platform SHALL provide an Alerts Center where authorized users can review current and historical operational and maintenance alerts.

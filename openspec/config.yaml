@@ -22,6 +22,8 @@ context: |
   - docs/requirements-document.md: functional and non-functional requirements
   - docs/system-design.md: target architecture and backend/frontend design direction
   - docs/ux-design.md: personas, stories, IA, wireframes, visual system, and tokens
+  - docs/implementation-plan.md: backlog and phase planning
+  - docs/technical-specification-document.md: technical specifications
   - openspec/GLOSSARY.md: preferred project terminology for OpenSpec artifacts
   - VERSIONING.md: Semantic Versioning policy
   - CHANGE.LOG: changelog source
@@ -45,6 +47,16 @@ context: |
   - The project is pre-1.0 and should not invent release tags before a code-backed baseline exists
   - Conventional Commits are the expected commit style
 
+  Backlog and change management:
+  - docs/implementation-plan.md is the default source for selecting the next backlog item when the user asks for the next proposal
+  - Keep one active OpenSpec implementation change at a time before broader platform maturity
+  - Keep changes tightly scoped to one bounded concern
+  - Preserve the split between presentation, business logic, persistence, and shared contracts
+  - When authoritative docs disagree, proposals should call out the mismatch explicitly
+
+  Archive rule:
+  - Archive a change only after implementation tasks are complete, related specs are ready to sync, and validation passes
+
 rules:
   proposal:
     - Anchor every proposal in the RTLS Analytics Platform domain and state the affected user roles.
@@ -64,6 +76,8 @@ rules:
     - Prefer additive requirements unless a breaking change is intentional and documented.
   tasks:
     - Break work into small ordered tasks with concrete outputs.
+    - Keep proposals concise and explicit about scope and non-goals.
+    - Use testable requirements in spec deltas.
     - Include documentation updates when behavior, terminology, tokens, or architecture change.
     - Include verification tasks for prototypes, docs consistency, or tests as appropriate.
     - Avoid implementation tasks that assume files or apps exist when they are not present in the repository.

@@ -1,7 +1,7 @@
 # alert-rules-and-notification-delivery Specification
 
 ## Purpose
-TBD - created by archiving change implement-alert-rules-and-alerts-center. Update Purpose after archive.
+Define and manage configurable alert rules that generate operational notifications for table SLA breaches, unauthorized geofence violations, and gateway health degradation.
 ## Requirements
 ### Requirement: Authorized users can manage delivered operational alert rules
 The RTLS Analytics Platform SHALL allow authorized users to create, update, enable, disable, and review alert rules for the delivered operational alert types.

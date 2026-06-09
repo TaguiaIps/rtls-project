@@ -2,9 +2,7 @@
 
 ## Purpose
 Define the canonical implementation workspace structure, shared package boundaries, and baseline developer workflow for the RTLS Analytics Platform codebase.
-
 ## Requirements
-
 ### Requirement: Repository workspace structure
 The RTLS Analytics Platform repository SHALL define a canonical implementation workspace using an `apps/` and `packages/` layout that supports backend, web, mobile, and shared package development.
 
@@ -40,3 +38,11 @@ The implementation workspace SHALL define a pull-request quality baseline that r
 #### Scenario: A pull request is opened
 - **WHEN** code changes affect the implementation workspace
 - **THEN** the CI system SHALL run the baseline lint, test, and build checks for the affected parts of the workspace
+
+### Requirement: Governance consistency checklist
+The implementation workspace SHALL provide a canonical checklist for verifying documentation alignment (delivered status, pending scope, and specification intent) during the change archive process.
+
+#### Scenario: A change is ready for archive
+- **WHEN** implementation is complete and a change is prepared for archiving
+- **THEN** the Administrator (Alex) SHALL verify the change against the governance consistency checklist to ensure implementation plan and specification purpose alignment
+

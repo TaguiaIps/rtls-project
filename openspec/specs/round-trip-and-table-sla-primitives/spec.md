@@ -1,7 +1,7 @@
 # round-trip-and-table-sla-primitives Specification
 
 ## Purpose
-TBD - created by archiving change implement-derived-events-dwell-roundtrip-and-sla-primitives. Update Purpose after archive.
+Provide reusable round-trip measurement primitives and SLA timer management for table areas, evaluating origin-destination-origin cycles and maintaining active timer state.
 ## Requirements
 ### Requirement: Round-trip measurements are derived from canonical zone events
 The RTLS Analytics Platform SHALL provide reusable round-trip measurement primitives that evaluate explicit origin-destination-origin cycles from canonical zone-transition history.
