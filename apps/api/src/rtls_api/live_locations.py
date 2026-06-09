@@ -128,6 +128,7 @@ async def stream_live_locations(websocket: WebSocket) -> None:
     floor_id = websocket.query_params.get("floor_id")
     search = websocket.query_params.get("search")
     asset_category = websocket.query_params.get("asset_category")
+    asset_tag_id = websocket.query_params.get("asset_tag_id")
     last_seen_update = datetime.now(timezone.utc)
     settings: Settings = websocket.app.state.settings
     session_factory: sessionmaker[Session] = websocket.app.state.session_factory
@@ -141,6 +142,7 @@ async def stream_live_locations(websocket: WebSocket) -> None:
                     site_id=site_id,
                     floor_id=floor_id,
                     asset_category=asset_category,
+                    asset_tag_id=asset_tag_id,
                     search=search,
                     updated_after=last_seen_update,
                     order_by_updated_at=True,

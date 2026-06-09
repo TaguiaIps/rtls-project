@@ -363,11 +363,25 @@ class GatewayHealthResponse(BaseModel):
     battery_level_percent: float | None
 
 
+class AlertKpisResponse(BaseModel):
+    total_active: int = Field(ge=0)
+    critical: int = Field(ge=0)
+    warning: int = Field(ge=0)
+
+
+class SlaKpisResponse(BaseModel):
+    breach_count: int = Field(ge=0)
+    success_rate_pct: float = Field(ge=0.0, le=100.0)
+    trend_pct: float | None = Field(default=None, description="Percentage point change vs previous window; null when no prior data")
+
+
 class OperationsOverviewKpisResponse(BaseModel):
     active_assets: int = Field(ge=0)
     low_confidence_assets: int = Field(ge=0)
     restricted_zone_assets: int = Field(ge=0)
     stale_gateways: int = Field(ge=0)
+    alerts: AlertKpisResponse = Field(default_factory=AlertKpisResponse)
+    sla: SlaKpisResponse = Field(default_factory=SlaKpisResponse)
 
 
 class OperationsPriorityItemResponse(BaseModel):
@@ -830,3 +844,52 @@ class AlertDetailResponse(AlertListItemResponse):
 
 class AlertActionRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=500)
+
+
+# --- Calibration ---
+
+
+class CalibrationSample(BaseModel):
+    checkpoint_x: float
+    checkpoint_y: float
+    gateway_id: str
+    rssi: int
+    tx_power: int | None = None
+
+
+class CalibrationSessionRequest(BaseModel):
+    floor_id: str
+    samples: list[CalibrationSample] = Field(min_length=1)
+
+
+class CalibrationSessionResponse(BaseModel):
+    id: str
+    floor_id: str
+    status: str
+    checkpoint_count: int
+    sample_count: int
+    error_message: str | None
+    artifact_id: str | None
+    created_at: datetime
+    processing_started_at: datetime | None
+    processing_completed_at: datetime | None
+
+
+class CalibrationArtifactResponse(BaseModel):
+    id: str
+    floor_id: str
+    version: int
+    status: str
+    coverage_score: float | None
+    grid_resolution_m: float | None
+    activated_at: datetime | None
+    created_at: datetime
+
+
+class CalibrationHealthResponse(BaseModel):
+    floor_id: str
+    floor_name: str
+    active_artifact: CalibrationArtifactResponse | None
+    total_sessions: int
+    total_artifacts: int
+    has_active_calibration: bool

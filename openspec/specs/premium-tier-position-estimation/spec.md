@@ -1,7 +1,7 @@
 # premium-tier-position-estimation Specification
 
 ## Purpose
-TBD - created by archiving change add-premium-tier-aoa-uwb-support. Update Purpose after archive.
+Derive high-precision asset locations from AoA or UWB measurements while maintaining calibration state and providing modality-aware precision metadata.
 ## Requirements
 ### Requirement: Premium-tier telemetry produces durable asset locations
 The RTLS Analytics Platform SHALL derive durable asset location outputs from accepted Premium-tier AoA or UWB measurements for registered tracked assets on mapped floors.
@@ -15,14 +15,14 @@ The RTLS Analytics Platform SHALL derive durable asset location outputs from acc
 - **THEN** the system SHALL NOT publish a misleading new Premium-tier location result for that asset
 
 ### Requirement: Premium-tier positioning depends on valid Premium gateway geometry and calibration state
-The RTLS Analytics Platform SHALL use Premium gateway geometry and current calibration state when deriving Premium-tier location outputs.
+The RTLS Analytics Platform SHALL use Premium gateway geometry and current calibration artifacts (radiomaps and offsets) when deriving Premium-tier location outputs.
 
-#### Scenario: Premium gateway geometry and calibration are valid
-- **WHEN** the estimator receives accepted Premium measurements from gateways whose required placement geometry and calibration state are valid for the current floor context
-- **THEN** the system SHALL use that Premium placement context during location estimation
+#### Scenario: Premium gateway geometry and calibration artifacts are valid
+- **WHEN** the estimator receives accepted Premium measurements from gateways whose required placement geometry and active calibration artifacts (radiomap and offsets) are valid for the current floor context
+- **THEN** the system SHALL use that Premium placement and calibration context during location estimation
 
-#### Scenario: Premium gateway calibration is stale or invalid
-- **WHEN** Premium telemetry arrives for a floor whose required Premium calibration state is stale, missing, or invalid for the relevant gateways
+#### Scenario: Premium gateway calibration artifact is stale or missing
+- **WHEN** Premium telemetry arrives for a floor whose required active radiomap or gateway offset artifact is stale, missing, or invalid
 - **THEN** the system SHALL reject or degrade Premium estimation according to supported confidence rules instead of implying unchanged high-precision positioning
 
 ### Requirement: Premium-tier outputs include modality-aware source and precision semantics
@@ -46,3 +46,4 @@ The RTLS Analytics Platform SHALL let a fresh, higher-quality Premium result sup
 #### Scenario: Premium result is older or less trustworthy than the current canonical result
 - **WHEN** a Premium-tier candidate is older than or lower quality than the canonical current result for the same tracked asset
 - **THEN** the system SHALL NOT overwrite the canonical latest-known state with the weaker Premium-tier candidate
+

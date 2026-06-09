@@ -2,15 +2,18 @@
 
 This document describes the implemented Administrator setup flow for the RTLS Analytics Platform.
 
+OpenSpec references: `site-and-floor-management`, `floor-plan-management`, `zone-and-poi-editor`, `gateway-placement-and-tier-profiles`, `asset-tag-registry`, `calibration-engine`, `radiomap-artifact-registry`.
+
 It covers the protected Admin workspace for:
 
 - site and floor hierarchy setup
 - raster floor-plan upload
 - scale calibration
 - polygonal zone, table, restricted-zone, and point-of-interest editing
-- gateway placement with Economic or Premium tier assignment
-- asset tag registry management
+- gateway placement with Economic or Premium tier assignment, including Premium modality and mounting metadata
+- asset tag registry management with update-rate and battery policy metadata
 - CSV validation and confirmation for bulk asset-tag onboarding
+- calibration session submission, radiomap generation, and artifact lifecycle management
 
 ## 1. Scope
 
@@ -18,9 +21,9 @@ This implementation supports:
 
 - authenticated Administrator access for create, update, upload, import, and delete actions
 - authorized-user retrieval of sites, floors, floor-plan metadata, scale, zones, and gateway placements through the shared floor detail view
-- one raster floor-plan image per floor
-- `PNG` and `JPG` floor-plan uploads
-- gateway records with stable identifiers, labels, floor-linked placement coordinates, and Economic or Premium tier assignment
+- one raster floor-plan image per floor (`PNG` and `JPG`)
+- gateway records with stable identifiers, labels, floor-linked placement coordinates, Economic or Premium tier assignment, and Premium-specific modality and mounting metadata
+- Premium gateway calibration state tracking against the current floor and placement geometry
 - asset-tag records with stable identifiers, display labels, category, update-rate profile, and battery profile metadata
 - CSV import with required columns, duplicate detection, row-level validation, and explicit confirmation before records are created
 
@@ -32,8 +35,7 @@ This implementation intentionally does not support yet:
 - snapping grids or CAD-like geometry tools
 - polygon holes
 - telemetry ingestion, heartbeat processing, or live gateway health
-- QR commissioning flows
-- calibration sessions beyond the two-point scale step
+- real-time auto-calibration during positioning
 - live asset rendering, search, or historical replay
 
 ## 2. Workflow Sequence
@@ -51,6 +53,43 @@ Administrators should use the setup workspace in this order:
 9. Assign each gateway to the Economic or Premium tier profile.
 10. Create asset tags manually or validate a CSV import.
 11. Confirm the CSV import only after every row is valid.
+12. (Optional) Perform a calibration walk via the mobile app, submitting the session for radiomap generation.
+13. Review the generated artifact's coverage score, then activate it for Premium-tier positioning.
+
+## 3. Calibration Health Monitoring
+
+After gateways are placed and a floor is calibrated, Administrators can monitor calibration status per floor:
+
+- **GET `/api/admin/floors/{floor_id}/calibration/health`** — returns the active artifact status, coverage score, and session counts.
+- **GET `/api/admin/floors/{floor_id}/calibration/artifacts`** — lists all radiomap versions for a floor with their status.
+- **PATCH `/api/admin/calibration/artifacts/{id}/activate`** — atomically switches the active radiomap (the previous active becomes `stale`).
+
+Calibration artifacts are automatically invalidated (set to `invalid`) when:
+- A new floor-plan image is uploaded for the floor.
+- The floor's scale calibration is updated.
+
+After invalidation, a new calibration walk is required to restore Premium-tier positioning accuracy.
+
+## 3. Live Blue-Dot Calibration
+
+The mobile commissioning app supports two calibration capture modes:
+
+### Live Tracking Mode
+1. Select the **asset tag** you are carrying from the Self-Location panel.
+2. Start the calibration session on the target floor.
+3. Tap **"Live Tracking"** to enable real-time blue-dot positioning.
+4. Walk the calibration route — the app automatically captures checkpoint positions as you move, filtering by a minimum distance threshold to avoid duplicate captures.
+5. The blue dot renders with a **precision radius** that reflects the current positioning accuracy, and the dot color indicates confidence level (blue = high, purple = medium, red = low).
+6. A **Kalman filter** smooths jitter from the live stream for stable rendering.
+
+### Manual Fallback Mode
+1. If live tracking is unavailable, degraded, or disabled, tap the floor plan manually to mark your current position.
+2. Each tap captures a checkpoint and advances the calibration route, identical to the original workflow.
+
+### Connection Health
+- The mobile app shows a "Reconnecting" indicator when the WebSocket stream drops.
+- Automatic reconnection with exponential backoff (up to 10 attempts) preserves the session without requiring a full reset.
+- If the stream cannot be restored, the app prompts to switch to manual mode.
 
 This matches the intended Wave 1 dependency order from:
 
@@ -60,7 +99,7 @@ This matches the intended Wave 1 dependency order from:
 
 The gateway and asset registry workflow extends the earlier spatial setup baseline instead of replacing it. Floor hierarchy, floor-plan upload, scale calibration, and zone editing still remain the prerequisite foundation for gateway placement.
 
-## 3. Floor-Plan And Scale Behavior
+## 4. Floor-Plan And Scale Behavior
 
 Floor-plan uploads follow these rules:
 
@@ -117,17 +156,21 @@ Each gateway stores:
 
 - `gateway_identifier`
 - `display_name`
-- `hardware_tier`
-- `placement`
+- `hardware_tier` (`Economic` or `Premium`)
+- `placement` (normalized floor-relative coordinates)
 - `notes`
+- Premium-specific metadata: `modality`, `mounting_label`, `mounting_angle_degrees`, `calibration_status`
 
 Implemented gateway behavior:
 
 - gateway placement requires an existing floor plan
 - placements reuse the same normalized floor-relative coordinate model as the spatial editor
 - Administrators can create, update, list, and delete gateways
-- Economic and Premium are the only supported tier profiles in this change
+- Economic and Premium are the only supported tier profiles
 - tier assignment is persisted as explicit configuration metadata for later ingestion and positioning changes
+- Premium gateways require modality and mounting metadata; submissions without required fields are rejected
+- Premium gateway calibration state is tracked against the current floor context and placement geometry
+- when floor geometry or gateway placement changes after Premium calibration, the affected calibration state is marked stale
 
 ## 6. Asset Registry And CSV Import
 
@@ -198,8 +241,7 @@ This keeps configuration history durable before later audit-log, ingestion, and 
 
 The following items remain later changes and are intentionally out of scope for this workflow:
 
-- QR-based mobile commissioning
-- automated calibration wizard and radio-map collection
+- automated calibration engine and radiomap generation
 - telemetry ingestion and heartbeat processing
 - live gateway health monitoring and maintenance alerts
 - live asset rendering, asset search, and historical movement replay

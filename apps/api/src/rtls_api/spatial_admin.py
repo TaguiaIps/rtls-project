@@ -21,6 +21,8 @@ from rtls_api.models import (
     AssetTag,
     AssetTagImportSession,
     AssetUpdateRateProfile,
+    CalibrationArtifact,
+    CalibrationArtifactStatus,
     Floor,
     FloorPlanAsset,
     Gateway,
@@ -209,6 +211,23 @@ def _validate_gateway_update_payload(gateway: Gateway, payload: GatewayUpdateReq
 def _mark_floor_premium_calibration_stale(floor: Floor) -> None:
     for gateway in floor.gateways:
         _mark_gateway_premium_calibration_stale(gateway)
+
+
+def _invalidate_floor_calibration_artifacts(floor: Floor) -> None:
+    from sqlalchemy import select
+
+    db = Session.object_session(floor)
+    if db is None:
+        return
+    active = db.scalars(
+        select(CalibrationArtifact).where(
+            CalibrationArtifact.floor_id == floor.id,
+            CalibrationArtifact.status == CalibrationArtifactStatus.ACTIVE.value,
+        )
+    ).first()
+    if active is not None:
+        active.status = CalibrationArtifactStatus.INVALID.value
+        active.activated_at = None
 
 
 def serialize_site(site: Site) -> SiteResponse:
@@ -527,6 +546,7 @@ async def upload_floor_plan(
         asset.height_px = image.height
         _clear_floor_scale(floor)
         _mark_floor_premium_calibration_stale(floor)
+        _invalidate_floor_calibration_artifacts(floor)
         action_type = "floorplan.replaced"
     else:
         asset = FloorPlanAsset(
@@ -624,6 +644,7 @@ def configure_floor_scale(
     floor.scale_distance_m = payload.real_world_distance_m
     floor.scale_pixels_per_meter = pixel_distance / payload.real_world_distance_m
     floor.scale_configured_at = utc_now()
+    _invalidate_floor_calibration_artifacts(floor)
 
     write_audit_event(
         db,
@@ -744,10 +765,7 @@ def update_gateway(
             _clear_gateway_premium_profile(gateway)
             changes["premium_profile"] = None
     if payload.placement is not None:
-        if (
-            payload.placement.x != gateway.placement_x
-            or payload.placement.y != gateway.placement_y
-        ):
+        if payload.placement.x != gateway.placement_x or payload.placement.y != gateway.placement_y:
             gateway.placement_x = payload.placement.x
             gateway.placement_y = payload.placement.y
             changes["placement"] = {"x": gateway.placement_x, "y": gateway.placement_y}
@@ -1136,17 +1154,14 @@ async def validate_asset_tag_import(
             detail=f"CSV import is missing required columns: {', '.join(missing_headers)}",
         )
 
-    existing_identifiers = set(
-        db.scalars(select(AssetTag.tag_identifier)).all()
-    )
+    existing_identifiers = set(db.scalars(select(AssetTag.tag_identifier)).all())
     seen_identifiers: set[str] = set()
     valid_rows: list[AssetTagImportPreviewRecord] = []
     invalid_rows: list[AssetTagImportValidationRow] = []
 
     for row_number, row in enumerate(reader, start=2):
         values = {
-            header: _normalize_asset_import_cell(row.get(header))
-            for header in ASSET_IMPORT_HEADERS
+            header: _normalize_asset_import_cell(row.get(header)) for header in ASSET_IMPORT_HEADERS
         }
         errors: list[str] = []
 
@@ -1159,15 +1174,11 @@ async def validate_asset_tag_import(
 
         update_rate_profile = _parse_asset_update_rate_profile(values["update_rate_profile"])
         if update_rate_profile is None:
-            errors.append(
-                "update_rate_profile must be one of: slow, balanced, realtime"
-            )
+            errors.append("update_rate_profile must be one of: slow, balanced, realtime")
 
         battery_profile = _parse_asset_battery_profile(values["battery_profile"])
         if battery_profile is None:
-            errors.append(
-                "battery_profile must be one of: long_life, standard, performance"
-            )
+            errors.append("battery_profile must be one of: long_life, standard, performance")
 
         if values["tag_identifier"]:
             if values["tag_identifier"] in seen_identifiers:

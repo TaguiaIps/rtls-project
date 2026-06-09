@@ -117,6 +117,21 @@ class AlertRuleType(str, Enum):
     GATEWAY_LOW_BATTERY = "gateway_low_battery"
 
 
+class CalibrationSessionStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class CalibrationArtifactStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    ACTIVE = "active"
+    STALE = "stale"
+    INVALID = "invalid"
+
+
 class AlertSeverity(str, Enum):
     CRITICAL = "critical"
     WARNING = "warning"
@@ -864,3 +879,69 @@ class AnalyticsTableSlaHourlyRollup(Base):
 
     floor: Mapped[Floor] = relationship()
     table_area: Mapped[SpatialArea] = relationship()
+
+
+class CalibrationSession(Base):
+    __tablename__ = "calibration_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    submitted_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default=CalibrationSessionStatus.PENDING.value,
+        index=True,
+    )
+    checkpoint_count: Mapped[int] = mapped_column(Integer, default=0)
+    sample_count: Mapped[int] = mapped_column(Integer, default=0)
+    raw_samples: Mapped[dict[str, Any]] = mapped_column(JSON)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    artifact_id: Mapped[str | None] = mapped_column(
+        ForeignKey("calibration_artifacts.id"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    processing_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processing_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    floor: Mapped[Floor] = relationship()
+    submitted_by: Mapped[User | None] = relationship()
+    artifact: Mapped[CalibrationArtifact | None] = relationship(back_populates="session")
+
+
+class CalibrationArtifact(Base):
+    __tablename__ = "calibration_artifacts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default=CalibrationArtifactStatus.PENDING.value,
+        index=True,
+    )
+    radiomap_storage_key: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True
+    )
+    gateway_offsets: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    coverage_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    grid_resolution_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    activated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    floor: Mapped[Floor] = relationship()
+    activated_by: Mapped[User | None] = relationship()
+    session: Mapped[CalibrationSession | None] = relationship(back_populates="artifact")

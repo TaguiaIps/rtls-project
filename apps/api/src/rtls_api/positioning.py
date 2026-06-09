@@ -14,6 +14,8 @@ from rtls_api.models import (
     AssetCurrentLocation,
     AssetLocationHistory,
     AssetLocationType,
+    CalibrationArtifact,
+    CalibrationArtifactStatus,
     Floor,
     GatewayHardwareTier,
     LocationConfidenceLevel,
@@ -56,6 +58,20 @@ class PositionCandidate:
 class PositioningService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._radiomap_cache: dict[str, tuple[float, dict | None]] = {}
+        self._cache_timestamps: dict[str, float] = {}
+
+    def _get_active_artifact(self, *, db: Session, floor_id: str) -> CalibrationArtifact | None:
+        return db.scalar(
+            select(CalibrationArtifact).where(
+                CalibrationArtifact.floor_id == floor_id,
+                CalibrationArtifact.status == CalibrationArtifactStatus.ACTIVE.value,
+            )
+        )
+
+    def _has_valid_calibration(self, *, db: Session, floor_id: str) -> bool:
+        artifact = self._get_active_artifact(db=db, floor_id=floor_id)
+        return artifact is not None and artifact.status == CalibrationArtifactStatus.ACTIVE.value
 
     def update_positions_for_tags(
         self,
@@ -161,12 +177,20 @@ class PositioningService:
         if total_weight <= 0:
             return None
 
-        coordinate_x = sum(
-            reading.gateway.placement_x * _signal_weight(reading.rssi) for reading in floor_readings
-        ) / total_weight
-        coordinate_y = sum(
-            reading.gateway.placement_y * _signal_weight(reading.rssi) for reading in floor_readings
-        ) / total_weight
+        coordinate_x = (
+            sum(
+                reading.gateway.placement_x * _signal_weight(reading.rssi)
+                for reading in floor_readings
+            )
+            / total_weight
+        )
+        coordinate_y = (
+            sum(
+                reading.gateway.placement_y * _signal_weight(reading.rssi)
+                for reading in floor_readings
+            )
+            / total_weight
+        )
 
         confidence_level = _derive_economic_confidence_level(floor_readings)
         confidence_score = _derive_economic_confidence_score(floor_readings)
@@ -253,6 +277,9 @@ class PositioningService:
             if measurement.gateway.floor_id == floor_id
         ]
         if not floor_measurements:
+            return None
+
+        if not self._has_valid_calibration(db=db, floor_id=floor_id):
             return None
 
         candidates: list[PositionCandidate] = []
@@ -732,7 +759,7 @@ def _normalized_distance_to_meters(*, floor: Floor, distance: float) -> float:
 
 
 def _solve_weighted_linear_system(
-    rows: list[tuple[float, float, float, float]]
+    rows: list[tuple[float, float, float, float]],
 ) -> tuple[float, float] | None:
     if not rows:
         return None

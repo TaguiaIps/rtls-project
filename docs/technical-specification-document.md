@@ -41,21 +41,18 @@ The system follows an agnostic, event-driven pattern connecting hardware infrast
 
 The backend is structured around microservices:
 
-1. **MQTT Broker (e.g., Mosquitto, EMQX):** Handles edge telemetry ingestion.
-2. **Ingestion & Normalization:** A shared worker subscribes to `rtls/data/{gateway_id}` and `rtls/heartbeat/{gateway_id}`, validates registered gateway identity, deduplicates retries in Redis, stamps canonical broker time, and persists raw telemetry plus latest heartbeat state.
-3. **Location Engine:**
-   - *Economic (current baseline):* Reuses recent accepted raw readings and registered gateway placements on a mapped floor to derive a confidence-aware location result. When confidence is too low for a trustworthy point estimate, the backend falls back to a mapped zone result.
-   - *Economic (later extension):* Guided mobile calibration may add richer radiomap/fingerprinting reference data without changing the downstream location contracts introduced now.
-   - *Premium:* Processes AoA phase data or UWB ToF for precise (X,Y) coordinates.
-   - Constrains outputs using Geofence/Floorplan mapping to prevent "wall crossing".
-4. **Events / Rules Engine:** Evaluates positioning against business logic (Table SLAs, Zone Entry/Exit, Dwell Time) and generates Alerts.
-5. **API Service (FastAPI / Django REST):** Provides REST endpoints for CRUD and serves Analytics. Uses **WebSockets** for real-time map pushes.
-
-Current delivered web-facing contract notes:
-
-- `/api/operations/overview` provides the current Operations Overview snapshot for a selected site/floor.
-- `/api/locations/live`, `/api/locations/search`, `/api/locations/assets/{asset_tag_id}/history`, and `/ws/locations` provide the Live Map baseline.
-- The current overview surface is intentionally limited to live-location and gateway-health signals. Full alert-center workflows, SLA trend cards, and analytics pages remain later work.
+1. **MQTT Broker (Mosquitto, EMQX):** Handles edge telemetry ingestion on topics `rtls/data/{gateway_id}`, `rtls/premium/{gateway_id}`, and `rtls/heartbeat/{gateway_id}`.
+2. **Ingestion & Normalization (Worker):** Subscribes to MQTT topics, validates registered gateway identity, deduplicates retries in Redis (10s TTL on `(gateway_id, message_id)`), stamps canonical `broker_received_at` time, persists raw telemetry (Economic) and normalized AoA/UWB measurements (Premium), and updates latest heartbeat state.
+3. **Location Engine (Worker):**
+   - *Economic:* Reuses recent accepted raw readings and registered gateway placements on a mapped floor to derive a confidence-aware location result (`high`, `medium`, `low`). Low-confidence updates fall back to a mapped zone result.
+   - *Premium:* Processes AoA phase data or UWB ToF measurements with valid gateway geometry and calibration state, producing sub-meter precision with modality-aware metadata. Requires an active calibration artifact (radiomap + gateway offsets) for the floor.
+   - Canonical state prefers higher-quality results when both tiers are available.
+4. **Calibration Engine (Worker):** Consumes submitted mobile calibration walk sessions and generates radiomap artifacts (signal-strength grids per gateway) and per-gateway offset metadata (signal bias, estimated distance). Artifacts are versioned, stored in object storage, and linked to floors with an `active`/`stale`/`invalid` lifecycle. Automatic invalidation triggers when floor plans or scale configurations change.
+4. **Derived Events Engine (Worker):** Evaluates positioning updates against operational areas to generate zone-entry/exit events, dwell records, round-trip measurements, and table SLA timer snapshots. Events persist durable history for downstream alert and analytics workflows.
+5. **Alert Pipeline:** Evaluates derived events against configurable alert rules (Table SLA, unauthorized geofence, maintenance) to generate durable alert instances with status tracking and notification delivery (in-app + optional email).
+6. **API Service (FastAPI):** Provides REST endpoints for CRUD, analytics queries, alert management, audit review, and export jobs. Uses **WebSockets** (`/ws/locations`) for real-time map pushes.
+7. **Analytics & Exports:** Bounded read-only queries for trajectory, heatmaps, dwell, round-trips, and SLA trends. Async CSV export jobs with object-storage artifacts. Hourly analytics rollups for query acceleration.
+8. **Data Lifecycle:** Administrator-triggered retention runs (raw readings: 90d, premium measurements: 90d, location history: 30d, exports: 7d) and hourly rollup refresh.
 
 ### **2.4. Data Storage Model**
 
@@ -63,11 +60,10 @@ Current delivered web-facing contract notes:
 * **TimescaleDB:** Time-series extension mapping append-only `raw_readings` plus later `location_history` workloads. The Stage B baseline also keeps a latest heartbeat snapshot per registered gateway.
 * *(Optional)* **ClickHouse:** OLAP database for complex, enterprise-level historical heatmap generations and aggregates.
 
-Current Stage B scope notes:
+Current scope notes:
 
-* Raw-reading persistence and latest gateway heartbeat state remain the canonical ingestion layer.
-* The current economic-tier baseline adds latest known asset locations, append-only location history, confidence scoring, zone fallback, live-location queries, and `/ws/locations`.
-* Alerts, analytics rollups, premium-tier telemetry, and guided mobile calibration remain deferred to later implementation-plan changes.
+* The full pipeline is delivered: ingestion, two-tier positioning, derived events, alert rules and alerts center, analytics workspace, mobile asset finder, and mobile commissioning.
+* Premium-tier AoA/UWB telemetry, guided mobile calibration, and production mTLS remain deferred to later implementation-plan changes.
 
 ---
 
@@ -93,11 +89,26 @@ Current Stage B scope notes:
 
 ### **4.1. Core Database Schema Highlights**
 
-* `site_hierarchy`: Defines Sites -> Buildings -> Floors -> Zones.
-* `asset_entities`: Links an asset to a Profile (update rate, battery spec).
-* `asset_current_locations`: Latest known floor-linked state per tracked asset, including confidence and optional zone fallback metadata.
-* `asset_location_history`: Append-only history of accepted location results for trajectory and replay workflows.
-* `business_events`: Logs of entry/exit, SLA violations, alert triggers.
+* `users`: Platform user accounts with email, password hash, and role.
+* `sites` / `floors`: Spatial hierarchy for operational scope.
+* `floor_plans`: Raster image metadata and storage references per floor.
+* `operational_areas`: Polygonal zones, tables, restricted zones, and POIs linked to floors.
+* `gateways`: Registered gateway records with floor-linked placement, tier, and Premium-specific metadata.
+* `assets`: Asset tag records with identity, category, update-rate, and battery profiles.
+* `raw_readings` (TimescaleDB Hypertable): Append-only Economic-tier raw telemetry.
+* `premium_raw_measurements`: Normalized AoA/UWB measurements with modality and quality context.
+* `asset_current_locations`: Latest known floor-linked state per tracked asset, including confidence, source-tier, source-modality, and optional zone fallback.
+* `location_history` (TimescaleDB Hypertable): Append-only location results for trajectory and replay.
+* `zone_events`: Canonical zone-entry and zone-exit events.
+* `dwell_records`: Durable dwell windows from zone occupancy.
+* `table_timers`: Current SLA timer snapshots for SLA-eligible tables.
+* `alert_rules`: Configurable alert rule definitions (Table SLA, unauthorized geofence).
+* `alert_instances`: Durable alert instances with status tracking.
+* `alert_actions`: Acknowledgement and resolution history per alert.
+* `alert_notification_deliveries`: In-app and email notification delivery records.
+* `audit_events`: Authentication lifecycle and configuration mutation audit trail.
+* `analytics_rollups`: Hourly heatmap density and SLA aggregates.
+* `export_jobs`: Async CSV export tracking with object-storage references.
 
 ### **4.2. API & Observability**
 
@@ -108,8 +119,9 @@ Current Stage B scope notes:
 
 ## **5. Deployment, OTA & Operations**
 
-* **Containerization:** All backend services packaged via Docker, orchestrated via Kubernetes.
-* **Commissioning Playbook:** Standardized flow mapping: Site -> Floorplan -> Calibrate Scale -> Draw Zones -> Deploy Gateways.
-* **Automated Calibration:** Tools inside the app let an Admin walk the restaurant scanning signals for 15-30 minutes to auto-generate the Fingerprint map.
+* **Containerization:** All backend services packaged via Docker, orchestrated locally via Docker Compose (production target: k3s or Kubernetes).
+* **Commissioning Playbook:** Standardized flow mapping: Site -> Floor -> Floor Plan -> Calibrate Scale -> Define Zones -> Place Gateways -> Register Asset Tags.
+* **Mobile Commissioning:** Expo-based mobile app with native camera QR scanning, site/floor/zone assignment, floor-linked preview with gateway markers, and tap-driven calibration checkpoint capture.
 * **Device Management (OTA):** Employs solutions like Eclipse hawkBit or AWS IoT to securely push firmware updates to edge gateways.
 * **Compliance:** Verification that selected hardware possesses required Anatel homologation (for Brazilian operations) and respects LGPD data-minimization practices regarding staff tracking.
+* **Observability:** Local `/metrics` endpoint, `X-Request-ID` tracing, administrator Health workspace with gateway-risk cards and audit totals, and data lifecycle management with configurable retention windows.
