@@ -45,7 +45,17 @@ services:
       RTLS_REDIS_URL: ${RTLS_REDIS_URL:-redis://redis:6379/0}
       RTLS_MQTT_BROKER_HOST: ${RTLS_MQTT_BROKER_HOST:-mqtt-broker}
       RTLS_MQTT_BROKER_PORT: ${RTLS_MQTT_BROKER_PORT:-1883}
+      RTLS_MQTT_TLS_ENABLED: ${RTLS_MQTT_TLS_ENABLED:-true}
+      RTLS_MQTT_CA_CERT: ${RTLS_MQTT_CA_CERT:-/mosquitto/certs/ca.crt}
+      RTLS_MQTT_CLIENT_CERT: ${RTLS_MQTT_CLIENT_CERT:-/mosquitto/certs/worker.crt}
+      RTLS_MQTT_CLIENT_KEY: ${RTLS_MQTT_CLIENT_KEY:-/mosquitto/certs/worker.key}
       RTLS_OBJECT_STORAGE_ENDPOINT: ${RTLS_OBJECT_STORAGE_ENDPOINT:-http://object-storage:9000}
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./ops/certs:/mosquitto/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
     volumes:
       - ./apps/api:/workspace/apps/api
     depends_on:
@@ -71,8 +81,11 @@ services:
     image: eclipse-mosquitto:2.0
     ports:
       - "${RTLS_MQTT_BROKER_PORT:-1883}:1883"
+      - "${RTLS_MQTT_TLS_PORT:-8883}:8883"
     volumes:
       - ./ops/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./ops/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./ops/certs:/mosquitto/certs:ro
 
   redis:
     image: redis:7.4-alpine
