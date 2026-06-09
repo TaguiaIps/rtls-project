@@ -12,9 +12,13 @@ from rtls_api.config import Settings
 from rtls_api.ingestion import TelemetryIngestionService
 from rtls_api.main import create_app
 from rtls_api.models import (
+    AlertInstance,
+    AlertSeverity,
+    AlertStatus,
     AssetBatteryProfile,
     AssetTag,
     AssetUpdateRateProfile,
+    DerivedZoneDwellRecord,
     Floor,
     FloorPlanAsset,
     Gateway,
@@ -293,3 +297,184 @@ def test_operations_overview_returns_empty_state_without_spatial_context(tmp_pat
         assert payload["priority_items"] == []
         assert payload["gateway_snapshot"] == []
         assert payload["map_preview"]["locations"] == []
+
+
+def test_operations_overview_includes_alert_kpis(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+
+        seeded = seed_environment(app)
+
+        with app.state.session_factory() as db:
+            db.add_all(
+                [
+                    AlertInstance(
+                        rule_id="rule-c1",
+                        rule_type="table_sla",
+                        severity=AlertSeverity.CRITICAL.value,
+                        status=AlertStatus.OPEN.value,
+                        title="SLA breach Table 5",
+                        summary="Table 5 exceeded 30min SLA",
+                        scope_key="table:area-5",
+                        scope_label="Table 5",
+                        site_id=seeded["site_id"],
+                        floor_id=seeded["floor_id"],
+                        first_triggered_at=datetime(2026, 3, 26, 12, 0, 0, tzinfo=timezone.utc),
+                        last_triggered_at=datetime(2026, 3, 26, 12, 0, 0, tzinfo=timezone.utc),
+                    ),
+                    AlertInstance(
+                        rule_id="rule-w1",
+                        rule_type="gateway_stale",
+                        severity=AlertSeverity.WARNING.value,
+                        status=AlertStatus.OPEN.value,
+                        title="Gateway stale",
+                        summary="Gateway 1 is stale",
+                        scope_key="gateway:gw-1",
+                        scope_label="GW 1",
+                        site_id=seeded["site_id"],
+                        floor_id=seeded["floor_id"],
+                        first_triggered_at=datetime(2026, 3, 26, 12, 0, 0, tzinfo=timezone.utc),
+                        last_triggered_at=datetime(2026, 3, 26, 12, 0, 0, tzinfo=timezone.utc),
+                    ),
+                    AlertInstance(
+                        rule_id="rule-w2",
+                        rule_type="gateway_stale",
+                        severity=AlertSeverity.WARNING.value,
+                        status=AlertStatus.RESOLVED.value,
+                        title="Old warning",
+                        summary="Already resolved",
+                        scope_key="gateway:gw-2",
+                        scope_label="GW 2",
+                        site_id=seeded["site_id"],
+                        floor_id=seeded["floor_id"],
+                        first_triggered_at=datetime(2026, 3, 25, tzinfo=timezone.utc),
+                        last_triggered_at=datetime(2026, 3, 25, tzinfo=timezone.utc),
+                        resolved_at=datetime(2026, 3, 26, tzinfo=timezone.utc),
+                    ),
+                ]
+            )
+            db.commit()
+
+        user_token = issue_access_token(client, "ops@example.com", "StrongPass123")
+        response = client.get(
+            "/api/operations/overview",
+            headers={"Authorization": f"Bearer {user_token}"},
+            params={"floor_id": seeded["floor_id"]},
+        )
+
+        assert response.status_code == 200
+        kpis = response.json()["kpis"]
+        assert kpis["alerts"]["total_active"] == 2
+        assert kpis["alerts"]["critical"] == 1
+        assert kpis["alerts"]["warning"] == 1
+
+
+def test_operations_overview_includes_sla_kpis(tmp_path: Path) -> None:
+    settings = build_settings(tmp_path, sla_threshold_seconds=600)
+    app = create_app(settings)
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+
+        seeded = seed_environment(app)
+        now = datetime.now(timezone.utc)
+
+        with app.state.session_factory() as db:
+            tag = db.scalar(select(AssetTag).where(AssetTag.tag_identifier == "TAG-OV-001"))
+            zone = db.scalar(select(SpatialArea).where(SpatialArea.name == "Kitchen Pass"))
+            assert tag is not None and zone is not None
+
+            db.add_all(
+                [
+                    DerivedZoneDwellRecord(
+                        asset_tag_id=tag.id,
+                        floor_id=seeded["floor_id"],
+                        zone_id=zone.id,
+                        started_at=now - timedelta(minutes=30),
+                        ended_at=now - timedelta(minutes=25),
+                        duration_seconds=300,
+                        closure_reason="exit",
+                    ),
+                    DerivedZoneDwellRecord(
+                        asset_tag_id=tag.id,
+                        floor_id=seeded["floor_id"],
+                        zone_id=zone.id,
+                        started_at=now - timedelta(minutes=20),
+                        ended_at=now - timedelta(minutes=10),
+                        duration_seconds=700,
+                        closure_reason="exit",
+                    ),
+                    DerivedZoneDwellRecord(
+                        asset_tag_id=tag.id,
+                        floor_id=seeded["floor_id"],
+                        zone_id=zone.id,
+                        started_at=now - timedelta(minutes=90),
+                        ended_at=now - timedelta(minutes=70),
+                        duration_seconds=1200,
+                        closure_reason="exit",
+                    ),
+                ]
+            )
+            db.commit()
+
+        user_token = issue_access_token(client, "ops@example.com", "StrongPass123")
+        response = client.get(
+            "/api/operations/overview",
+            headers={"Authorization": f"Bearer {user_token}"},
+            params={"floor_id": seeded["floor_id"]},
+        )
+
+        assert response.status_code == 200
+        kpis = response.json()["kpis"]
+        assert kpis["sla"]["breach_count"] == 1
+        assert 40.0 <= kpis["sla"]["success_rate_pct"] <= 60.0
+        assert kpis["sla"]["trend_pct"] is not None
+
+
+def test_operations_overview_alert_kpis_default_zero(tmp_path: Path) -> None:
+    app = create_app(build_settings(tmp_path))
+
+    with TestClient(app) as client:
+        with app.state.session_factory() as db:
+            create_user(
+                db,
+                email="ops@example.com",
+                password="StrongPass123",
+                role=UserRole.GENERAL_USER,
+                display_name="Carlos",
+            )
+            db.commit()
+
+        user_token = issue_access_token(client, "ops@example.com", "StrongPass123")
+        response = client.get(
+            "/api/operations/overview",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+
+        assert response.status_code == 200
+        kpis = response.json()["kpis"]
+        assert kpis["alerts"]["total_active"] == 0
+        assert kpis["alerts"]["critical"] == 0
+        assert kpis["alerts"]["warning"] == 0
+        assert kpis["sla"]["breach_count"] == 0
+        assert kpis["sla"]["success_rate_pct"] == 100.0
+        assert kpis["sla"]["trend_pct"] is None

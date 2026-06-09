@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "vitest/globals"]
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@rtls/contracts": ["../../packages/contracts/src/index.ts"]
+    }
   },
-  "include": ["App.tsx", "test"]
+  "include": ["App.tsx", "src", "test"]
 }

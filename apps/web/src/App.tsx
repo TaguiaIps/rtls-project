@@ -9,9 +9,14 @@ import {
   useNavigate
 } from "react-router-dom";
 
+import { AdminAuditWorkspace } from "./admin/AdminAuditWorkspace";
+import { AdminHealthWorkspace } from "./admin/AdminHealthWorkspace";
+import { AdminShell } from "./admin/AdminShell";
 import { AdminSpatialWorkspace } from "./admin/AdminSpatialWorkspace";
 import { AuthProvider, roleHomeRoute, useAuth } from "./auth";
+import { CommandInput, PasswordInput } from "./components/FormErgonomics";
 import { AlertsCenterPage } from "./operations/AlertsCenter";
+import { AnalyticsWorkspacePage } from "./operations/AnalyticsWorkspace";
 import {
   LiveMapPage,
   OperationsOverviewPage,
@@ -73,26 +78,21 @@ function LoginPage() {
         </div>
 
         <form className="login-form" onSubmit={onSubmit}>
-          <label>
-            <span>Email</span>
-            <input
-              autoComplete="email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Password</span>
-            <input
-              autoComplete="current-password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
+          <CommandInput
+            autoComplete="email"
+            label="Email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <PasswordInput
+            autoComplete="current-password"
+            label="Password"
+            name="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
           {error ? <p className="form-error">{error}</p> : null}
           <button className="primary-button" disabled={submitting} type="submit">
             {submitting ? "Signing In..." : "Sign In"}
@@ -106,50 +106,6 @@ function LoginPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function ShellLayout({
-  title,
-  subtitle,
-  children
-}: PropsWithChildren<{ title: string; subtitle: string }>) {
-  const { logout, user } = useAuth();
-
-  return (
-    <main className="dashboard-shell">
-      <aside className="nav-rail">
-        <p className="eyebrow">RTLS</p>
-        <h2>{title}</h2>
-        <p className="muted-text">{subtitle}</p>
-      </aside>
-      <section className="dashboard-main">
-        <header className="top-bar">
-          <div>
-            <p className="muted-text">Signed in as</p>
-            <strong>{user?.display_name || user?.email}</strong>
-          </div>
-          <div className="top-bar-actions">
-            <span className="role-badge">{user?.role}</span>
-            <button className="secondary-button" onClick={() => void logout()} type="button">
-              Sign Out
-            </button>
-          </div>
-        </header>
-        {children}
-      </section>
-    </main>
-  );
-}
-
-function AdminHome() {
-  return (
-    <ShellLayout
-      title="Admin Console"
-      subtitle="Spatial hierarchy, floor plans, scale confirmation, and operational zone setup."
-    >
-      <AdminSpatialWorkspace />
-    </ShellLayout>
   );
 }
 
@@ -193,10 +149,22 @@ function AppRoutes() {
         path="/admin"
         element={
           <ProtectedRoute allowedRoles={["Administrator"]}>
-            <AdminHome />
+            <AdminShell />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<Navigate replace to="spatial" />} />
+        <Route
+          path="spatial"
+          element={
+            <div className="shell-page">
+              <AdminSpatialWorkspace />
+            </div>
+          }
+        />
+        <Route path="health" element={<AdminHealthWorkspace />} />
+        <Route path="audit" element={<AdminAuditWorkspace />} />
+      </Route>
       <Route
         path="/operations"
         element={
@@ -206,6 +174,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<OperationsOverviewPage />} />
+        <Route path="analytics" element={<AnalyticsWorkspacePage />} />
         <Route path="alerts" element={<AlertsCenterPage />} />
         <Route path="live-map" element={<LiveMapPage />} />
       </Route>

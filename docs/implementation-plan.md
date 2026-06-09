@@ -1,8 +1,21 @@
 # Implementation Plan
 
-This document captures the recommended phased implementation plan for the RTLS Analytics Platform and the proposed segmentation into future OpenSpec changes.
+This document captures the recommended phased implementation plan for the RTLS Analytics Platform and the proposed segmentation into OpenSpec changes.
 
-It is intended as a planning artifact only. It does not create any OpenSpec changes by itself.
+It is intended as a planning artifact. OpenSpec specifications under `openspec/specs/` define the detailed acceptance criteria for each implemented capability.
+
+## Implementation Status
+
+All specification changes have been implemented and archived under `openspec/changes/archive/`. The 25 active specs under `openspec/specs/` represent the current delivered baseline.
+
+| Wave | Changes | Status |
+| :--- | :--- | :--- |
+| Wave 1 | Bootstrap workspace, identity/RBAC/audit, sites/floors/zones, gateway & asset registry | Implemented |
+| Wave 2 | Ingestion pipeline, economic positioning & live location, web shell & live map | Implemented |
+| Wave 3 | Derived events, alert rules & alerts center, analytics workspace | Implemented |
+| Wave 4 | Premium tier AoA/UWB, mobile asset finder, mobile commissioning, health & audit UI, exports & rollups | Implemented |
+| Wave 5 | Production MQTT TLS/mTLS, calibration engine & radiomap, native QR scanning, maintenance alerts | Implemented |
+| Wave 6 | Mobile self-location blue dot, expand operations overview with alert/SLA KPIs | Implemented |
 
 ## Planning Rules
 
@@ -172,7 +185,7 @@ Implement mobile search, recent searches, asset location sheet, and open-in-map 
 
 ### 13. `implement-mobile-commissioning-and-calibration`
 
-Implement QR scanner, assign zone/room flow, guided calibration mode, blue-dot calibration workflow, and session summary.
+Implement scanner-based or QR-derived device intake, assign zone/room flow, guided calibration mode, blue-dot calibration workflow, and session summary.
 
 - Depends on:
   - `implement-sites-floorplans-and-zone-editor`
@@ -181,6 +194,7 @@ Implement QR scanner, assign zone/room flow, guided calibration mode, blue-dot c
   - `implement-economic-tier-positioning-and-live-location`
 - Maps to:
   - `FR-ADM-003`
+  - `US-ADM-04`
   - `US-MOB-02`
   - `NFR-USA-002`
 
@@ -211,6 +225,79 @@ Implement async exports, retention policies, rollup tables, and report accelerat
 - Maps to:
   - `NFR-PER-003`
   - data lifecycle items from the system design
+
+### 16. `implement-production-mqtt-tls-and-mtls`
+
+Move the gateway-to-broker path from trusted pilot or private-network MQTT to production-grade TLS with broker certificate validation, mutual TLS, and broker-enforced gateway identity controls.
+
+- Depends on:
+  - `implement-ingestion-pipeline-and-raw-readings`
+- Maps to:
+  - `NFR-SEC-003`
+
+### 17. `implement-calibration-engine-and-radiomap-generation`
+
+Extend the delivered mobile calibration baseline with a backend calibration engine that generates reusable radiomap and offset artifacts for the positioning pipeline.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+  - `implement-ingestion-pipeline-and-raw-readings`
+  - `implement-economic-tier-positioning-and-live-location`
+- Maps to:
+  - `FR-ADM-006`
+  - `US-ADM-06`
+
+### 18. `implement-native-mobile-qr-scanning`
+
+Add native camera-based QR scanning to the delivered mobile commissioning workflow while preserving manual identifier entry for simulator and fallback usage.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+- Maps to:
+  - `US-ADM-03`
+  - `NFR-USA-003`
+
+### 19. `implement-maintenance-alert-generation`
+
+Close the remaining reliability gap by turning delivered gateway stale and low-battery health signals into durable maintenance alerts that flow through the existing Alerts Center.
+
+- Depends on:
+  - `implement-health-audit-ui-and-observability`
+  - `implement-alert-rules-and-alerts-center`
+- Maps to:
+  - `NFR-REL-001`
+
+### 20. `implement-mobile-self-location-blue-dot`
+
+Extend the delivered mobile calibration baseline so the blue dot follows live device self-location during calibration instead of relying on tap-driven checkpoint capture.
+
+- Depends on:
+  - `implement-mobile-commissioning-and-calibration`
+  - `implement-calibration-engine-and-radiomap-generation`
+- Maps to:
+  - `US-MOB-03`
+
+### 21. `expand-operations-overview-alert-and-sla-kpis`
+
+Extend the delivered Operations Overview with active-alert and SLA summary KPI cards while preserving the current live map and priority-queue landing workflow.
+
+- Depends on:
+  - `deliver-web-shell-operations-overview-and-live-map`
+  - `implement-alert-rules-and-alerts-center`
+  - `implement-analytics-workspace-and-reports`
+  - `implement-maintenance-alert-generation`
+- Maps to:
+  - `US-GEN-05`
+
+## Change Archive Checklist
+
+Every change archive MUST verify the following before merging into the baseline:
+
+- [ ] Implementation status updated in this document (`docs/implementation-plan.md`).
+- [ ] Specification `## Purpose` statements finalized (no "TBD" placeholders remain).
+- [ ] Terminology aligns with `openspec/GLOSSARY.md`.
+- [ ] Delta specs successfully merged into main specs.
+- [ ] Requirement-to-change traceability verified.
 
 ## Why This Split Avoids Rework
 
@@ -259,6 +346,22 @@ This adds the operational intelligence layer.
 
 This adds premium precision, mobile flows, observability, and lifecycle hardening.
 
+### Wave 5
+
+- `implement-production-mqtt-tls-and-mtls`
+- `implement-calibration-engine-and-radiomap-generation`
+- `implement-native-mobile-qr-scanning`
+- `implement-maintenance-alert-generation`
+
+This closes the remaining gap between the delivered pilot baseline and the production-grade security, calibration, and reliability targets.
+
+### Wave 6
+
+- `implement-mobile-self-location-blue-dot`
+- `expand-operations-overview-alert-and-sla-kpis`
+
+This extends the delivered baseline UX after the core reliability and calibration primitives are complete.
+
 ## Recommended OpenSpec Creation Order
 
 Create only the first change initially:
@@ -270,4 +373,4 @@ After that is approved, create:
 2. `implement-identity-rbac-and-audit-foundation`
 3. `implement-sites-floorplans-and-zone-editor`
 
-Do not create all 15 changes at once unless you intentionally want a large backlog tree. It is more manageable to create the next change only after the current foundation is settled.
+Do not create all 21 changes at once unless you intentionally want a large backlog tree. It is more manageable to create the next change only after the current foundation is settled.

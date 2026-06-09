@@ -14,11 +14,17 @@ from rtls_api.models import (
     AssetBatteryProfile,
     AssetLocationType,
     AssetUpdateRateProfile,
+    DataLifecycleRunStatus,
     DerivedZoneEventType,
     DwellClosureReason,
+    ExportJobFormat,
+    ExportJobStatus,
     GatewayHardwareTier,
     GatewayHealthStatus,
     LocationConfidenceLevel,
+    LocationSourceModality,
+    PremiumCalibrationStatus,
+    PremiumTelemetryModality,
     SpatialAreaType,
     TableServiceTimerStatus,
     UnauthorizedGeofenceTrigger,
@@ -67,6 +73,110 @@ class AdminUserUpdateRequest(BaseModel):
 class AdminSummaryResponse(BaseModel):
     current_user: CurrentUserResponse
     managed_roles: list[str]
+
+
+class AuditEventResponse(BaseModel):
+    id: str
+    actor_user_id: str | None
+    actor_email: str | None
+    actor_role: str | None
+    action_category: str
+    action_type: str
+    target_type: str | None
+    target_id: str | None
+    details: dict[str, object] | None
+    created_at: datetime
+
+
+class AuditEventListResponse(BaseModel):
+    items: list[AuditEventResponse]
+    total_count: int = Field(ge=0)
+
+
+class HealthRiskResponse(BaseModel):
+    id: str
+    kind: str
+    severity: str
+    gateway_id: str
+    gateway_identifier: str
+    display_name: str
+    floor_id: str
+    floor_name: str
+    summary: str
+    observed_at: datetime | None
+    battery_level_percent: float | None
+
+
+class ObservabilityGatewayTotalsResponse(BaseModel):
+    total: int = Field(ge=0)
+    healthy: int = Field(ge=0)
+    stale: int = Field(ge=0)
+    low_battery: int = Field(ge=0)
+    without_heartbeat: int = Field(ge=0)
+
+
+class ObservabilityTelemetryTotalsResponse(BaseModel):
+    raw_readings: int = Field(ge=0)
+    premium_measurements: int = Field(ge=0)
+    heartbeat_snapshots: int = Field(ge=0)
+
+
+class ObservabilityAlertTotalsResponse(BaseModel):
+    active: int = Field(ge=0)
+    critical: int = Field(ge=0)
+    warning: int = Field(ge=0)
+
+
+class ObservabilityAuditTotalsResponse(BaseModel):
+    total: int = Field(ge=0)
+    last_24h: int = Field(ge=0)
+    latest_at: datetime | None
+
+
+class ObservabilityServiceResponse(BaseModel):
+    name: str
+    status: str
+    detail: str
+
+
+class ExportRetentionPolicyResponse(BaseModel):
+    raw_readings_days: int = Field(ge=1)
+    premium_measurements_days: int = Field(ge=1)
+    location_history_days: int = Field(ge=1)
+    exports_days: int = Field(ge=1)
+
+
+class DataLifecycleRunResponse(BaseModel):
+    id: str
+    requested_by_user_id: str
+    requested_by_email: str | None
+    status: DataLifecycleRunStatus
+    retention_summary: dict[str, int] | None
+    rollup_summary: dict[str, int] | None
+    error_message: str | None
+    requested_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+
+
+class ObservabilityLifecycleSummaryResponse(BaseModel):
+    policies: ExportRetentionPolicyResponse
+    latest_run: DataLifecycleRunResponse | None
+
+
+class ObservabilitySummaryResponse(BaseModel):
+    generated_at: datetime
+    gateway_totals: ObservabilityGatewayTotalsResponse
+    telemetry_totals: ObservabilityTelemetryTotalsResponse
+    alert_totals: ObservabilityAlertTotalsResponse
+    audit_totals: ObservabilityAuditTotalsResponse
+    lifecycle: ObservabilityLifecycleSummaryResponse
+    risk_items: list[HealthRiskResponse]
+    services: list[ObservabilityServiceResponse]
+    healthcheck_path: str
+    metrics_path: str
+    request_id_header: str
+    tracing_status: str
 
 
 class SpatialPoint(BaseModel):
@@ -124,18 +234,43 @@ class SpatialAreaUpdateRequest(BaseModel):
         return self
 
 
+class PremiumGatewayProfileRequest(BaseModel):
+    modality: PremiumTelemetryModality
+    mounting_label: str = Field(min_length=1, max_length=120)
+    mounting_angle_degrees: float = Field(ge=-180, le=180)
+    calibration_status: PremiumCalibrationStatus = PremiumCalibrationStatus.UNCALIBRATED
+
+
+class PremiumGatewayProfileResponse(BaseModel):
+    modality: PremiumTelemetryModality
+    mounting_label: str
+    mounting_angle_degrees: float
+    calibration_status: PremiumCalibrationStatus
+    calibration_updated_at: datetime | None
+
+
 class GatewayCreateRequest(BaseModel):
     gateway_identifier: str = Field(min_length=1, max_length=120)
     display_name: str = Field(min_length=1, max_length=120)
     hardware_tier: GatewayHardwareTier
     placement: SpatialPoint
+    premium_profile: PremiumGatewayProfileRequest | None = None
     notes: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_premium_profile(self) -> GatewayCreateRequest:
+        if self.hardware_tier == GatewayHardwareTier.PREMIUM and self.premium_profile is None:
+            raise ValueError("Premium gateways require a premium profile")
+        if self.hardware_tier == GatewayHardwareTier.ECONOMIC and self.premium_profile is not None:
+            raise ValueError("Economic gateways cannot include a premium profile")
+        return self
 
 
 class GatewayUpdateRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=120)
     hardware_tier: GatewayHardwareTier | None = None
     placement: SpatialPoint | None = None
+    premium_profile: PremiumGatewayProfileRequest | None = None
     notes: str | None = Field(default=None, max_length=500)
 
 
@@ -209,6 +344,7 @@ class GatewayResponse(BaseModel):
     display_name: str
     hardware_tier: GatewayHardwareTier
     placement: SpatialPoint
+    premium_profile: PremiumGatewayProfileResponse | None
     notes: str | None
 
 
@@ -227,11 +363,25 @@ class GatewayHealthResponse(BaseModel):
     battery_level_percent: float | None
 
 
+class AlertKpisResponse(BaseModel):
+    total_active: int = Field(ge=0)
+    critical: int = Field(ge=0)
+    warning: int = Field(ge=0)
+
+
+class SlaKpisResponse(BaseModel):
+    breach_count: int = Field(ge=0)
+    success_rate_pct: float = Field(ge=0.0, le=100.0)
+    trend_pct: float | None = Field(default=None, description="Percentage point change vs previous window; null when no prior data")
+
+
 class OperationsOverviewKpisResponse(BaseModel):
     active_assets: int = Field(ge=0)
     low_confidence_assets: int = Field(ge=0)
     restricted_zone_assets: int = Field(ge=0)
     stale_gateways: int = Field(ge=0)
+    alerts: AlertKpisResponse = Field(default_factory=AlertKpisResponse)
+    sla: SlaKpisResponse = Field(default_factory=SlaKpisResponse)
 
 
 class OperationsPriorityItemResponse(BaseModel):
@@ -335,6 +485,9 @@ class AssetLocationResponse(BaseModel):
     zone_name: str | None
     confidence_level: LocationConfidenceLevel
     confidence_score: float = Field(ge=0, le=1)
+    source_tier: GatewayHardwareTier
+    source_modality: LocationSourceModality
+    precision_meters: float | None = Field(default=None, ge=0)
     source_gateway_count: int = Field(ge=0)
     source_reading_count: int = Field(ge=0)
 
@@ -423,6 +576,150 @@ class RoundTripMeasurementResponse(BaseModel):
     total_seconds: float = Field(ge=0)
 
 
+class AnalyticsHeatmapCellResponse(BaseModel):
+    row: int = Field(ge=0)
+    column: int = Field(ge=0)
+    center: SpatialPoint
+    sample_count: int = Field(ge=1)
+    intensity: float = Field(ge=0, le=1)
+
+
+class AnalyticsHeatmapResponse(BaseModel):
+    site_id: str
+    site_name: str
+    floor_id: str
+    floor_name: str
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    grid_columns: int = Field(ge=1)
+    grid_rows: int = Field(ge=1)
+    total_samples: int = Field(ge=0)
+    max_density: int = Field(ge=0)
+    cells: list[AnalyticsHeatmapCellResponse]
+
+
+class AnalyticsTrajectoryResponse(BaseModel):
+    asset_tag_id: str
+    tag_identifier: str
+    display_name: str
+    asset_category: str
+    site_id: str
+    site_name: str
+    floor_id: str
+    floor_name: str
+    start_at: datetime
+    end_at: datetime
+    points: list[AssetLocationHistoryResponse]
+
+
+class AnalyticsExportRequest(BaseModel):
+    report_kind: str
+    export_format: ExportJobFormat = ExportJobFormat.CSV
+    floor_id: str
+    start_at: datetime
+    end_at: datetime
+    asset_tag_id: str | None = None
+    asset_category: str | None = None
+    zone_id: str | None = None
+    origin_zone_id: str | None = None
+    destination_zone_id: str | None = None
+    table_area_id: str | None = None
+    bucket_minutes: int | None = Field(default=None, ge=1)
+
+
+class AnalyticsExportJobResponse(BaseModel):
+    id: str
+    report_kind: str
+    export_format: ExportJobFormat
+    status: ExportJobStatus
+    floor_id: str | None
+    site_id: str | None
+    file_name: str | None
+    row_count: int | None = Field(default=None, ge=0)
+    error_message: str | None
+    requested_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    expires_at: datetime | None
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    sample_count: int = Field(ge=0)
+    avg_duration_seconds: float | None = Field(default=None, ge=0)
+    max_duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsDwellSummaryResponse(AnalyticsSummaryResponse):
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    threshold_source: str
+    threshold_breach_count: int = Field(ge=0)
+
+
+class AnalyticsDwellRecordResponse(DerivedZoneDwellRecordResponse):
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    threshold_breached: bool
+
+
+class AnalyticsDwellReportResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    zone_id: str | None
+    zone_name: str | None
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    summary: AnalyticsDwellSummaryResponse
+    records: list[AnalyticsDwellRecordResponse]
+
+
+class AnalyticsRoundTripSummaryResponse(AnalyticsSummaryResponse):
+    avg_outbound_seconds: float | None = Field(default=None, ge=0)
+    avg_return_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsRoundTripReportResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    origin_zone_id: str
+    origin_zone_name: str
+    destination_zone_id: str
+    destination_zone_name: str
+    asset_category: str | None
+    start_at: datetime
+    end_at: datetime
+    summary: AnalyticsRoundTripSummaryResponse
+    records: list[RoundTripMeasurementResponse]
+
+
+class AnalyticsSlaTrendBucketResponse(BaseModel):
+    bucket_started_at: datetime
+    completed_visit_count: int = Field(ge=0)
+    breach_count: int = Field(ge=0)
+    avg_duration_seconds: float | None = Field(default=None, ge=0)
+    max_duration_seconds: float | None = Field(default=None, ge=0)
+
+
+class AnalyticsSlaTrendResponse(BaseModel):
+    site_id: str | None
+    site_name: str | None
+    floor_id: str | None
+    floor_name: str | None
+    table_area_id: str
+    table_name: str
+    start_at: datetime
+    end_at: datetime
+    bucket_minutes: int = Field(ge=1)
+    threshold_source: str
+    threshold_seconds: float | None = Field(default=None, gt=0)
+    current_timer: TableServiceTimerStateResponse | None
+    buckets: list[AnalyticsSlaTrendBucketResponse]
+
+
 class AlertRuleUpsertRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     rule_type: AlertRuleType
@@ -442,6 +739,11 @@ class AlertRuleUpsertRequest(BaseModel):
             raise ValueError("In-app delivery must stay enabled for delivered alerts")
         if self.notify_email and not self.email_recipients:
             raise ValueError("Email recipients are required when email delivery is enabled")
+        if self.rule_type in {
+            AlertRuleType.GATEWAY_STALE,
+            AlertRuleType.GATEWAY_LOW_BATTERY,
+        }:
+            raise ValueError("System-managed maintenance alert types cannot be created manually")
         if self.rule_type == AlertRuleType.TABLE_SLA:
             if self.threshold_seconds is None:
                 raise ValueError("threshold_seconds is required for table SLA rules")
@@ -542,3 +844,52 @@ class AlertDetailResponse(AlertListItemResponse):
 
 class AlertActionRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=500)
+
+
+# --- Calibration ---
+
+
+class CalibrationSample(BaseModel):
+    checkpoint_x: float
+    checkpoint_y: float
+    gateway_id: str
+    rssi: int
+    tx_power: int | None = None
+
+
+class CalibrationSessionRequest(BaseModel):
+    floor_id: str
+    samples: list[CalibrationSample] = Field(min_length=1)
+
+
+class CalibrationSessionResponse(BaseModel):
+    id: str
+    floor_id: str
+    status: str
+    checkpoint_count: int
+    sample_count: int
+    error_message: str | None
+    artifact_id: str | None
+    created_at: datetime
+    processing_started_at: datetime | None
+    processing_completed_at: datetime | None
+
+
+class CalibrationArtifactResponse(BaseModel):
+    id: str
+    floor_id: str
+    version: int
+    status: str
+    coverage_score: float | None
+    grid_resolution_m: float | None
+    activated_at: datetime | None
+    created_at: datetime
+
+
+class CalibrationHealthResponse(BaseModel):
+    floor_id: str
+    floor_name: str
+    active_artifact: CalibrationArtifactResponse | None
+    total_sessions: int
+    total_artifacts: int
+    has_active_calibration: bool

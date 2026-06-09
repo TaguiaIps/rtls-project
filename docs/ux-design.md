@@ -59,9 +59,10 @@ This section organizes our features into a narrative flow, combining the user st
 | :--- | :--- | :--- | :--- |
 | **US-ADM-01** | As **Alex**, I want to upload a floor plan image, so that I have a visual canvas for my gateway and asset layout. | User can select image; displayed as background; scale is set via reference points. | **Must-have** |
 | **US-ADM-02** | As **Alex**, I want to place and label gateway icons (Economic/Premium tier) on the map. | Drag/drop gateways; enter name/ID and tier. | **Must-have** |
-| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | App scans QR; prompts for zone/room; records rough coordinates. | **Must-have** |
-| **US-ADM-04** | As **Alex**, I want to run an automated calibration assistant that collects data to calculate offsets and build the initial radiomap. | Calibration runs in background; collects RSSI; confirms map generation. | **Must-have** |
+| **US-ADM-03** | As **Alex**, I want to use the mobile app to scan device QR codes and choose their zone, so I can seamlessly commission the infrastructure. | Camera-based QR scanning resolves the device, prompts for zone/room, and shows floor-linked commissioning context, with manual entry retained as fallback. | **Must-have** |
+| **US-ADM-04** | As **Alex**, I want to run a guided calibration assistant that records floor checkpoints and a blue-dot session summary, so that I can prepare a floor for later calibration processing without leaving the mobile workflow. | Calibration session runs in guided mode, captures checkpoints against the selected floor, and saves elapsed time, sample count, and completion progress. | **Must-have** |
 | **US-ADM-05** | As **Alex**, I want to bulk-import a list of asset tags from a CSV file. | Sample CSV available; successful batch import including tag profiles (update rate). | **Must-have** |
+| **US-ADM-06** | As **Alex**, I want the system to process collected calibration data into a radiomap and baseline offsets, so that positioning quality improves without manual tuning. | Submitted calibration data produces a persisted calibration result with status, quality score, and generated artifacts available to the positioning engine. | **Must-have** |
 
 ### **3.2. Activity 2: Daily Operations Monitoring (Carlos)**
 
@@ -74,10 +75,11 @@ This section organizes our features into a narrative flow, combining the user st
 **Acceptance Criteria:**
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-GEN-01** | As **Carlos**, I want to see a high-level dashboard with key metrics (e.g., active assets, Table Service SLAs) upon login. | Displays "Active Assets", "Active Alerts", and "SLA Metrics"; auto-refreshes. | **Must-have** |
+| **US-GEN-01** | As **Carlos**, I want to see a high-level dashboard with key live-location and infrastructure metrics upon login, so I can decide where to investigate first. | Displays "Active Assets", "Low Confidence", "Restricted Zone Hits", and "Stale Gateways"; auto-refreshes. | **Must-have** |
 | **US-GEN-02** | As **Carlos**, I want to see moving assets in real-time on a map with confidence scores. | Icons update live (0.5-20Hz); low confidence estimates fall back to Zone highlighting. | **Must-have** |
 | **US-GEN-03** | As **Carlos**, I want to filter the map view by asset type (e.g., "waiter," "cooking equipment") to reduce clutter. | Filter toggles asset categories on/off perfectly. | **Should-have** |
 | **US-GEN-04** | As **Carlos**, I want to receive an alert when a high-value asset or staff member exceeds a time limit in a specific zone (e.g., table SLA violation). | Alerts trigger on dwell-time thresholds; in-app and optional email notification. | **Must-have** |
+| **US-GEN-05** | As **Carlos**, I want the Operations Overview to also surface active-alert and SLA summary cards, so I can judge service pressure without leaving the landing dashboard. | Displays overview cards for active alerts and SLA trend or breach metrics with one-click drill-ins into Alerts Center or Analytics. | **Should-have** |
 
 ### **3.3. Activity 3: Deep-Dive Analysis (Carlos)**
 
@@ -102,8 +104,9 @@ This section organizes our features into a narrative flow, combining the user st
 **Acceptance Criteria:**
 | ID | User Story | Confirmation | Priority |
 | :--- | :--- | :--- | :--- |
-| **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Autocomplete search centers map on last known location. | **Must-have** |
-| **US-MOB-02** | As **Alex**, I want to see my own location as a "blue dot" while in calibration mode, so I can accurately map signal strengths. | Calibration mode shows user location accurately; updates as user walks. | **Must-have** |
+| **US-MOB-01** | As **Carlos**, I want to search for an asset on my mobile app and see its location to find it quickly (e.g., missing POS terminal). | Search returns matching assets, preserves recent searches, shows a location sheet, and offers open-in-map handoff into Live Map. | **Must-have** |
+| **US-MOB-02** | As **Alex**, I want to see a visible blue-dot capture while in calibration mode, so I can record floor checkpoints and review a session summary. | Calibration mode updates a tap-driven blue-dot capture as the operator records floor checkpoints and reviews a session summary. | **Must-have** |
+| **US-MOB-03** | As **Alex**, I want the blue dot in calibration mode to follow my actual device location, so I can validate the calibration walk without manually tapping the floor preview. | Calibration mode derives the blue dot from live self-location and updates checkpoint progress without requiring manual floor taps. | **Should-have** |
 
 ---
 
@@ -219,11 +222,14 @@ graph TD
 | :--- | :--- | :--- | :--- | :--- |
 | **Sign in and route by role** | FR-SEC-001, FR-SEC-002 | Login | Enter credentials -> system validates role -> routes to role-specific home | Correct landing page plus visible role badge |
 | **Upload and scale floor plan** | US-ADM-01, FR-ADM-001 | Admin Console -> Floor Plans & Scale | Upload image -> place two reference points -> enter real distance -> save floor | Floor appears in map selector with scale confirmed |
-| **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> save | Gateway marker persists with tier color and status |
-| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002 | Mobile -> QR Scanner | Scan QR -> identify device -> select zone/room -> confirm placement -> sync to web | Device appears in registry and map draft layer |
-| **Run automated calibration** | US-ADM-04, FR-ADM-003, US-MOB-02 | Admin Console -> Calibration Wizard | Choose floor and gateways -> start session -> walk route with blue dot guidance -> collect signal data -> process radiomap | Wizard returns quality score, offsets, and completion summary |
+| **Place gateways and assign tier** | US-ADM-02, FR-ADM-002, FR-ADM-004 | Admin Console -> Gateway Placement | Select floor -> drag gateway onto map -> label gateway -> choose Economic or Premium tier -> complete Premium modality and calibration metadata when needed -> save | Gateway marker persists with tier color and status |
+| **Commission infrastructure via QR** | US-ADM-03, NFR-USA-002, NFR-USA-003 | Mobile -> Commissioning | Open camera scanner -> scan QR payload -> identify device -> select floor -> assign zone/room -> confirm device context | Device identity, floor, and zone are visible in the mobile commissioning session |
+| **Run guided calibration capture** | US-ADM-04, FR-ADM-003, US-MOB-02 | Mobile -> Commissioning | Choose floor and target -> start session -> use the tap-driven blue-dot capture -> tap checkpoints -> review summary | Session summary shows elapsed time, samples, and completed checkpoints for later calibration follow-up |
+| **Use live self-location during calibration** | US-MOB-03 | Future Mobile Calibration Guidance | Start calibration -> device estimates current position -> blue dot follows the operator -> checkpoint progress updates without floor taps | Operator can complete the calibration walk without manually placing the blue dot |
+| **Generate radiomap and offsets** | US-ADM-06, FR-ADM-006 | Future Calibration Engine | Submit collected calibration samples -> process run -> review quality and artifact status -> activate calibration result | Calibration result shows status, quality score, and reusable artifacts for positioning |
 | **Bulk import asset tags** | US-ADM-05, FR-ADM-005 | Admin Console -> Asset Registry | Download template -> upload CSV -> review validation -> fix errors inline -> confirm import | Imported assets visible with profile, update rate, and battery policy |
-| **See operations overview on login** | US-GEN-01 | Operations Overview | Review KPI cards, live alerts, SLA snapshot, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
+| **See operations overview on login** | US-GEN-01 | Operations Overview | Review current KPI cards, gateway snapshot, priority queue, and map preview | User can decide whether to drill into map, alerts, or analytics in one click |
+| **Review alert and SLA overview cards** | US-GEN-05 | Future Operations Overview Expansion | Open Operations Overview -> inspect active-alert and SLA summary cards -> drill into alerts or analytics | User understands alert pressure and SLA drift without leaving the landing dashboard |
 | **Monitor assets in real time** | US-GEN-02, FR-VIS-001, FR-VIS-002, FR-VIS-003 | Live Map Workspace | Choose floor -> watch live movement -> inspect confidence state -> open asset drawer | Map shows current position or zone fallback with last update time |
 | **Filter and search assets** | US-GEN-03, FR-VIS-004, US-MOB-01 | Live Map or Mobile Asset Finder | Search by name/tag/type -> apply category filters -> focus one asset or cohort | Map centers on result and clutter is reduced |
 | **Respond to SLA or geofence alerts** | US-GEN-04, FR-NOT-001, FR-NOT-002, FR-NOT-003, FR-ANL-006 | Alert tray or Alerts Center | Open alert -> map recenters on affected table/zone/asset -> inspect context -> acknowledge/escalate | Alert status changes and audit trail records action |
@@ -286,6 +292,34 @@ Implementation baseline note:
 * Designed for first-glance triage in under 10 seconds.
 * Every card has a direct action: `View on map`, `Open report`, or `Acknowledge`.
 
+### **5.2.A. Web App: Admin Health and Audit Baseline**
+
+**Supports:** NFR-REL-001, NFR-REL-002, FR-SEC-003
+
+Implementation baseline note:
+
+* The delivered administrator shell now exposes three route-aware views: Spatial, Health, and Audit.
+* Health summarizes gateway heartbeat risk, battery risk, telemetry totals, alert pressure, audit totals, and the local observability contract (`/health`, `/metrics`, and `X-Request-ID`).
+* Audit uses server-side filtering for recent persisted events by actor email, category, action type, and target type.
+* Rich diff rendering, date-range controls, packet-loss analysis, and external dashboards remain follow-on work.
+
+```text
++--------------------------------------------------------------------------------+
+| Admin Rail: Spatial | Health | Audit                                          |
+|--------------------------------------------------------------------------------|
+| Health Summary: Gateways | Gateway Risks | Telemetry | Audit + Alerts          |
+|--------------------------------------------------------------------------------|
+| Gateway Risks Panel                   | Observability Baseline                 |
+| - stale / missing heartbeat cards     | - /health                              |
+| - low battery cards                   | - /metrics                             |
+| - floor and gateway identifiers       | - X-Request-ID                         |
+|--------------------------------------------------------------------------------|
+| Audit Filters: Actor | Category | Action Type | Target Type | Apply / Clear    |
+|--------------------------------------------------------------------------------|
+| Newest-first bounded audit rows with persisted detail payload                  |
++--------------------------------------------------------------------------------+
+```
+
 ### **5.3. Web App: Live Operations Map**
 
 **Supports:** US-GEN-02, US-GEN-03, US-GEN-04, FR-VIS-001, FR-VIS-002, FR-VIS-003, FR-VIS-004, US-MOB-01
@@ -294,6 +328,7 @@ Implementation baseline note:
 
 * The delivered Live Map supports floor selection, live markers, confidence-aware visualization, search, category/confidence/location-type filters, and a selected-asset drawer.
 * Zone fallback and confidence states are implemented now because they are already backed by the current positioning contract.
+* Canonical live-location results now carry source-tier, source-modality, and optional precision metadata, so Premium AoA or UWB updates can reuse the same Live Map and drawer patterns without implying that every point estimate came from the Economic BLE path.
 * Alert-specific overlays, trajectory replay, and analytics drill-ins remain future work.
 
 ```text
@@ -338,6 +373,12 @@ Implementation baseline note:
 
 **Supports:** US-ANL-01, US-ANL-03, US-ANL-04, FR-ANL-002, FR-ANL-003, FR-ANL-004, FR-ANL-005
 
+Implementation baseline note:
+
+* The delivered Analytics workspace now supports trajectory replay, heatmap generation, dwell reporting, round-trip reporting, and table SLA trend views inside the shared monitoring shell.
+* The current delivery also supports async CSV export jobs from the parameter rail, plus a recent-export queue that exposes pending, completed, and failed states with download access for retained artifacts.
+* Saved presets, compare-period workflows, and scheduled report delivery remain later work.
+
 ```text
 +------------------------------------------------------------------------------------------------+
 | Report Switcher: Heatmap | Trajectory | Round-Trip | Dwell Time | SLA Trends                   |
@@ -347,12 +388,12 @@ Implementation baseline note:
 | - time range                           | - chart / legend / report table                             |
 | - compare by shift / daypart           | - annotation layer                                          |
 |------------------------------------------------------------------------------------------------|
-| Insight Footer: export | save preset | compare with previous period | share link                |
+| Insight Footer: save preset | compare with previous period | share link                 |
 +------------------------------------------------------------------------------------------------+
 ```
 
-* The workspace uses one mental model for all analytics: choose population, choose time, generate, compare, export.
-* Saved presets let Carlos repeat common analyses without rebuilding filters each time.
+* The workspace uses one mental model for all delivered analytics: choose scope, choose time, generate, inspect.
+* Presets and cross-period comparison workflows remain deferred even though the IA already reserves room for them.
 
 ### **5.6. Web App: Zone & POI Editor**
 
@@ -394,7 +435,7 @@ Implementation baseline note:
 
 ### **5.8. Web App: Calibration Wizard**
 
-**Supports:** US-ADM-04, FR-ADM-003
+**Supports:** US-ADM-06, FR-ADM-006
 
 ```text
 +-----------------------------------------------------------------------------------+
@@ -408,6 +449,7 @@ Implementation baseline note:
 +-----------------------------------------------------------------------------------+
 ```
 
+* This wizard represents the future production-grade calibration layer beyond the delivered mobile capture baseline.
 * The wizard emphasizes trust: what is being collected, how long remains, and whether data quality is sufficient.
 
 ### **5.9. Web App: Infrastructure Health & Audit Log**
@@ -434,82 +476,100 @@ Implementation baseline note:
 
 ```text
 +--------------------------------------------------------------+
+| Session Panel                                                |
+| - API base URL                                               |
+| - web base URL                                               |
+| - pasted access token                                        |
+|--------------------------------------------------------------|
 | Search asset _______________________                         |
 |--------------------------------------------------------------|
-| Result List                                                  |
+| Result List / Recent Searches                                |
 | - POS Terminal 07  | Kitchen Pass | Last seen 12s ago        |
 | - Cart 03          | Dining South | Last seen 1m ago         |
 |--------------------------------------------------------------|
-| Mini Map                                                    |
-| - highlighted destination                                   |
-| - confidence badge                                          |
-| - open full location sheet                                  |
+| Location Sheet                                               |
+| - selected asset details                                     |
+| - confidence or precision badge                              |
+| - open full location in delivered Live Map                   |
 +--------------------------------------------------------------+
 ```
 
-* The mobile flow favors speed: search, identify, orient, move.
+* The delivered baseline favors speed: search, identify, orient, move.
+* Dedicated mobile sign-in still remains deferred, so the current screen keeps an explicit session panel for API and web endpoints plus a pasted access token.
 
 ### **5.11. Mobile App: Commissioning & Calibration**
 
-**Supports:** US-ADM-03, US-MOB-02, NFR-USA-002
+**Supports:** US-ADM-03, US-ADM-04, US-MOB-02, NFR-USA-002, NFR-USA-003
 
 ```text
 +--------------------------------------------------------------+
-| QR Scanner / Calibration Session                            |
+| Scanner Input / Calibration Session                         |
 |--------------------------------------------------------------|
-| Camera or Map View                                           |
-| - scan frame OR blue dot map                                 |
+| Floor Map Preview                                            |
+| - gateways                                                    |
+| - route checkpoints                                           |
+| - blue dot capture                                            |
 |--------------------------------------------------------------|
 | Bottom Sheet                                                 |
 | - detected device                                             |
 | - zone selector                                               |
-| - start / pause / finish collection                           |
-| - quality and progress                                        |
+| - start / finish collection                                   |
+| - progress and session summary                                |
 +--------------------------------------------------------------+
 ```
 
-* The bottom sheet keeps one-thumb actions reachable while the main canvas stays dedicated to camera or map context.
+* The delivered baseline now supports native camera-based QR scanning and keeps manual or external-scanner entry available as fallback, with the floor map and blue-dot capture in one-thumb reach.
 
 ---
 
 ## **6. Visual Design & Interaction States**
 
-### **6.1. Suggested Theme**
+### **6.1. Design System: Industrial Command Deck**
 
-**Theme Name:** **Industrial Command Deck**
+**Philosophy: The Sentinel Interface**
+This design system is engineered for mission-critical environments where split-second decisions rely on data clarity and structural authority. We move away from the "playful SaaS" aesthetic toward a sophisticated, industrial-grade console that monitors, alerts, and commands.
 
-**Design stance:** A restrained, high-technology operations console that feels precise and mission-critical without drifting into unreadable sci-fi HUD styling.
+#### **6.1.1. Colors & Surface Architecture (Deep Void)**
+The palette recedes to let active telemetry pop with surgical precision. Traditional 1px borders are strictly prohibited for structural layout; boundaries are defined through background color shifts.
 
-**Why this direction fits:**
-
-* The product is spatial, real-time, and data-dense, so the interface should feel like a live control surface.
-* Administrators need trust and precision more than decorative flourish.
-* Operations managers need strong contrast between normal flow, risk, and incident states.
-
-**Differentiation anchor:** If a screenshot is shared without branding, it should still read as a **location intelligence command surface** because of the layered floor-plan map, telemetry accents, and crisp confidence/alert treatment.
-
-### **6.2. Color System & Typography**
-
-| Token Group | Use | Value |
+| **Token** | **Hex Value** | **Role** |
 | :--- | :--- | :--- |
-| **Background / Base** | App chrome | `#060B14` |
-| **Background / Surface** | Cards, side rails, drawers | `#0F1724` |
-| **Background / Elevated** | Active panels, modals | `#152235` |
-| **Stroke / Subtle** | Dividers, grids, inactive map outlines | `#24364D` |
-| **Text / Primary** | Primary labels and body copy | `#EAF2FF` |
-| **Text / Secondary** | Supporting labels and metadata | `#9FB1C8` |
-| **Accent / Telemetry** | Live states, focused actions, precise locations | `#21D4FD` |
-| **Accent / Depth** | Secondary emphasis, selected tabs, charts | `#2F6BFF` |
-| **Success** | Healthy devices, completed calibration | `#22C55E` |
-| **Warning** | SLA risk, low confidence caution, battery drop | `#F59E0B` |
-| **Critical** | Violations, unauthorized geofence, offline status | `#F04438` |
-| **Info Wash** | Large translucent map overlays | `rgba(33, 212, 253, 0.14)` |
+| `--surface-base` | `#0e131e` | Primary application canvas |
+| `--surface-container` | `#1b1f2b` | Major functional areas (Sidebars, Map overlays) |
+| `--surface-container-low` | `#171b27` | Recessed "milled" panels |
+| `--surface-container-lowest`| `#090e19` | Data card backgrounds |
+| `--surface-container-high` | `#303541` | Elevated modules & active elements |
+| `--primary` | `#00f0ff` | Telemetry Cyan (status, active links) |
+| `--on-surface` | `#dee2f2` | Primary text (reduced strain) |
+| `--on-surface-variant`| `#8ea2bc` | Muted labels and metadata |
 
-**Typography system:**
+#### **6.1.2. Typography**
+The type system balances technical precision with rapid scanning.
 
-* **Headings:** `Space Grotesk` for a technical, modern voice with enough personality for a premium product.
-* **Body/UI text:** `Inter` for compact readability in dense dashboard layouts.
-* **Optional utility text:** Monospaced numerals for coordinates, IDs, and timestamps only.
+*   **Headings:** `Space Grotesk` for a technical, modern voice with enough personality for a premium product.
+*   **Body/UI text:** `Inter` for compact readability in dense dashboard layouts.
+*   **Optional utility text:** Monospaced numerals for coordinates, IDs, and timestamps only.
+
+#### **6.1.3. Geometry & Elevation**
+Depth is achieved through tonal layering rather than traditional shadows.
+
+*   **Radius Tokens:** `--radius-xl` (8px) for major containers; `--radius-sm` (2px) for technical status chips.
+*   **The "No-Line" Rule:** Structural borders are replaced by color transitions. Where extreme density requires separation, use `--outline-variant` (`rgba(59, 73, 75, 0.15)`).
+*   **Glassmorphism:** HUD elements utilize `.hud-glass` (60% opacity background with 24px backdrop blur) to integrate telemetry into the map view.
+*   **Presence Pulse:** Low-confidence estimations are visualized with a pulsing glassmorphism circle (`.presence-pulse`) to communicate "honest" uncertainty.
+*   **Position Transitions:** All asset markers utilize hardware-accelerated CSS transitions (300ms ease-out) for coordinate updates to eliminate visual "teleportation."
+
+#### **6.1.4. Mobile Pleasurable Interactions**
+The mobile platform utilizes native capabilities to transform routine maintenance tasks into satisfying, gamified workflows.
+
+*   **Tactile Confirmation:** Critical data capture events (QR scanning, Calibration checkpoints) trigger standard haptic patterns to reduce reliance on continuous visual monitoring.
+*   **Segmented Progress:** Workflows are broken into discrete "chunks" using industrial segmented indicators to provide a clear narrative of achievement.
+*   **Meaningful Transitions:** Completion of complex spatial setup is rewarded with technical "Celebration" animations that visually confirm the establishment of system accuracy.
+
+#### **6.1.5. Components**
+*   **Primary Actions:** Solid Cyan gradient with a 1px "inner glow" inset box-shadow to simulate a backlit physical button.
+*   **Input Fields:** "Command" style with bottom-border only, transitioning from variant grey to primary Cyan on focus.
+*   **Command Rail:** High-density vertical sidebar (80px) using monoline icons and minimized labels.
 
 ### **6.3. Visual Language**
 
@@ -624,10 +684,10 @@ Build the `04 Mobile App` page using separate sections for general-user and admi
 | **MOB-03** | Asset Search Results | Fast shortlist of candidate assets | Results, no result, low-confidence result |
 | **MOB-04** | Asset Location Sheet | Last known location and context | Precise location, zone fallback, stale timestamp |
 | **MOB-05** | Mobile Map Focus | Centered map for finding asset | Normal, destination highlighted, no live update |
-| **MOB-06** | QR Scanner | Scan gateway/tag code | Idle camera, detected code, invalid code |
-| **MOB-07** | Assign Zone / Room | Attach scanned device to place | Selection, validation error, success |
-| **MOB-08** | Calibration Mode | Blue-dot guided collection | Ready, collecting, paused, weak signal |
-| **MOB-09** | Calibration Session Summary | Confirm results and sync | Success, warning quality, retry required |
+| **MOB-06** | QR Scanner | Resolve gateway/tag code into a commissioning target | Empty input, resolved target, invalid code |
+| **MOB-07** | Assign Zone / Room | Attach scanned device to a selected floor context | Selection, validation error, success |
+| **MOB-08** | Calibration Mode | Blue-dot guided checkpoint capture | Ready, collecting, checkpoints complete |
+| **MOB-09** | Calibration Session Summary | Confirm recent samples and checkpoint coverage | Success, low-sample warning, retry required |
 
 ### **7.5. Prototype Flow Map**
 
@@ -1346,10 +1406,11 @@ Show these as separate visible layers in Figma:
 | Region | Content |
 | :--- | :--- |
 | **Header** | Title, site/floor context, optional profile shortcut |
-| **Search Bar** | Large touch target with search icon and clear affordance |
+| **Session Panel** | API base URL, web base URL, and pasted access token until dedicated mobile auth lands |
+| **Search Bar** | Large touch target with search action and clear affordance |
 | **Recent Searches** | Last 3-5 accessed assets |
-| **Suggested Assets** | Frequently searched or active incident assets |
-| **Status Strip** | Optional alert count or live connection indicator |
+| **Selected Asset Sheet** | Last-seen, location context, precision or confidence, and open-in-map action |
+| **Status Strip** | Optional live connection or authorization indicator |
 
 #### **Required Variants**
 
@@ -1381,13 +1442,13 @@ Show these as separate visible layers in Figma:
 | State | Content |
 | :--- | :--- |
 | **Idle** | `Point the camera at a gateway or tag QR code.` |
-| **Detected** | Device type, device ID, confidence of read, CTA `Assign Zone` |
-| **Invalid** | Error copy, CTA `Try Again` |
+| **Detected** | Device type, device ID, current floor context, CTA `Assign Zone` |
+| **Invalid** | Error copy, CTA `Try Again` or `Edit Payload` |
 
 #### **Required Variants**
 
-* Idle camera
-* QR detected successfully
+* Empty scanner input
+* QR payload resolved successfully
 * Unsupported or unreadable QR
 * Network sync delayed but local scan retained
 

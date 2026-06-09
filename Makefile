@@ -7,7 +7,7 @@ VENV_ACTIVATE = source $(VENV_DIR)/bin/activate
 UV_API_SYNC = $(VENV_ACTIVATE) && $(UV) sync --project apps/api --extra dev --active
 UV_API_RUN = $(VENV_ACTIVATE) && $(UV) run --project apps/api --active
 
-.PHONY: install api-install js-install lint test build format compose-up compose-down compose-reset bootstrap-admin
+.PHONY: install api-install js-install lint test build format compose-up compose-down compose-reset bootstrap-admin certs
 
 install: api-install js-install
 
@@ -42,6 +42,10 @@ compose-down:
 
 compose-reset:
 	docker compose down -v --remove-orphans
+
+certs:
+	@mkdir -p ops/certs
+	bash ops/certs/generate-certs.sh --all
 
 bootstrap-admin:
 	$(UV_API_RUN) python -m rtls_api.bootstrap_admin --email "$(EMAIL)" --password "$(PASSWORD)" --display-name "$(DISPLAY_NAME)"

@@ -12,6 +12,8 @@ from rtls_api.config import Settings
 from rtls_api.ingestion import TelemetryIngestionService, ensure_utc
 from rtls_api.main import create_app
 from rtls_api.models import (
+    AlertInstance,
+    AlertStatus,
     AssetBatteryProfile,
     AssetTag,
     AssetUpdateRateProfile,
@@ -266,6 +268,61 @@ def test_heartbeat_ingestion_updates_gateway_health_feed(tmp_path: Path) -> None
         assert stored_heartbeat.message_id == "hb-001"
 
 
+def test_heartbeat_ingestion_creates_and_clears_low_battery_maintenance_alert(
+    tmp_path: Path,
+) -> None:
+    settings = build_settings(tmp_path, gateway_heartbeat_stale_after_seconds=300)
+    app = create_app(settings)
+
+    with TestClient(app):
+        gateway_id, _ = seed_gateway(app)
+        service = create_ingestion_service(app, settings)
+        low_battery_time = datetime.now(timezone.utc) - timedelta(seconds=10)
+        low_battery_result = service.process_message(
+            topic="rtls/heartbeat/gw-lobby-01",
+            payload_bytes=json.dumps(
+                {
+                    "gateway_id": "gw-lobby-01",
+                    "message_id": "hb-low-battery",
+                    "battery_level_percent": 9,
+                }
+            ).encode("utf-8"),
+            broker_received_at=low_battery_time,
+        )
+        assert low_battery_result.accepted is True
+
+        with app.state.session_factory() as db:
+            alerts = db.scalars(
+                select(AlertInstance).where(AlertInstance.rule_type == "gateway_low_battery")
+            ).all()
+            assert len(alerts) == 1
+            assert alerts[0].scope_key == f"gateway:{gateway_id}:battery"
+            assert alerts[0].status == AlertStatus.OPEN.value
+
+        recovery_result = service.process_message(
+            topic="rtls/heartbeat/gw-lobby-01",
+            payload_bytes=json.dumps(
+                {
+                    "gateway_id": "gw-lobby-01",
+                    "message_id": "hb-recovered",
+                    "battery_level_percent": 81,
+                }
+            ).encode("utf-8"),
+            broker_received_at=low_battery_time + timedelta(seconds=30),
+        )
+        assert recovery_result.accepted is True
+
+        with app.state.session_factory() as db:
+            alert = db.scalar(
+                select(AlertInstance).where(
+                    AlertInstance.rule_type == "gateway_low_battery",
+                    AlertInstance.scope_key == f"gateway:{gateway_id}:battery",
+                )
+            )
+            assert alert is not None
+            assert alert.status == AlertStatus.CLEARED.value
+
+
 def test_worker_subscribes_to_data_and_heartbeat_topics(monkeypatch, tmp_path: Path) -> None:
     from rtls_api import worker
 
@@ -282,5 +339,6 @@ def test_worker_subscribes_to_data_and_heartbeat_topics(monkeypatch, tmp_path: P
 
     assert subscribed_topics == [
         ("pilot/data/+", 1),
+        ("pilot/premium/+", 1),
         ("pilot/heartbeat/+", 1),
     ]

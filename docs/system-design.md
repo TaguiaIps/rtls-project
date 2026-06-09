@@ -14,54 +14,57 @@ This design covers the four primary tiers of the RTLS system: the backend micros
 
 ## **2. System Architecture Overview**
 
-The system will be implemented using a microservices architecture, containerized with Docker, and orchestrated by Kubernetes. This approach ensures scalability, resilience, and maintainability.
+The system is implemented using a microservices architecture, containerized with Docker, and orchestrated locally via Docker Compose (with Kubernetes/k3s for production). This approach ensures scalability, resilience, and maintainability.
 
 ### **2.1. Architectural Diagram (Container View)**
 
 ```mermaid
 graph TD
     subgraph User Interaction
-        User[User<br>Alex / Carlos]
-        Dashboard[Web Dashboard / Mobile Apps<br>React on Nginx]
+        User[User<br>Administrator / General User]
+        Web[Web Application<br>React + Vite]
+        Mobile[Mobile App<br>Expo / React Native]
     end
 
     subgraph Infrastructure
-        Tags[BLE Tags]
-        Gateways[BLE Gateways]
+        Tags[BLE Tags<br>Economic & Premium]
+        Gateways[BLE Gateways<br>Economic & Premium]
     end
 
     subgraph Backend Services
-        API[API & WebSocket Service<br>HTTPS/React SPA<br>FastAPI]
-        MQTTBroker[MQTT Broker<br>Mosquitto]
-        Ingest[Ingestion Service<br>FastAPI]
-        Stream[Internal Stream<br>Redis Streams or Kafka]
-        Positioning[Positioning Engine]
+        API[API & WebSocket Service<br>FastAPI]
+        MQTTBroker[MQTT Broker<br>Mosquitto / EMQX]
+        Worker[Worker Process<br>FastAPI]
+        Redis[Redis<br>Dedupe + Streams + Sessions]
         Timescale[TimescaleDB]
+        ObjectStore[Object Storage<br>Floor Plans + Exports]
     end
 
-    User -->|HTTPS/React SPA| Dashboard
-    Dashboard -->|REST API<br>HTTPS| API
+    User -->|HTTPS| Web
+    Mobile -->|HTTPS / Handoff| Web
+    Web -->|REST + WebSocket| API
     Tags --> Gateways
-
     Gateways -->|MQTT QoS=1| MQTTBroker
-    MQTTBroker --> Ingest
-    Ingest --> Stream
-    Stream --> Positioning
-    Positioning --> Timescale
-    Timescale --> API
-    API --> Dashboard
+    MQTTBroker --> Worker
+    Worker --> Redis
+    Worker --> Timescale
+    Worker -->|Derived Events| Timescale
+    API --> Timescale
+    API --> ObjectStore
+    API -->|WebSocket| Web
 ```
 
 ### 2.2 **Components**
 
-- **BLE Tags (beacons)**: emit advertisements at configured intervals.
-- **BLE Gateways**: publish JSON to MQTT topics (QoS=1). Minimal capabilities assumed.
-- **MQTT Broker**: TLS, per-topic ACLs.
-- **Ingestion Service (FastAPI)**: subscribes to topics, validates payloads, dedupes, tags with `broker_received_timestamp`, writes to TimescaleDB and streams data to Positioning Engine.
-- **Positioning Engine**: computes positions and stores `location_history`.
-- **API & WS Service (FastAPI)**: authentication, REST APIs, WebSocket streaming.
-- **Redis**: dedupe cache, pub/sub/streams, job coordination.
-- **TimescaleDB**: primary storage for readings and locations.
+- **BLE Tags (beacons)**: emit advertisements at configured intervals. Economic tags use BLE RSSI (0.5–2 Hz); Premium tags use AoA/UWB (5–20 Hz).
+- **BLE Gateways**: publish JSON to MQTT topics (QoS=1). Economic gateways forward RSSI readings; Premium gateways forward AoA phase data or UWB ToF measurements.
+- **MQTT Broker**: TLS, per-topic ACLs. Topics: `rtls/data/{gateway_id}`, `rtls/premium/{gateway_id}`, `rtls/heartbeat/{gateway_id}`.
+- **Worker Process (FastAPI)**: subscribes to MQTT topics, validates payloads, deduplicates in Redis, persists raw readings to TimescaleDB, runs positioning engine (Economic and Premium), derives zone transitions, dwell records, round-trips, and SLA timers.
+- **API & WS Service (FastAPI)**: authentication (JWT), REST APIs, WebSocket streaming (`/ws/locations`), alert rules, analytics queries, export jobs, admin audit/health endpoints.
+- **Redis**: dedupe cache, internal streams, JWT session store, concurrent refresh serialization.
+- **TimescaleDB**: primary storage for raw readings, premium measurements, location history, derived events, alert instances, audit events, and analytics rollups.
+- **Object Storage**: floor-plan binaries and analytics export artifacts.
+- **Observability**: local `/metrics` endpoint, `X-Request-ID` tracing, administrator Health and Audit workspaces.
 
 ### 2.3 **Message sequence**
 
@@ -95,6 +98,7 @@ sequenceDiagram
 - **Protocol:** MQTT
 - **MQTT Topic Structure:**
   - telemetry: `rtls/data/{gateway_id}`
+  - premium telemetry: `rtls/premium/{gateway_id}`
   - heartbeat: `rtls/heartbeat/{gateway_id}`
 - **Identity Rule:** The topic gateway identifier must match the payload `gateway_id` and an existing registered gateway.
 - **Payload Format (JSON):** Each telemetry message published by a gateway contains one message envelope and one or more observed tag readings.
@@ -124,17 +128,39 @@ sequenceDiagram
     }
     ```
 
+- **Premium Telemetry Format (JSON):** Each Premium gateway publishes modality-specific AoA or UWB measurements through a parallel contract that preserves normalized estimator inputs.
+
+    ```json
+    {
+      "gateway_id": "gw-premium-01",
+      "message_id": "uwb-001",
+      "gateway_timestamp": "2026-03-29T12:00:00Z",
+      "firmware_version": "2.0.0",
+      "measurements": [
+        {
+          "tag_id": "TAG-PRM-01",
+          "modality": "UWB",
+          "sequence_id": "uwb-001",
+          "quality_score": 0.92,
+          "distance_m": 4.24
+        }
+      ]
+    }
+    ```
+
 ### **3.2. Data Ingestion & Positioning Service**
 
 - **Language/Framework:** Python worker process.
 - **Core Logic:**
-    1. The worker subscribes to `rtls/data/+` and `rtls/heartbeat/+`.
+    1. The worker subscribes to `rtls/data/+`, `rtls/premium/+`, and `rtls/heartbeat/+`.
     2. Each message is parsed and validated before any durable state is written.
     3. The worker verifies that the MQTT topic gateway identifier matches the payload `gateway_id` and a registered gateway record.
     4. The worker deduplicates MQTT retries using the tuple `(gateway_id, message_id)` in Redis with a 10-second TTL.
     5. Accepted telemetry is persisted as one `raw_readings` row per observed tag with `broker_received_at` as canonical time.
-    6. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
-    7. Accepted live-location updates derived from recent raw readings now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
+    6. Accepted Premium telemetry is persisted as normalized AoA or UWB measurement rows with modality, quality, and sequence context intact for the Premium estimator.
+    7. Accepted heartbeat messages update the `gateway_heartbeats` latest-known state used by backend operational feeds.
+    8. The positioning layer now evaluates both the delivered Economic BLE flow and the Premium AoA or UWB flow, then writes one canonical latest-known result with source-tier, source-modality, and precision metadata.
+    9. Accepted live-location updates derived from recent telemetry now also project canonical zone-entry and zone-exit events, close dwell history, maintain open occupancy state, and update current table timer snapshots for SLA-eligible tables.
 
 #### MQTT payload schema (canonical)
 
@@ -165,17 +191,17 @@ sequenceDiagram
 - Deduplicate by `(gateway_id, message_id)` using Redis with a 10-second TTL.
 - Gateway-provided `gateway_timestamp` remains optional metadata and never replaces canonical time.
 - Unknown gateways, topic/payload mismatches, invalid payloads, and duplicate retries are rejected before durable writes.
-- The current economic-tier baseline derives latest known asset locations and append-only location history from recent accepted raw readings on mapped floors.
+- The current positioning layer derives latest known asset locations and append-only location history from recent accepted Economic telemetry and supported Premium measurements on mapped floors.
 
 #### Key operational notes
 
 - **Time canonicalization:** The ingestion worker appends `broker_received_at` to every message and uses it as canonical time. Gateway-provided `gateway_timestamp` is optional and treated as best-effort metadata.
 - **Broker & security:** Use a broker supporting TLS and per-topic ACLs (EMQX, Mosquitto with auth plugin, or HiveMQ). Gateways should authenticate using client certs or unique credentials.
-- **Economic-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements to compute confidence-aware floor locations. Low-confidence outputs fall back to mapped zones when possible instead of implying point precision.
+- **Two-tier positioning baseline:** The worker reuses recent accepted raw readings plus registered gateway placements for the Economic path, and normalized AoA or UWB measurements plus Premium gateway calibration state for the Premium path. Canonical live-location outputs now include source-tier, source-modality, and optional precision metadata so downstream clients can distinguish Premium precision from Economic fallback behavior.
 - **Derived-event baseline:** The same worker transaction now derives canonical zone transitions and closed dwell records from accepted live-location updates, keeps current table timer snapshots for SLA-eligible table areas, and evaluates round trips later from the persisted transition history instead of reparsing raw telemetry.
 - **Forward-only rollout:** Derived events begin when new accepted live-location updates arrive after deployment. Existing historical location rows are not backfilled in this first rollout.
-- **Reference data note:** Guided radiomap collection remains deferred to the later mobile calibration change. The delivered baseline relies on backend-managed floor, zone, and gateway-placement data.
-- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, and the delivered Alerts Center for table SLA and unauthorized geofence workflows. Maintenance alerts, analytics workspaces, exports and rollups, premium-tier telemetry, and mobile calibration workflows remain deferred.
+- **Reference data note:** Server-backed radiomap generation remains deferred. The delivered mobile commissioning baseline captures floor-linked calibration progress against backend-managed floor, zone, and gateway-placement data.
+- **Current scope boundary:** The baseline now includes typed alert rules, durable alert instances, in-app notifications, optional email-delivery attempts, the delivered Alerts Center, system-managed maintenance alerts for stale or low-battery gateways, the first Analytics workspace, async CSV analytics exports, hourly analytics rollups, administrator-triggered retention or rollup lifecycle runs, Premium-tier AoA or UWB telemetry support, the administrator Health and Audit workspaces, the local `/metrics` and request-id tracing baseline, the first mobile Asset Finder workflow with web Live Map handoff, and the first mobile commissioning workflow with native QR scanning plus local calibration-session summaries. Vendor-specific provisioning, dedicated mobile sign-in, and advanced backend calibration processing remain deferred.
 - **No gateway scraping or local buffering:** Do not expect Prometheus scraping or persistent queues on commercial Tuya gateways. For full gateway control choose alternative hardware.
 
 ### **3.3. API Service**
@@ -214,25 +240,33 @@ sequenceDiagram
 | | `DELETE` | `/api/assets/{id}` | Deletes an asset. |
 | | `POST` | `/api/assets/bulk_import` | Imports assets from a CSV file (US-ADM-05). |
 | **Admin - Gateway Health** | `GET` | `/api/admin/gateway-health` | Returns the latest heartbeat state for registered gateways that have reported health data. |
+| **Admin - Health & Audit** | `GET` | `/api/admin/observability/summary` | Returns the administrator Health workspace summary including gateway-risk cards, telemetry totals, alert pressure, audit totals, and delivered observability metadata. |
+| | `GET` | `/api/admin/audit-events` | Returns persisted audit history using bounded newest-first pagination and supported actor, category, action, target, and time filters. |
+| | `POST` | `/api/admin/observability/lifecycle-runs` | Creates a lifecycle run that applies retention windows and refreshes supported analytics rollups. |
 | **Analytics** | `GET` | `/api/analytics/trajectory` | Retrieves historical location points for an asset within a time range (US-ANL-01). |
 | | `GET` | `/api/analytics/heatmap` | Retrieves aggregated data for heatmap visualization (US-ANL-04). |
-| | `GET` | `/api/analytics/visit_count` | Retrieves a report of visits to specified POIs by an asset (US-ANL-03). |
+| | `GET` | `/api/analytics/dwells` | Retrieves dwell-time report data derived from canonical dwell history for the selected scope (FR-ANL-004). |
+| | `GET` | `/api/analytics/round-trips` | Retrieves completed route cycles and summary metrics for a selected origin and destination pair (FR-ANL-003). |
+| | `GET` | `/api/analytics/sla-trends` | Retrieves time-bucketed table SLA trend data using the configured alert-rule threshold baseline when available (FR-ANL-006). |
+| | `POST` | `/api/analytics/exports` | Queues an async CSV export for a supported analytics scope and returns the created job record. |
+| | `GET` | `/api/analytics/exports` | Lists recent export jobs visible to the current user, optionally filtered by floor. |
+| | `GET` | `/api/analytics/exports/{job_id}` | Returns the current status and metadata for one export job. |
+| | `GET` | `/api/analytics/exports/{job_id}/file` | Downloads the completed export artifact when it is still retained. |
 | **Admin - Gateways** | `GET` | `/api/gateways` | Retrieves a list of all configured gateways. |
 | | `POST` | `/api/gateways` | Registers a new gateway and its location (US-ADM-02). |
 | | `PUT` | `/api/gateways/{id}` | Updates a gateway's configuration. |
 | **Admin - Zones & POIs** | `GET` | `/api/zones` | Retrieves a list of all geofences and Points of Interest. |
 | | `POST` | `/api/zones` | Creates a new geofence or POI (US-ANL-02). |
 | | `PUT` | `/api/zones/{id}` | Updates a zone's geometry or name. |
-| **Data Export** | `POST` | `/api/export/request` | Requests an async export of raw data. Returns a job ID. |
-| | `GET` | `/api/export/status/{job_id}` | Checks the status of an export job and provides a download URL when complete. |
 | **Real-time** | `WS` | `/ws/locations` | WebSocket endpoint for streaming real-time location updates. |
+| **Observability** | `GET` | `/metrics` | Returns a text-based local metrics payload for current gateway, alert, telemetry, and audit counters. |
 
 ### **3.4. Analytics & Inference Service**
 
-- **Implementation:** A set of scheduled tasks managed by a job queue like **Celery** with a scheduler like Celery Beat.
+- **Implementation:** The delivered baseline uses durable export-job records plus application-managed background tasks for async CSV generation, and administrator-triggered lifecycle runs for retention and hourly rollup refresh.
 - **Core Jobs:**
-  - **Data Aggregation (Nightly):** Purges raw data older than 90 days after creating permanent hourly summaries.
-  - **Insight Generation (Scheduled):** Populates the `analytics_insights` table with actionable information.
+  - **Analytics Export (On Demand):** Replays a supported analytics query, writes a CSV artifact into object storage, and retains it for the configured export window.
+  - **Data Lifecycle (Manual baseline):** Applies delivered retention windows to raw telemetry, Premium measurements, location history, and export artifacts, then rebuilds supported hourly rollups.
 
 ---
 
@@ -254,7 +288,11 @@ sequenceDiagram
     - `name` (VARCHAR),
     - `site_id` (VARCHAR, UNIQUE),
     - `location_x` (FLOAT),
-    - `location_y` (FLOAT).
+    - `location_y` (FLOAT),
+    - `premium_modality` (nullable VARCHAR),
+    - `premium_mounting_label` (nullable VARCHAR),
+    - `premium_mounting_angle_degrees` (nullable FLOAT),
+    - `premium_calibration_status` (nullable VARCHAR).
   - **`raw_readings`** (TimescaleDB Hypertable):
     - `id` (PK),
     - `message_id`  (INTEGER, UNIQUE),
@@ -265,6 +303,18 @@ sequenceDiagram
     - `readings` (JSONB),
     - `asset_id` (FK to assets),
     - `gateway_id` (FK to gateways).
+  - **`premium_raw_measurements`**:
+    - `id` (PK),
+    - `message_id` (VARCHAR),
+    - `sequence_id` (nullable VARCHAR),
+    - `broker_received_at` (TIMESTAMPTZ),
+    - `gateway_timestamp` (nullable TIMESTAMPTZ),
+    - `modality` (VARCHAR),
+    - `quality_score` (nullable FLOAT),
+    - `azimuth_degrees` (nullable FLOAT),
+    - `distance_m` (nullable FLOAT),
+    - `asset_id` (nullable FK to assets),
+    - `gateway_id` (FK to gateways).
   - **`asset_current_locations`**:
     - `asset_id` (PK / FK to assets),
     - `floor_id` (FK to floors),
@@ -274,7 +324,10 @@ sequenceDiagram
     - `location_x` (FLOAT, nullable),
     - `location_y` (FLOAT, nullable),
     - `confidence_level` (VARCHAR),
-    - `confidence_score` (FLOAT).
+    - `confidence_score` (FLOAT),
+    - `source_tier` (VARCHAR),
+    - `source_modality` (VARCHAR),
+    - `precision_meters` (nullable FLOAT).
   - **`location_history`** (TimescaleDB Hypertable / append-only history pattern):
     - `id` (PK),
     - `timestamp` (TIMESTAMPTZ),
@@ -283,10 +336,17 @@ sequenceDiagram
     - `asset_id` (FK to assets),
     - `zone_id` (nullable FK to zones),
     - `confidence_level` (VARCHAR),
-    - `confidence_score` (FLOAT).
+    - `confidence_score` (FLOAT),
+    - `source_tier` (VARCHAR),
+    - `source_modality` (VARCHAR),
+    - `precision_meters` (nullable FLOAT).
 - **Data Lifecycle Management:**
-  - A TimescaleDB **retention policy** will automatically delete raw data older than **90 days**.
-  - Rollups: hourly/daily tables for dwell time, zone counts, avg_rssi
+  - The delivered lifecycle run currently enforces these application-managed retention windows:
+    - raw readings: **90 days**
+    - premium raw measurements: **90 days**
+    - location history: **30 days**
+    - export jobs and artifacts: **7 days**
+  - The delivered rollup baseline persists hourly heatmap density and hourly table SLA aggregates so compatible analytics requests can avoid rescanning only raw history.
 
 ### **Data Model (Entity-Relationship Diagram)**
 
@@ -387,18 +447,35 @@ erDiagram
 
 ## **5. Frontend Design**
 
-- **Framework:** React.js (using Vite for the build tool).
-- **Current State Management:** React Router plus route-local and page-local state. A dedicated client store remains optional future work, not a delivered requirement.
-- **Delivered Shell Baseline:** protected login, administrator spatial setup workspace, shared operations shell, Operations Overview, and Live Map.
-- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`.
+- **Framework:** React.js with Vite.
+- **State Management:** React Router plus route-local and page-local state.
+- **Design System:** "Deep Void" theme engine with "Command" interaction standards (focus-responsive Cyan borders, semantic form feedback, real-time validation).
+- **Key Components:** `OperationsShell`, `OperationsOverview`, `LiveMap`, `AdminSpatialWorkspace`, `AlertsCenter`, `AnalyticsWorkspace`, `HealthWorkspace`, `AuditWorkspace`.
 
 ### **5.0. Delivered Web Baseline Scope**
 
-- The current web shell is intentionally limited to monitoring surfaces backed by delivered live-location and gateway-health signals.
-- The current Operations Overview summarizes active assets, low-confidence assets, restricted-zone presence, stale gateways, a floor-linked map preview, and a priority queue derived from those live signals.
-- The current Live Map renders one selected floor at a time with floor-plan imagery, zones, gateways, live asset markers, confidence states, search and filter controls, and a selected-asset drawer.
-- Alerts Center queue, detail, acknowledgement, resolution, and delivered rule-editing workflows are now part of the web baseline for operational alerts.
-- Maintenance alerts, analytics workspaces, SLA trends, assignments, exports, and richer incident workflows remain follow-on backlog items.
+The web application is a protected single-page application with role-aware routing:
+
+**Shared Infrastructure:**
+- JWT authentication with refresh-token rotation
+- "Command Rail" navigation layout
+- Role-aware routing (Administrator → setup area, General User → operations area)
+- In-app notification system for active alerts
+
+**Administrator Workspaces:**
+- Spatial setup (sites, floors, floor plans, scale calibration, zones/POIs/tables)
+- Gateway placement and tier management
+- Asset tag registry with CSV bulk import
+- Alert rule configuration (Table SLA, unauthorized geofence)
+- Health workspace (gateway risk cards, telemetry totals, alert pressure)
+- Audit workspace (event history with actor, category, action, target, time filters)
+- Data lifecycle management (retention runs, rollup refresh)
+
+**General User Workspaces:**
+- Operations Overview (live operational state, floor-linked map preview, priority queue)
+- Live Map (floor-linked with glassmorphism HUD, search/filter, confidence visualization, selected-asset drawer)
+- Alerts Center (active and historical alert review, acknowledgement, resolution)
+- Analytics Workspace (trajectory replay, heatmaps, dwell reports, round-trip reports, SLA trends, CSV export)
 
 ### **5.1. General User Flow Diagram**
 
@@ -407,21 +484,48 @@ graph TD
     A[Start] --> B{User Authenticated?};
     B -- No --> C[Login Page];
     C -- Submits Credentials --> D[API Authenticates];
-    D -- Success --> E[Dashboard View];
+    D -- Success --> E[Operations Overview];
     B -- Yes --> E;
-    E -- Clicks 'View Map' --> F[Real-Time Map View];
-    F -- Selects an Asset --> G[Asset Details Panel Appears];
-    G -- Clicks 'View Trajectory' --> H[Analytics Panel];
-    H -- Selects Time Range & Runs Report --> I[Map Displays Asset Trajectory];
-    F -- Clicks 'Analytics' --> H;
+    E -- Clicks Live Map --> F[Live Map View];
+    F -- Selects an Asset --> G[Asset Details Drawer];
+    G -- Clicks View Trajectory --> H[Analytics Workspace];
+    H -- Selects Time Range --> I[Trajectory / Heatmap / Dwell Reports];
+    F -- Clicks Alerts --> J[Alerts Center];
+    J -- Selects Alert --> K[Alert Detail + Triage Actions];
+    E -- Clicks Analytics --> H;
 ```
 
 ---
 
 ## **6. Mobile Application Design**
 
-- **Framework:** A cross-platform framework like **Flutter** or **React Native**.
-- **Core Logic:** On-device pathfinding using the **A* (A-star) algorithm** with a pre-downloaded map graph.
+- **Framework:** Expo (React Native).
+- **Authentication:** Accepts a current access token plus configurable API and web base URLs (dedicated mobile auth flow deferred).
+
+### **6.1. Asset Finder (Delivered)**
+
+Single-screen workflow for fast on-floor asset lookup:
+
+- Search by name or tag identifier using `GET /api/locations/search`
+- Recent searches persisted locally via AsyncStorage
+- Location sheet with confidence/precision metadata
+- "Open in Live Map" handoff to web `/operations/live-map`
+
+### **6.2. Commissioning & Calibration (Delivered)**
+
+Administrator-focused device commissioning workflow:
+
+- Native camera-based QR scanning, external scanner, or manual identifier entry
+- Site and floor selection, zone/room assignment
+- Floor-linked preview with gateway markers and route checkpoints
+- Tap-driven checkpoint capture (blue-dot calibration baseline)
+- Session persistence with target identity, floor/zone context, elapsed time, sample count, and checkpoint progress
+
+### **6.3. Deferred Mobile Features**
+
+- Dedicated mobile sign-in flow
+- Live device self-positioning during calibration (blue dot follows real position)
+- Full mobile navigation stack with deep linking
 
 ---
 
@@ -469,7 +573,7 @@ sequenceDiagram
 
 ### **7.3. Administrator Adds a New Asset**
 
-This diagram illustrates the flow for fulfilling user story US-ADM-04.
+This diagram illustrates the flow for fulfilling user story US-ADM-05.
 
 ```mermaid
 sequenceDiagram
@@ -487,43 +591,33 @@ sequenceDiagram
     Frontend->>Admin: Displays "Asset created successfully" message
 ```
 
-### 7.4. Calibration Mode
+### 7.4. Mobile Asset Finder
 
-The mobile app runs a guided calibration that uses server-derived coverage heatmaps.
+The Expo mobile baseline now delivers a single-screen Asset Finder for fast on-floor lookup without introducing a full mobile navigation stack yet.
 
-Steps:
+Key delivery details:
 
-1. Register site and start calibration.
-2. Carry a calibration beacon/tag and walk the area; app streams actions to server and receives coverage updates.
-3. App displays coverage heatmap and completion metrics derived from `broker_received_timestamp`.
+1. The app accepts a current access token plus configurable API and web base URLs so operators can call the authorized live-location APIs before the later dedicated mobile-auth change lands.
+2. Asset search uses the existing `GET /api/locations/search` contract and returns shared live-location records with last-seen, floor, zone, and source-tier context.
+3. Recent searches persist locally through AsyncStorage and stay ordered by most recent access without duplicates.
+4. The selected-asset sheet shows location context plus confidence or precision metadata from the canonical live-location contract.
+5. "Open in Live Map" launches the delivered web route at `/operations/live-map` with `site_id`, `floor_id`, and `asset_tag_id` query parameters preserved.
 
-```mermaid
-flowchart LR
-  User[Installer] --> Mobile[Calibration App]
-  Mobile -->|start| API[Server API]
-  Mobile -->|publish beacon| Gateway
-  Gateway -->|MQTT| Ingest[Ingestion Service]
-  Ingest --> DB[TimescaleDB]
-  DB --> Mobile
-```
+### 7.5. Commissioning & Calibration Mode
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Mobile
-    participant Gateway
-    participant Ingest
-    participant Database
+The Expo mobile baseline now also delivers an Administrator-focused commissioning workflow that reuses the existing admin sites, floor-detail, gateway, zone, and asset-registry APIs.
 
-    User->>Mobile: Register site and start calibration
-    Mobile->>Gateway: Publish beacon data
-    Gateway->>Ingest: Update beacon location data
-    Ingest->>Database: Calibration information
-    Ingest-->>Mobile: Updates beacon location on map
-    Mobile->>User: Presents updated map
-```
+Key delivery details:
 
-### 7.5. Onboarding Wizard
+1. The same mobile session panel is reused so an Administrator can load protected admin context without waiting for the later dedicated mobile-auth change.
+2. Device intake resolves native camera-scanned, external-scanner, or pasted QR payloads against known gateway and asset-tag identifiers from the delivered registry surfaces.
+3. The workflow lets the operator choose the current site and floor, assign the device to a room or zone, and inspect a floor-linked preview before calibration begins.
+4. The calibration walkthrough renders gateway markers, route checkpoints, and a visible blue-dot capture that updates when the operator taps the floor preview to record their current position.
+5. Completed sessions persist locally through AsyncStorage with target identity, floor and zone context, elapsed time, sample count, and checkpoint progress.
+6. Automatic indoor positioning, radiomap generation, and backend calibration persistence remain deferred, while manual identifier entry remains available as fallback for simulator and constrained-device workflows.
+7. True device self-location for the calibration blue dot remains deferred; the delivered baseline uses tap-driven checkpoint capture instead of live operator positioning.
+
+### 7.6. Onboarding Wizard
 
 Admin registers gateways (gateway_id, location label, firmware) in the UI. Gateway metadata is used for mapping and diagnostics.
 

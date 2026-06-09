@@ -21,10 +21,14 @@ from rtls_api.models import (
     AssetTag,
     AssetTagImportSession,
     AssetUpdateRateProfile,
+    CalibrationArtifact,
+    CalibrationArtifactStatus,
     Floor,
     FloorPlanAsset,
     Gateway,
     GatewayHardwareTier,
+    PremiumCalibrationStatus,
+    PremiumTelemetryModality,
     Site,
     SpatialArea,
     SpatialAreaType,
@@ -50,6 +54,8 @@ from rtls_api.schemas import (
     GatewayCreateRequest,
     GatewayResponse,
     GatewayUpdateRequest,
+    PremiumGatewayProfileRequest,
+    PremiumGatewayProfileResponse,
     SiteCreateRequest,
     SiteResponse,
     SpatialAreaCreateRequest,
@@ -138,6 +144,92 @@ def _clear_floor_scale(floor: Floor) -> None:
     floor.scale_configured_at = None
 
 
+def _serialize_premium_gateway_profile(gateway: Gateway) -> PremiumGatewayProfileResponse | None:
+    if (
+        gateway.premium_modality is None
+        or gateway.premium_mounting_label is None
+        or gateway.premium_mounting_angle_degrees is None
+        or gateway.premium_calibration_status is None
+    ):
+        return None
+    return PremiumGatewayProfileResponse(
+        modality=PremiumTelemetryModality(gateway.premium_modality),
+        mounting_label=gateway.premium_mounting_label,
+        mounting_angle_degrees=gateway.premium_mounting_angle_degrees,
+        calibration_status=PremiumCalibrationStatus(gateway.premium_calibration_status),
+        calibration_updated_at=gateway.premium_calibration_updated_at,
+    )
+
+
+def _clear_gateway_premium_profile(gateway: Gateway) -> None:
+    gateway.premium_modality = None
+    gateway.premium_mounting_label = None
+    gateway.premium_mounting_angle_degrees = None
+    gateway.premium_calibration_status = None
+    gateway.premium_calibration_updated_at = None
+
+
+def _apply_premium_gateway_profile(
+    gateway: Gateway,
+    premium_profile: PremiumGatewayProfileRequest,
+) -> None:
+    gateway.premium_modality = premium_profile.modality.value
+    gateway.premium_mounting_label = premium_profile.mounting_label.strip()
+    gateway.premium_mounting_angle_degrees = premium_profile.mounting_angle_degrees
+    gateway.premium_calibration_status = premium_profile.calibration_status.value
+    gateway.premium_calibration_updated_at = utc_now()
+
+
+def _mark_gateway_premium_calibration_stale(gateway: Gateway) -> None:
+    if gateway.hardware_tier != GatewayHardwareTier.PREMIUM.value:
+        return
+    if gateway.premium_modality is None:
+        return
+    if gateway.premium_calibration_status == PremiumCalibrationStatus.STALE.value:
+        return
+    gateway.premium_calibration_status = PremiumCalibrationStatus.STALE.value
+    gateway.premium_calibration_updated_at = utc_now()
+
+
+def _validate_gateway_update_payload(gateway: Gateway, payload: GatewayUpdateRequest) -> None:
+    next_tier = (
+        payload.hardware_tier.value if payload.hardware_tier is not None else gateway.hardware_tier
+    )
+    if next_tier == GatewayHardwareTier.PREMIUM.value:
+        if payload.premium_profile is None and gateway.premium_modality is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Premium gateways require a premium profile",
+            )
+    elif payload.premium_profile is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Economic gateways cannot include a premium profile",
+        )
+
+
+def _mark_floor_premium_calibration_stale(floor: Floor) -> None:
+    for gateway in floor.gateways:
+        _mark_gateway_premium_calibration_stale(gateway)
+
+
+def _invalidate_floor_calibration_artifacts(floor: Floor) -> None:
+    from sqlalchemy import select
+
+    db = Session.object_session(floor)
+    if db is None:
+        return
+    active = db.scalars(
+        select(CalibrationArtifact).where(
+            CalibrationArtifact.floor_id == floor.id,
+            CalibrationArtifact.status == CalibrationArtifactStatus.ACTIVE.value,
+        )
+    ).first()
+    if active is not None:
+        active.status = CalibrationArtifactStatus.INVALID.value
+        active.activated_at = None
+
+
 def serialize_site(site: Site) -> SiteResponse:
     ordered_floors = sorted(
         site.floors,
@@ -183,6 +275,7 @@ def serialize_gateway(gateway: Gateway) -> GatewayResponse:
         display_name=gateway.display_name,
         hardware_tier=GatewayHardwareTier(gateway.hardware_tier),
         placement={"x": gateway.placement_x, "y": gateway.placement_y},
+        premium_profile=_serialize_premium_gateway_profile(gateway),
         notes=gateway.notes,
     )
 
@@ -452,6 +545,8 @@ async def upload_floor_plan(
         asset.width_px = image.width
         asset.height_px = image.height
         _clear_floor_scale(floor)
+        _mark_floor_premium_calibration_stale(floor)
+        _invalidate_floor_calibration_artifacts(floor)
         action_type = "floorplan.replaced"
     else:
         asset = FloorPlanAsset(
@@ -549,6 +644,7 @@ def configure_floor_scale(
     floor.scale_distance_m = payload.real_world_distance_m
     floor.scale_pixels_per_meter = pixel_distance / payload.real_world_distance_m
     floor.scale_configured_at = utc_now()
+    _invalidate_floor_calibration_artifacts(floor)
 
     write_audit_event(
         db,
@@ -607,6 +703,8 @@ def create_gateway(
         placement_y=payload.placement.y,
         notes=payload.notes.strip() if payload.notes else None,
     )
+    if payload.premium_profile is not None:
+        _apply_premium_gateway_profile(gateway, payload.premium_profile)
     db.add(gateway)
     try:
         db.flush()
@@ -628,6 +726,11 @@ def create_gateway(
             "floor_id": floor_id,
             "gateway_identifier": gateway.gateway_identifier,
             "hardware_tier": gateway.hardware_tier,
+            "premium_profile": (
+                payload.premium_profile.model_dump(mode="json")
+                if payload.premium_profile is not None
+                else None
+            ),
         },
     )
     db.commit()
@@ -645,22 +748,33 @@ def update_gateway(
     gateway = get_gateway_or_404(db, gateway_id)
     floor = get_floor_or_404(db, gateway.floor_id)
     _validate_floor_for_gateway_placement(floor)
+    _validate_gateway_update_payload(gateway, payload)
 
     changes: dict[str, object] = {}
     if payload.display_name is not None and payload.display_name.strip() != gateway.display_name:
         gateway.display_name = payload.display_name.strip()
         changes["display_name"] = gateway.display_name
     if payload.hardware_tier is not None and payload.hardware_tier.value != gateway.hardware_tier:
+        prior_tier = gateway.hardware_tier
         gateway.hardware_tier = payload.hardware_tier.value
         changes["hardware_tier"] = gateway.hardware_tier
-    if payload.placement is not None:
         if (
-            payload.placement.x != gateway.placement_x
-            or payload.placement.y != gateway.placement_y
+            prior_tier == GatewayHardwareTier.PREMIUM.value
+            and gateway.hardware_tier != GatewayHardwareTier.PREMIUM.value
         ):
+            _clear_gateway_premium_profile(gateway)
+            changes["premium_profile"] = None
+    if payload.placement is not None:
+        if payload.placement.x != gateway.placement_x or payload.placement.y != gateway.placement_y:
             gateway.placement_x = payload.placement.x
             gateway.placement_y = payload.placement.y
             changes["placement"] = {"x": gateway.placement_x, "y": gateway.placement_y}
+            _mark_gateway_premium_calibration_stale(gateway)
+            if gateway.hardware_tier == GatewayHardwareTier.PREMIUM.value:
+                changes["premium_calibration_status"] = gateway.premium_calibration_status
+    if payload.premium_profile is not None:
+        _apply_premium_gateway_profile(gateway, payload.premium_profile)
+        changes["premium_profile"] = payload.premium_profile.model_dump(mode="json")
     if payload.notes is not None:
         next_notes = payload.notes.strip() or None
         if next_notes != gateway.notes:
@@ -1040,17 +1154,14 @@ async def validate_asset_tag_import(
             detail=f"CSV import is missing required columns: {', '.join(missing_headers)}",
         )
 
-    existing_identifiers = set(
-        db.scalars(select(AssetTag.tag_identifier)).all()
-    )
+    existing_identifiers = set(db.scalars(select(AssetTag.tag_identifier)).all())
     seen_identifiers: set[str] = set()
     valid_rows: list[AssetTagImportPreviewRecord] = []
     invalid_rows: list[AssetTagImportValidationRow] = []
 
     for row_number, row in enumerate(reader, start=2):
         values = {
-            header: _normalize_asset_import_cell(row.get(header))
-            for header in ASSET_IMPORT_HEADERS
+            header: _normalize_asset_import_cell(row.get(header)) for header in ASSET_IMPORT_HEADERS
         }
         errors: list[str] = []
 
@@ -1063,15 +1174,11 @@ async def validate_asset_tag_import(
 
         update_rate_profile = _parse_asset_update_rate_profile(values["update_rate_profile"])
         if update_rate_profile is None:
-            errors.append(
-                "update_rate_profile must be one of: slow, balanced, realtime"
-            )
+            errors.append("update_rate_profile must be one of: slow, balanced, realtime")
 
         battery_profile = _parse_asset_battery_profile(values["battery_profile"])
         if battery_profile is None:
-            errors.append(
-                "battery_profile must be one of: long_life, standard, performance"
-            )
+            errors.append("battery_profile must be one of: long_life, standard, performance")
 
         if values["tag_identifier"]:
             if values["tag_identifier"] in seen_identifiers:

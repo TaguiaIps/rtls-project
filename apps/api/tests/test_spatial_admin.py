@@ -209,7 +209,8 @@ def test_admin_spatial_crud_flow_records_audit_events(tmp_path: Path) -> None:
 
         with app.state.session_factory() as db:
             actions = db.scalars(
-                select(AuditEvent.action_type).where(
+                select(AuditEvent.action_type)
+                .where(
                     AuditEvent.action_type.in_(
                         [
                             "site.created",
@@ -221,7 +222,8 @@ def test_admin_spatial_crud_flow_records_audit_events(tmp_path: Path) -> None:
                             "area.deleted",
                         ]
                     )
-                ).order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                )
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
             ).all()
 
         assert actions == [
@@ -554,12 +556,19 @@ def test_gateway_and_asset_registry_flow_records_audit_events(tmp_path: Path) ->
                 "display_name": "Dining Gateway Updated",
                 "hardware_tier": "Premium",
                 "placement": {"x": 0.4, "y": 0.55},
+                "premium_profile": {
+                    "modality": "UWB",
+                    "mounting_label": "Kitchen beam",
+                    "mounting_angle_degrees": 10,
+                    "calibration_status": "calibrated",
+                },
                 "notes": "Relocated near the kitchen pass",
             },
         )
         assert update_gateway.status_code == 200
         assert update_gateway.json()["hardware_tier"] == "Premium"
         assert update_gateway.json()["placement"] == {"x": 0.4, "y": 0.55}
+        assert update_gateway.json()["premium_profile"]["modality"] == "UWB"
 
         floor_detail = client.get(
             f"/api/admin/floors/{floor_id}",
@@ -705,7 +714,8 @@ def test_gateway_and_asset_registry_flow_records_audit_events(tmp_path: Path) ->
             gateways = db.scalars(select(Gateway)).all()
             asset_tags = db.scalars(select(AssetTag).order_by(AssetTag.tag_identifier.asc())).all()
             actions = db.scalars(
-                select(AuditEvent.action_type).where(
+                select(AuditEvent.action_type)
+                .where(
                     AuditEvent.action_type.in_(
                         [
                             "gateway.created",
@@ -717,7 +727,8 @@ def test_gateway_and_asset_registry_flow_records_audit_events(tmp_path: Path) ->
                             "asset.imported",
                         ]
                     )
-                ).order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
+                )
+                .order_by(AuditEvent.created_at.asc(), AuditEvent.id.asc())
             ).all()
 
         assert gateways == []

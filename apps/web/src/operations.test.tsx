@@ -72,7 +72,9 @@ const overviewResponse = {
     active_assets: 4,
     low_confidence_assets: 1,
     restricted_zone_assets: 1,
-    stale_gateways: 1
+    stale_gateways: 1,
+    alerts: { total_active: 2, critical: 1, warning: 1 },
+    sla: { breach_count: 1, success_rate_pct: 85.0, trend_pct: -3.2 }
   },
   priority_items: [
     {
@@ -302,6 +304,109 @@ const liveLocationsResponse = [
   }
 ];
 
+const analyticsTrajectoryResponse = {
+  asset_tag_id: "asset-1",
+  tag_identifier: "TAG-881",
+  display_name: "Waiter Tag 881",
+  asset_category: "staff",
+  site_id: "site-1",
+  site_name: "Salvador Flagship",
+  floor_id: "floor-1",
+  floor_name: "Dining Hall A",
+  start_at: "2026-03-26T08:00:00Z",
+  end_at: "2026-03-26T12:00:00Z",
+  points: [
+    {
+      id: "hist-1",
+      asset_tag_id: "asset-1",
+      tag_identifier: "TAG-881",
+      display_name: "Waiter Tag 881",
+      asset_category: "staff",
+      floor_id: "floor-1",
+      floor_name: "Dining Hall A",
+      site_id: "site-1",
+      site_name: "Salvador Flagship",
+      observed_at: "2026-03-26T08:10:00Z",
+      location_type: "point",
+      point: { x: 0.2, y: 0.2 },
+      zone_id: null,
+      zone_name: null,
+      confidence_level: "high",
+      confidence_score: 0.9,
+      source_gateway_count: 3,
+      source_reading_count: 3
+    },
+    {
+      id: "hist-2",
+      asset_tag_id: "asset-1",
+      tag_identifier: "TAG-881",
+      display_name: "Waiter Tag 881",
+      asset_category: "staff",
+      floor_id: "floor-1",
+      floor_name: "Dining Hall A",
+      site_id: "site-1",
+      site_name: "Salvador Flagship",
+      observed_at: "2026-03-26T08:20:00Z",
+      location_type: "point",
+      point: { x: 0.6, y: 0.2 },
+      zone_id: "zone-1",
+      zone_name: "Cold Storage",
+      confidence_level: "medium",
+      confidence_score: 0.72,
+      source_gateway_count: 2,
+      source_reading_count: 2
+    }
+  ]
+};
+
+const analyticsHeatmapResponse = {
+  site_id: "site-1",
+  site_name: "Salvador Flagship",
+  floor_id: "floor-1",
+  floor_name: "Dining Hall A",
+  asset_category: null,
+  start_at: "2026-03-26T08:00:00Z",
+  end_at: "2026-03-26T12:00:00Z",
+  grid_columns: 12,
+  grid_rows: 8,
+  total_samples: 6,
+  max_density: 3,
+  cells: [
+    {
+      row: 1,
+      column: 2,
+      center: { x: 0.2, y: 0.2 },
+      sample_count: 3,
+      intensity: 1
+    },
+    {
+      row: 4,
+      column: 6,
+      center: { x: 0.55, y: 0.56 },
+      sample_count: 2,
+      intensity: 0.66
+    }
+  ]
+};
+
+const analyticsExportJobsResponse = [
+  {
+    id: "export-1",
+    report_kind: "trajectory",
+    export_format: "csv",
+    status: "completed",
+    floor_id: "floor-1",
+    site_id: "site-1",
+    file_name: "trajectory-20260326T120000Z.csv",
+    row_count: 2,
+    error_message: null,
+    requested_at: "2026-03-26T12:00:00Z",
+    started_at: "2026-03-26T12:00:01Z",
+    completed_at: "2026-03-26T12:00:03Z",
+    expires_at: "2026-04-02T12:00:03Z"
+  }
+];
+
 describe("operations shell", () => {
   beforeEach(() => {
     cleanup();
@@ -366,6 +471,7 @@ describe("operations shell", () => {
       expect(screen.getByText("Feed Degraded")).toBeInTheDocument();
     });
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Live Map" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
     expect(screen.getByText("Restricted Zone Hits")).toBeInTheDocument();
@@ -376,8 +482,10 @@ describe("operations shell", () => {
   it("updates the live map from WebSocket events and applies search filters", async () => {
     window.history.pushState({}, "", "/operations/live-map?site_id=site-1&floor_id=floor-1&confidence_level=low");
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    let exportJobs = [...analyticsExportJobsResponse];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
 
       if (url.endsWith("/api/me")) {
         return jsonResponse({
@@ -606,6 +714,153 @@ describe("operations shell", () => {
     });
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Dining Hall SLA/i })).toBeInTheDocument();
+    });
+  });
+
+  it("renders Analytics workspace reports and switches from trajectory to heatmap", async () => {
+    window.history.pushState(
+      {},
+      "",
+      "/operations/analytics?site_id=site-1&floor_id=floor-1&analytics_report=trajectory&analytics_start_at=2026-03-26T08%3A00%3A00Z&analytics_end_at=2026-03-26T12%3A00%3A00Z&analytics_asset_tag_id=asset-1"
+    );
+
+    let exportJobs = [...analyticsExportJobsResponse];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+
+      if (url.endsWith("/api/me")) {
+        return jsonResponse({
+          id: "user-1",
+          email: "ops@example.com",
+          display_name: "Carlos",
+          role: "General User",
+          status: "active"
+        });
+      }
+      if (url.endsWith("/api/admin/sites")) {
+        return jsonResponse(sitesResponse);
+      }
+      if (url.includes("/api/alerts/summary")) {
+        return jsonResponse(alertSummaryResponse);
+      }
+      if (url.endsWith("/api/admin/floors/floor-1")) {
+        return jsonResponse(floorDetailResponse);
+      }
+      if (url.endsWith("/api/admin/floors/floor-1/floor-plan/file")) {
+        return new Response("png-data", {
+          status: 200,
+          headers: { "Content-Type": "image/png" }
+        });
+      }
+      if (url === "/api/locations/live?floor_id=floor-1" || url.endsWith("/api/locations/live?floor_id=floor-1")) {
+        return jsonResponse(liveLocationsResponse);
+      }
+      if (url.includes("/api/analytics/exports?") && method === "GET") {
+        return jsonResponse(exportJobs);
+      }
+      if (url.endsWith("/api/analytics/exports") && method === "POST") {
+        const queuedJob = {
+          ...analyticsExportJobsResponse[0],
+          id: "export-2",
+          status: "pending",
+          file_name: null,
+          row_count: null,
+          completed_at: null,
+          expires_at: null
+        };
+        exportJobs = [queuedJob, ...exportJobs];
+        return jsonResponse(queuedJob, 200);
+      }
+      if (url.endsWith("/api/analytics/exports/export-1/file")) {
+        return new Response("observed_at,zone_name\n", {
+          status: 200,
+          headers: { "Content-Type": "text/csv" }
+        });
+      }
+      if (url.includes("/api/analytics/trajectory")) {
+        return jsonResponse(analyticsTrajectoryResponse);
+      }
+      if (url.includes("/api/analytics/heatmap")) {
+        return jsonResponse(analyticsHeatmapResponse);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Waiter Tag 881" })).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Heatmap" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Traffic density" })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /queue csv export/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/pending|completed/i).length).toBeGreaterThan(0);
+    });
+    expect(
+      fetchSpy.mock.calls.some(([input]) => String(input).includes("/api/analytics/heatmap"))
+    ).toBe(true);
+    expect(
+      fetchSpy.mock.calls.some(
+        ([input, init]) =>
+          String(input).includes("/api/analytics/exports") && (init?.method ?? "GET") === "POST"
+      )
+    ).toBe(true);
+  });
+
+  it("renders Alert and SLA KPI cards with drilldown navigation", async () => {
+    window.history.pushState({}, "", "/operations?site_id=site-1&floor_id=floor-1");
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.endsWith("/api/me")) {
+        return jsonResponse({
+          id: "user-1",
+          email: "ops@example.com",
+          display_name: "Carlos",
+          role: "General User",
+          status: "active"
+        });
+      }
+      if (url.endsWith("/api/admin/sites")) {
+        return jsonResponse(sitesResponse);
+      }
+      if (url.includes("/api/alerts/summary")) {
+        return jsonResponse(alertSummaryResponse);
+      }
+      if (url.includes("/api/operations/overview")) {
+        return jsonResponse(overviewResponse);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Total Active")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Critical")).toBeInTheDocument();
+    expect(screen.getByText("Warning")).toBeInTheDocument();
+    expect(screen.getByText("SLA Breaches")).toBeInTheDocument();
+    expect(screen.getByText(/85%$/)).toBeInTheDocument();
+    expect(screen.getByText("-3.2pp")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Critical"));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/operations/alerts");
+      expect(window.location.search).toContain("severity=critical");
+      expect(window.location.search).toContain("status=unresolved");
     });
   });
 });

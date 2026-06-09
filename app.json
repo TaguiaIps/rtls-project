@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "a8803e18-189c-40d4-985c-ab65217d9756"
+      }
+    },
+    "owner": "hugodepaulas-organization",
+    "slug": "rtls-taguia"
+  }
+}

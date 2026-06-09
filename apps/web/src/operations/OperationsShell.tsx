@@ -31,6 +31,14 @@ import {
 
 import { useAuth } from "../auth";
 
+import {
+  IconAdmin,
+  IconAlerts,
+  IconAnalytics,
+  IconLiveMap,
+  IconOverview
+} from "../components/Icons";
+
 type ShellContextValue = {
   accessToken: string | null;
   alertSummary: AlertNotificationSummaryRecord | null;
@@ -51,6 +59,41 @@ type ShellContextValue = {
 const DEFAULT_MAP_WIDTH = 1200;
 const DEFAULT_MAP_HEIGHT = 720;
 
+function BreadcrumbTrail({
+  site,
+  floor,
+  workspace
+}: {
+  site: SiteRecord | null;
+  floor: FloorSummary | null;
+  workspace: string;
+}) {
+  return (
+    <nav className="breadcrumb-trail" aria-label="Breadcrumb">
+      <span className="breadcrumb-trail__segment" title={site?.name ?? "Site"}>
+        {site?.name ?? "..."}
+      </span>
+      <span className="breadcrumb-trail__separator">›</span>
+      <span className="breadcrumb-trail__segment" title={floor?.name ?? "Floor"}>
+        {floor?.name ?? "..."}
+      </span>
+      <span className="breadcrumb-trail__separator">›</span>
+      <span className="breadcrumb-trail__segment breadcrumb-trail__segment--active">
+        {workspace}
+      </span>
+    </nav>
+  );
+}
+
+function LiveFeedHeartbeat({ status }: { status: OperationsFeedStatus }) {
+  return (
+    <div className={`heartbeat heartbeat--${status}`} title={`Feed Status: ${status}`}>
+      <span className="heartbeat__dot" />
+      <span className="heartbeat__label">{status === "live" ? "Live" : "Feed"}</span>
+    </div>
+  );
+}
+
 export function OperationsShellLayout() {
   const { accessToken, fetchWithAuth, user } = useAuth();
   const apiBaseUrl = useAuth().apiBaseUrl;
@@ -62,6 +105,13 @@ export function OperationsShellLayout() {
   const [feedStatus, setFeedStatus] = useState<OperationsFeedStatus>("empty");
   const [feedUpdatedAt, setFeedUpdatedAt] = useState<string | null>(null);
   const location = useLocation();
+
+  const workspaceLabel = useMemo(() => {
+    if (location.pathname.endsWith("/analytics")) return "Analytics";
+    if (location.pathname.endsWith("/live-map")) return "Live Map";
+    if (location.pathname.endsWith("/alerts")) return "Alerts";
+    return "Overview";
+  }, [location.pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,27 +244,25 @@ export function OperationsShellLayout() {
   };
 
   const navItems = [
-    { label: "Overview", path: "/operations" },
-    { label: "Live Map", path: "/operations/live-map" },
+    { label: "Overview", path: "/operations", icon: <IconOverview /> },
+    { label: "Analytics", path: "/operations/analytics", icon: <IconAnalytics /> },
+    { label: "Live Map", path: "/operations/live-map", icon: <IconLiveMap /> },
     {
       label: "Alerts",
       path: "/operations/alerts",
-      badgeCount: alertSummary?.unresolved_count ?? 0
+      badgeCount: alertSummary?.unresolved_count ?? 0,
+      icon: <IconAlerts />
     }
   ];
   if (user?.role === "Administrator") {
-    navItems.push({ label: "Admin", path: "/admin" });
+    navItems.push({ label: "Admin", path: "/admin", icon: <IconAdmin /> });
   }
 
   return (
-    <main className="app-shell">
-      <aside className="shell-rail">
+    <main className="dashboard-shell">
+      <aside className="nav-rail">
         <div className="shell-brand">
-          <p className="eyebrow">RTLS Analytics Platform</p>
-          <h1>Operations</h1>
-          <p className="muted-text">
-            Live service readiness, map-first monitoring, and spatial triage for restaurant operations.
-          </p>
+          <p className="eyebrow">RTLS</p>
         </div>
 
         <nav className="shell-nav" aria-label="Primary">
@@ -229,24 +277,28 @@ export function OperationsShellLayout() {
                 pathname: item.path,
                 search: searchParams.toString() ? `?${searchParams.toString()}` : ""
               }}
+              title={item.label}
             >
-              <span>{item.label}</span>
+              {item.icon}
               {"badgeCount" in item && item.badgeCount ? (
                 <span className="shell-nav__badge">{item.badgeCount}</span>
               ) : null}
             </NavLink>
           ))}
         </nav>
-
-        <div className="shell-status-card">
-          <p className="shell-status-card__label">Context</p>
-          <strong>{selectedSite?.name ?? "Awaiting mapped site"}</strong>
-          <span>{selectedFloor?.name ?? "No floor selected"}</span>
-        </div>
       </aside>
 
-      <section className="shell-main">
-        <header className="shell-topbar">
+      <section className="dashboard-main">
+        <header className="top-bar">
+          <div className="top-bar__left">
+            <BreadcrumbTrail
+              site={selectedSite}
+              floor={selectedFloor}
+              workspace={workspaceLabel}
+            />
+            <LiveFeedHeartbeat status={feedStatus} />
+          </div>
+
           <div className="shell-topbar__context">
             <label>
               <span>Site</span>
@@ -286,17 +338,9 @@ export function OperationsShellLayout() {
             </label>
           </div>
 
-          <div className="shell-topbar__meta">
-            <div className={`live-pill live-pill--${feedStatus}`}>
-              <span className="live-pill__dot" />
-              <div>
-                <strong>{feedStatusLabel(feedStatus)}</strong>
-                <span>{feedUpdatedAt ? `Updated ${relativeTime(feedUpdatedAt)}` : "Awaiting live feed"}</span>
-              </div>
-            </div>
-            <div className="shell-user-chip">
-              <strong>{user?.display_name ?? user?.email}</strong>
-              <span>{user?.role}</span>
+          <div className="top-bar-actions">
+            <div className="role-badge">
+              <strong>{user?.role}</strong>
             </div>
           </div>
         </header>
@@ -377,6 +421,19 @@ export function OperationsOverviewPage() {
     navigate(`/operations/live-map?${nextParams.toString()}`);
   };
 
+  const openAlerts = (severity: string | null) => {
+    const nextParams = new URLSearchParams(shellSearchParams);
+    nextParams.set("status", "unresolved");
+    if (severity) {
+      nextParams.set("severity", severity);
+    }
+    navigate(`/operations/alerts?${nextParams.toString()}`);
+  };
+
+  const openAnalyticsSla = () => {
+    navigate(`/operations/analytics?${shellSearchParams.toString()}`);
+  };
+
   if (loading) {
     return (
       <section className="panel panel--compact">
@@ -429,8 +486,48 @@ export function OperationsOverviewPage() {
         <KpiCard label="Stale Gateways" value={summary?.kpis.stale_gateways ?? 0} tone="warning" />
       </section>
 
+      <section className="overview-kpis">
+        <h3 className="kpi-section-label">Alerts</h3>
+        <AlertKpiCard
+          label="Total Active"
+          value={summary?.kpis.alerts?.total_active ?? 0}
+          tone={summary && summary.kpis.alerts.total_active > 0 ? "warning" : "live"}
+          onClick={() => openAlerts(null)}
+        />
+        <AlertKpiCard
+          label="Critical"
+          value={summary?.kpis.alerts?.critical ?? 0}
+          tone={summary && summary.kpis.alerts.critical > 0 ? "critical" : "live"}
+          onClick={() => openAlerts("critical")}
+        />
+        <AlertKpiCard
+          label="Warning"
+          value={summary?.kpis.alerts?.warning ?? 0}
+          tone={summary && summary.kpis.alerts.warning > 0 ? "warning" : "live"}
+          onClick={() => openAlerts("warning")}
+        />
+      </section>
+
+      <section className="overview-kpis">
+        <h3 className="kpi-section-label">SLA Performance</h3>
+        <SlaKpiCard
+          label="SLA Breaches"
+          value={summary?.kpis.sla?.breach_count ?? 0}
+          tone={summary && summary.kpis.sla.breach_count > 0 ? "critical" : "live"}
+          onClick={() => openAnalyticsSla()}
+        />
+        <SlaKpiCard
+          label="Success Rate"
+          value={summary?.kpis.sla?.success_rate_pct ?? 100}
+          tone={summary && summary.kpis.sla.success_rate_pct >= 95 ? "live" : (summary.kpis.sla.success_rate_pct >= 80 ? "warning" : "critical")}
+          suffix="%"
+          trend={summary?.kpis.sla?.trend_pct ?? null}
+          onClick={() => openAnalyticsSla()}
+        />
+      </section>
+
       <div className="overview-grid">
-        <section className="panel overview-map-panel">
+        <section className="panel overview-map-panel hud-glass">
           <div className="stack-card__header">
             <div>
               <p className="eyebrow">Live Map Preview</p>
@@ -590,6 +687,26 @@ export function LiveMapPage() {
     };
   }, [fetchWithAuth, selectedFloor?.id]);
 
+  const assetCategories = useMemo(
+    () => (searchParams.get("asset_categories")?.split(",") ?? []).filter(Boolean),
+    [searchParams]
+  );
+  const confidenceThresholds = useMemo(
+    () => (searchParams.get("confidence_thresholds")?.split(",") ?? []).filter(Boolean),
+    [searchParams]
+  );
+
+  const toggleFacet = useCallback(
+    (key: string, value: string) => {
+      const current = searchParams.get(key)?.split(",").filter(Boolean) ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      setSearchParam(key, next.length > 0 ? next.join(",") : null);
+    },
+    [searchParams, setSearchParam]
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -605,11 +722,11 @@ export function LiveMapPage() {
         if (deferredSearch) {
           params.set("search", deferredSearch);
         }
-        if (assetCategory) {
-          params.set("asset_category", assetCategory);
+        if (assetCategories.length > 0) {
+          params.set("asset_categories", assetCategories.join(","));
         }
-        if (confidenceLevel) {
-          params.set("confidence_level", confidenceLevel);
+        if (confidenceThresholds.length > 0) {
+          params.set("confidence_thresholds", confidenceThresholds.join(","));
         }
         if (locationType) {
           params.set("location_type", locationType);
@@ -639,7 +756,7 @@ export function LiveMapPage() {
     return () => {
       cancelled = true;
     };
-  }, [assetCategory, confidenceLevel, deferredSearch, fetchWithAuth, locationType, selectedFloor?.id]);
+  }, [assetCategories, confidenceThresholds, deferredSearch, fetchWithAuth, locationType, selectedFloor?.id]);
 
   useEffect(() => {
     if (!selectedFloor?.id || !accessToken) {
@@ -655,8 +772,8 @@ export function LiveMapPage() {
     if (deferredSearch) {
       wsUrl.searchParams.set("search", deferredSearch);
     }
-    if (assetCategory) {
-      wsUrl.searchParams.set("asset_category", assetCategory);
+    if (assetCategories.length > 0) {
+      wsUrl.searchParams.set("asset_categories", assetCategories.join(","));
     }
 
     const socket = new WebSocket(wsUrl.toString());
@@ -667,7 +784,7 @@ export function LiveMapPage() {
     socket.onmessage = (event) => {
       const payload = JSON.parse(event.data) as LiveLocationStreamEvent;
       const nextLocation = payload.location;
-      if (!matchesClientFilters(nextLocation, { confidenceLevel, locationType })) {
+      if (!matchesFacetedFilters(nextLocation, { assetCategories, confidenceThresholds, locationType })) {
         return;
       }
       setLocations((currentLocations) => {
@@ -683,7 +800,7 @@ export function LiveMapPage() {
     return () => {
       socket.close();
     };
-  }, [accessToken, apiBaseUrl, assetCategory, confidenceLevel, deferredSearch, locationType, selectedFloor?.id]);
+  }, [accessToken, apiBaseUrl, assetCategories, confidenceThresholds, deferredSearch, locationType, selectedFloor?.id]);
 
   useEffect(() => {
     if (!selectedFloor?.id) {
@@ -708,7 +825,7 @@ export function LiveMapPage() {
 
   return (
     <div className="live-map-layout">
-      <header className="panel live-map-header">
+      <header className="panel live-map-header hud-glass">
         <div>
           <p className="eyebrow">Live Map</p>
           <h2>{selectedFloor?.name ?? "Awaiting mapped floor"}</h2>
@@ -725,28 +842,6 @@ export function LiveMapPage() {
             onChange={(event) => setSearchInput(event.target.value)}
           />
           <select
-            aria-label="Asset category"
-            value={assetCategory ?? ""}
-            onChange={(event) => setSearchParam("asset_category", event.target.value || null)}
-          >
-            <option value="">All categories</option>
-            {categoryOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Confidence level"
-            value={confidenceLevel ?? ""}
-            onChange={(event) => setSearchParam("confidence_level", event.target.value || null)}
-          >
-            <option value="">All confidence</option>
-            <option value="high">High confidence</option>
-            <option value="medium">Medium confidence</option>
-            <option value="low">Low confidence</option>
-          </select>
-          <select
             aria-label="Location type"
             value={locationType ?? ""}
             onChange={(event) => setSearchParam("location_type", event.target.value || null)}
@@ -762,10 +857,39 @@ export function LiveMapPage() {
         <aside className="panel live-map-sidebar">
           <div className="stack-card__header">
             <div>
-              <p className="eyebrow">Filters</p>
-              <h2>Visible context</h2>
+              <p className="eyebrow">Facets</p>
+              <h2>Active filters</h2>
             </div>
           </div>
+
+          <div className="facet-group">
+            <p className="facet-group__label">Category</p>
+            {categoryOptions.map((option) => (
+              <label key={option} className="facet-item">
+                <input
+                  type="checkbox"
+                  checked={assetCategories.includes(option)}
+                  onChange={() => toggleFacet("asset_categories", option)}
+                />
+                <span>{option}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="facet-group">
+            <p className="facet-group__label">Confidence</p>
+            {["high", "medium", "low"].map((option) => (
+              <label key={option} className="facet-item">
+                <input
+                  type="checkbox"
+                  checked={confidenceThresholds.includes(option)}
+                  onChange={() => toggleFacet("confidence_thresholds", option)}
+                />
+                <span>{option.charAt(0).toUpperCase() + option.slice(1)}</span>
+              </label>
+            ))}
+          </div>
+
           <dl className="definition-list">
             <div>
               <dt>Floor</dt>
@@ -774,10 +898,6 @@ export function LiveMapPage() {
             <div>
               <dt>Locations</dt>
               <dd>{locations.length}</dd>
-            </div>
-            <div>
-              <dt>Socket</dt>
-              <dd>{socketConnected ? "Connected" : "Disconnected"}</dd>
             </div>
           </dl>
           <div className="legend-list">
@@ -815,7 +935,7 @@ export function LiveMapPage() {
         </section>
 
         <aside className="live-map-right-column">
-          <section className="panel asset-drawer">
+          <section className="panel asset-drawer asset-drawer--high-density">
             <div className="stack-card__header">
               <div>
                 <p className="eyebrow">Selected Asset</p>
@@ -828,7 +948,7 @@ export function LiveMapPage() {
               ) : null}
             </div>
             {selectedAsset ? (
-              <dl className="definition-list">
+              <dl className="definition-list definition-list--compact">
                 <div>
                   <dt>Tag ID</dt>
                   <dd>{selectedAsset.tag_identifier}</dd>
@@ -908,6 +1028,53 @@ function KpiCard({
     <article className={`panel kpi-card kpi-card--${tone}`}>
       <p className="eyebrow">{label}</p>
       <strong>{value}</strong>
+    </article>
+  );
+}
+
+function AlertKpiCard({
+  label,
+  value,
+  tone,
+  onClick
+}: {
+  label: string;
+  value: number;
+  tone: "live" | "warning" | "critical";
+  onClick: () => void;
+}) {
+  return (
+    <article className={`panel kpi-card kpi-card--${tone} kpi-card--drilldown`} onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}>
+      <p className="eyebrow">{label}</p>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function SlaKpiCard({
+  label,
+  value,
+  tone,
+  suffix,
+  trend,
+  onClick
+}: {
+  label: string;
+  value: number;
+  tone: "live" | "warning" | "critical";
+  suffix?: string;
+  trend: number | null;
+  onClick: () => void;
+}) {
+  return (
+    <article className={`panel kpi-card kpi-card--${tone} kpi-card--drilldown`} onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}>
+      <p className="eyebrow">{label}</p>
+      <strong>{value}{suffix ?? ""}</strong>
+      {trend !== null && (
+        <span className={`trend-indicator ${trend >= 0 ? "trend-indicator--positive" : "trend-indicator--negative"}`}>
+          {trend >= 0 ? "+" : ""}{trend}pp
+        </span>
+      )}
     </article>
   );
 }
@@ -1007,13 +1174,20 @@ function MapCanvas({
                 location.asset_tag_id === selectedAssetId ? "map-marker--selected" : ""
               }`}
               onClick={() => onSelectAsset(location.asset_tag_id)}
+              style={{
+                transition: "transform 0.3s ease-out"
+              }}
+              transform={`translate(${marker.x}, ${marker.y})`}
             >
-              {location.confidence_level === "medium" ? (
-                <circle cx={marker.x} cy={marker.y} r={20} className="map-marker__halo" />
+              {location.confidence_level === "low" ? (
+                <circle cx={0} cy={0} r={24} className="presence-pulse--svg" />
               ) : null}
-              <circle cx={marker.x} cy={marker.y} r={10} className="map-marker__dot" />
+              {location.confidence_level === "medium" ? (
+                <circle cx={0} cy={0} r={20} className="map-marker__halo" />
+              ) : null}
+              <circle cx={0} cy={0} r={10} className="map-marker__dot" />
               {!compact ? (
-                <text x={marker.x + 14} y={marker.y + 4}>
+                <text x={14} y={4}>
                   {location.display_name}
                 </text>
               ) : null}
@@ -1132,6 +1306,32 @@ function relativeTime(value: string) {
 
 function uniqueValues(values: string[]) {
   return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
+
+function matchesFacetedFilters(
+  location: AssetLocationRecord,
+  filters: {
+    assetCategories: string[];
+    confidenceThresholds: string[];
+    locationType: string | null;
+  }
+) {
+  if (
+    filters.assetCategories.length > 0 &&
+    !filters.assetCategories.includes(location.asset_category)
+  ) {
+    return false;
+  }
+  if (
+    filters.confidenceThresholds.length > 0 &&
+    !filters.confidenceThresholds.includes(location.confidence_level)
+  ) {
+    return false;
+  }
+  if (filters.locationType && location.location_type !== filters.locationType) {
+    return false;
+  }
+  return true;
 }
 
 function matchesClientFilters(

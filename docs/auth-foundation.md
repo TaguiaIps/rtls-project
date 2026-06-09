@@ -1,26 +1,28 @@
 # Identity, RBAC, and Audit Foundation
 
-This document describes the first implementation of authentication, role-based access control, and audit-event persistence for the RTLS Analytics Platform.
+This document describes the implemented authentication, role-based access control, and audit-event persistence for the RTLS Analytics Platform.
+
+OpenSpec references: `user-authentication`, `role-based-access`, `audit-event-recording`.
 
 ## Scope
 
-This change implements:
+This implementation includes:
 
-- local `email + password` authentication
-- JWT access tokens
-- refresh-token rotation
+- local `email + password` authentication with JWT-based sessions
+- refresh-token rotation and session revocation
 - two platform roles: `Administrator` and `General User`
-- web login, logout, and role-aware routing
-- persisted audit events for authentication lifecycle actions
-- persisted audit events for configuration mutations available in the API baseline
+- backend route authorization and role-aware web routing
+- protected web application shell with role-appropriate entry points
+- web login experience with "Command" interaction standards (password visibility toggles, real-time validation, focus-responsive Cyan border)
+- persisted audit events for authentication lifecycle actions and configuration mutations
 
-This change intentionally does not implement:
+This implementation intentionally does not include:
 
 - SSO or enterprise identity providers
 - password reset
 - MFA
 - mobile authentication UX
-- the full Audit Log review UI
+- the full Audit Log review UI (query filtering by actor, action type, target, and time range is supported at the data layer)
 
 ## Administrator Bootstrap
 
@@ -40,24 +42,39 @@ Bootstrap rules:
 
 - the target email must not already exist
 - the command fails if an `Administrator` account already exists
-- the created account is immediately usable through the normal login flow
+- the created account is immediately usable through the normal authentication flow
 
 ## API Surface
 
 Implemented endpoints:
 
-- `POST /api/auth/token`
-- `POST /api/auth/refresh`
-- `POST /api/auth/logout`
-- `GET /api/me`
-- `GET /api/admin/summary`
-- `PATCH /api/admin/users/{user_id}`
+| Method | Path | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/token` | Authenticates user with credentials, returns access and refresh tokens. |
+| `POST` | `/api/auth/refresh` | Rotates refresh token and issues new access token pair. |
+| `POST` | `/api/auth/logout` | Revokes active refresh session and clears authenticated state. |
+| `GET` | `/api/me` | Returns current authenticated user context. |
+| `GET` | `/api/admin/summary` | Returns administrator summary (Administrator only). |
+| `PATCH` | `/api/admin/users/{user_id}` | Updates a user record (Administrator only). |
 
 Access model:
 
 - `GET /api/me` requires any authenticated active user
 - `/api/admin/*` routes require the `Administrator` role
 - role enforcement happens in the API, not just in the web app
+- unsupported role values are treated as unauthorized
+
+## Authorization Model
+
+The two-role model (`Administrator`, `General User`) is enforced at two levels:
+
+1. **Backend route authorization**: Protected backend routes check the authenticated user's role before processing the request. Administrator-only routes deny General User requests with an authorization error.
+
+2. **Role-aware web routing**: After sign-in, the web application routes users to role-appropriate entry points:
+   - Administrators are routed to the administrator setup/management area.
+   - General Users are routed to the operations/analytics area.
+
+3. **Protected web shell**: Navigation and page rendering is restricted to authenticated users with sufficient role access. Accessing a disallowed route prevents navigation and routes the user to an allowed destination or error state.
 
 ## Session Model
 
@@ -69,10 +86,13 @@ Access model:
 - the web client serializes concurrent refresh retries so one expiring access token does not replay the same rotated refresh token
 - logout revokes the active refresh session and clears the web session state
 - logout rejects rotated or replayed refresh tokens instead of revoking the currently active session
+- sign-in failures reject the request without exposing whether the email or password caused the failure
 
 ## Audit Events
 
 The API persists normalized audit records for:
+
+**Authentication lifecycle:**
 
 - login success
 - login failure
@@ -80,8 +100,16 @@ The API persists normalized audit records for:
 - refresh rejection
 - logout
 - logout rejection
-- administrator-driven user updates
 - Administrator bootstrap creation
+
+**Configuration mutations:**
+
+- administrator-driven user updates
+- site, floor, floor-plan, zone, gateway, and asset CRUD operations
+- scale calibration updates
+- CSV bulk import events
+- alert rule creation and updates
+- lifecycle run triggers
 
 Stored audit fields include:
 
@@ -94,6 +122,8 @@ Stored audit fields include:
 - event timestamp
 
 Secrets such as raw passwords and raw refresh tokens are never written into audit-event records.
+
+Audit events are persisted in a form that supports future filtering by actor, action category, target reference, and time window without redesigning the underlying record shape.
 
 ## Environment Variables
 

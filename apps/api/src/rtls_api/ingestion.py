@@ -8,13 +8,17 @@ from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from rtls_api.alerts import sync_gateway_maintenance_alerts
 from rtls_api.config import Settings
 from rtls_api.ingestion_store import MessageDedupeStore
 from rtls_api.models import (
     AssetTag,
     Gateway,
+    GatewayHardwareTier,
     GatewayHealthStatus,
     GatewayHeartbeat,
+    PremiumRawMeasurement,
+    PremiumTelemetryModality,
     RawReading,
 )
 from rtls_api.positioning import PositioningService
@@ -38,6 +42,10 @@ def telemetry_topic(settings: Settings) -> str:
 
 def heartbeat_topic(settings: Settings) -> str:
     return f"{settings.mqtt_topic_prefix.rstrip('/')}/heartbeat/+"
+
+
+def premium_telemetry_topic(settings: Settings) -> str:
+    return f"{settings.mqtt_topic_prefix.rstrip('/')}/premium/+"
 
 
 def gateway_health_status(
@@ -73,6 +81,38 @@ class TelemetryEnvelope(BaseModel):
     def validate_readings_present(self) -> TelemetryEnvelope:
         if not self.readings:
             raise ValueError("Telemetry must contain at least one reading")
+        return self
+
+
+class PremiumTelemetryMeasurementPayload(BaseModel):
+    tag_id: str = Field(min_length=1, max_length=120)
+    modality: PremiumTelemetryModality
+    sequence_id: str | None = Field(default=None, max_length=120)
+    quality_score: float | None = Field(default=None, ge=0, le=1)
+    azimuth_degrees: float | None = Field(default=None, ge=-180, le=180)
+    elevation_degrees: float | None = Field(default=None, ge=-90, le=90)
+    distance_m: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_modality_specific_fields(self) -> PremiumTelemetryMeasurementPayload:
+        if self.modality == PremiumTelemetryModality.BLE_AOA and self.azimuth_degrees is None:
+            raise ValueError("AoA measurements require azimuth_degrees")
+        if self.modality == PremiumTelemetryModality.UWB and self.distance_m is None:
+            raise ValueError("UWB measurements require distance_m")
+        return self
+
+
+class PremiumTelemetryEnvelope(BaseModel):
+    gateway_id: str = Field(min_length=1, max_length=120)
+    message_id: str = Field(min_length=1, max_length=120)
+    gateway_timestamp: datetime | None = None
+    firmware_version: str | None = Field(default=None, max_length=120)
+    measurements: list[PremiumTelemetryMeasurementPayload]
+
+    @model_validator(mode="after")
+    def validate_measurements_present(self) -> PremiumTelemetryEnvelope:
+        if not self.measurements:
+            raise ValueError("Premium telemetry must contain at least one measurement")
         return self
 
 
@@ -126,6 +166,8 @@ class TelemetryIngestionService:
         try:
             if message_type == "telemetry":
                 envelope = TelemetryEnvelope.model_validate(payload)
+            elif message_type == "premium_telemetry":
+                envelope = PremiumTelemetryEnvelope.model_validate(payload)
             else:
                 envelope = HeartbeatEnvelope.model_validate(payload)
         except ValidationError:
@@ -165,11 +207,41 @@ class TelemetryIngestionService:
                 db.commit()
                 return IngestionResult(True, message_type, "accepted", reading_count)
 
+            if message_type == "premium_telemetry":
+                if gateway.hardware_tier != GatewayHardwareTier.PREMIUM.value:
+                    return IngestionResult(False, message_type, "unsupported_gateway_tier")
+                if gateway.premium_modality is not None and any(
+                    measurement.modality.value != gateway.premium_modality
+                    for measurement in envelope.measurements
+                ):
+                    return IngestionResult(False, message_type, "invalid_payload")
+                measurement_count = self._persist_premium_telemetry(
+                    db=db,
+                    gateway=gateway,
+                    envelope=envelope,
+                    broker_received_at=received_at,
+                )
+                db.flush()
+                self._positioning_service.update_positions_for_tags(
+                    db=db,
+                    tag_identifiers={measurement.tag_id for measurement in envelope.measurements},
+                    observed_at=received_at,
+                )
+                db.commit()
+                return IngestionResult(True, message_type, "accepted", measurement_count)
+
             self._persist_heartbeat(
                 db=db,
                 gateway=gateway,
                 envelope=envelope,
                 broker_received_at=received_at,
+            )
+            db.flush()
+            sync_gateway_maintenance_alerts(
+                db=db,
+                settings=self._settings,
+                gateway_ids={gateway.id},
+                observed_at=received_at,
             )
             db.commit()
             return IngestionResult(True, message_type, "accepted", 0)
@@ -206,6 +278,41 @@ class TelemetryIngestionService:
             )
         return len(envelope.readings)
 
+    def _persist_premium_telemetry(
+        self,
+        *,
+        db: Session,
+        gateway: Gateway,
+        envelope: PremiumTelemetryEnvelope,
+        broker_received_at: datetime,
+    ) -> int:
+        tag_identifiers = {measurement.tag_id for measurement in envelope.measurements}
+        known_tags = db.scalars(
+            select(AssetTag).where(AssetTag.tag_identifier.in_(tag_identifiers))
+        ).all()
+        tags_by_identifier = {asset_tag.tag_identifier: asset_tag for asset_tag in known_tags}
+
+        for measurement in envelope.measurements:
+            asset_tag = tags_by_identifier.get(measurement.tag_id)
+            db.add(
+                PremiumRawMeasurement(
+                    gateway_id=gateway.id,
+                    asset_tag_id=asset_tag.id if asset_tag else None,
+                    tag_identifier=measurement.tag_id,
+                    message_id=envelope.message_id,
+                    sequence_id=measurement.sequence_id,
+                    broker_received_at=broker_received_at,
+                    gateway_timestamp=ensure_utc(envelope.gateway_timestamp),
+                    firmware_version=envelope.firmware_version,
+                    modality=measurement.modality.value,
+                    quality_score=measurement.quality_score,
+                    azimuth_degrees=measurement.azimuth_degrees,
+                    elevation_degrees=measurement.elevation_degrees,
+                    distance_m=measurement.distance_m,
+                )
+            )
+        return len(envelope.measurements)
+
     def _persist_heartbeat(
         self,
         *,
@@ -233,11 +340,16 @@ class TelemetryIngestionService:
 def _parse_topic(topic: str, settings: Settings) -> tuple[str | None, str | None]:
     prefix = settings.mqtt_topic_prefix.rstrip("/")
     telemetry_prefix = f"{prefix}/data/"
+    premium_prefix = f"{prefix}/premium/"
     heartbeat_prefix = f"{prefix}/heartbeat/"
     if topic.startswith(telemetry_prefix):
         gateway_id = topic.removeprefix(telemetry_prefix)
         if gateway_id and "/" not in gateway_id:
             return "telemetry", gateway_id
+    if topic.startswith(premium_prefix):
+        gateway_id = topic.removeprefix(premium_prefix)
+        if gateway_id and "/" not in gateway_id:
+            return "premium_telemetry", gateway_id
     if topic.startswith(heartbeat_prefix):
         gateway_id = topic.removeprefix(heartbeat_prefix)
         if gateway_id and "/" not in gateway_id:

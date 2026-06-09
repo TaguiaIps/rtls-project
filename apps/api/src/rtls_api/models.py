@@ -49,6 +49,17 @@ class GatewayHardwareTier(str, Enum):
     PREMIUM = "Premium"
 
 
+class PremiumTelemetryModality(str, Enum):
+    BLE_AOA = "BLE_AOA"
+    UWB = "UWB"
+
+
+class PremiumCalibrationStatus(str, Enum):
+    UNCALIBRATED = "uncalibrated"
+    CALIBRATED = "calibrated"
+    STALE = "stale"
+
+
 class GatewayHealthStatus(str, Enum):
     HEALTHY = "healthy"
     STALE = "stale"
@@ -77,6 +88,12 @@ class LocationConfidenceLevel(str, Enum):
     LOW = "low"
 
 
+class LocationSourceModality(str, Enum):
+    BLE_RSSI = "BLE_RSSI"
+    BLE_AOA = PremiumTelemetryModality.BLE_AOA.value
+    UWB = PremiumTelemetryModality.UWB.value
+
+
 class DerivedZoneEventType(str, Enum):
     ENTRY = "entry"
     EXIT = "exit"
@@ -96,6 +113,23 @@ class TableServiceTimerStatus(str, Enum):
 class AlertRuleType(str, Enum):
     TABLE_SLA = "table_sla"
     UNAUTHORIZED_GEOFENCE = "unauthorized_geofence"
+    GATEWAY_STALE = "gateway_stale"
+    GATEWAY_LOW_BATTERY = "gateway_low_battery"
+
+
+class CalibrationSessionStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class CalibrationArtifactStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    ACTIVE = "active"
+    STALE = "stale"
+    INVALID = "invalid"
 
 
 class AlertSeverity(str, Enum):
@@ -131,6 +165,25 @@ class AlertActionType(str, Enum):
 class UnauthorizedGeofenceTrigger(str, Enum):
     ENTRY = "entry"
     EXIT = "exit"
+
+
+class ExportJobFormat(str, Enum):
+    CSV = "csv"
+
+
+class ExportJobStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    EXPIRED = "expired"
+
+
+class DataLifecycleRunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class User(Base):
@@ -297,6 +350,14 @@ class Gateway(Base):
     hardware_tier: Mapped[str] = mapped_column(String(32))
     placement_x: Mapped[float] = mapped_column(Float)
     placement_y: Mapped[float] = mapped_column(Float)
+    premium_modality: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    premium_mounting_label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    premium_mounting_angle_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    premium_calibration_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    premium_calibration_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     notes: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
@@ -307,6 +368,10 @@ class Gateway(Base):
 
     floor: Mapped[Floor] = relationship(back_populates="gateways")
     raw_readings: Mapped[list[RawReading]] = relationship(
+        back_populates="gateway",
+        cascade="all, delete-orphan",
+    )
+    premium_raw_measurements: Mapped[list[PremiumRawMeasurement]] = relationship(
         back_populates="gateway",
         cascade="all, delete-orphan",
     )
@@ -334,6 +399,9 @@ class AssetTag(Base):
     )
 
     raw_readings: Mapped[list[RawReading]] = relationship(back_populates="asset_tag")
+    premium_raw_measurements: Mapped[list[PremiumRawMeasurement]] = relationship(
+        back_populates="asset_tag"
+    )
     current_location: Mapped[AssetCurrentLocation | None] = relationship(
         back_populates="asset_tag",
         cascade="all, delete-orphan",
@@ -376,6 +444,31 @@ class RawReading(Base):
     asset_tag: Mapped[AssetTag | None] = relationship(back_populates="raw_readings")
 
 
+class PremiumRawMeasurement(Base):
+    __tablename__ = "premium_raw_measurements"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    gateway_id: Mapped[str] = mapped_column(ForeignKey("gateways.id"), index=True)
+    asset_tag_id: Mapped[str | None] = mapped_column(ForeignKey("asset_tags.id"), nullable=True)
+    tag_identifier: Mapped[str] = mapped_column(String(120), index=True)
+    message_id: Mapped[str] = mapped_column(String(120), index=True)
+    sequence_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    broker_received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    gateway_timestamp: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    firmware_version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    modality: Mapped[str] = mapped_column(String(32), index=True)
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    azimuth_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    elevation_degrees: Mapped[float | None] = mapped_column(Float, nullable=True)
+    distance_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    gateway: Mapped[Gateway] = relationship(back_populates="premium_raw_measurements")
+    asset_tag: Mapped[AssetTag | None] = relationship(back_populates="premium_raw_measurements")
+
+
 class AssetCurrentLocation(Base):
     __tablename__ = "asset_current_locations"
 
@@ -388,6 +481,15 @@ class AssetCurrentLocation(Base):
     coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence_level: Mapped[str] = mapped_column(String(16))
     confidence_score: Mapped[float] = mapped_column(Float)
+    source_tier: Mapped[str] = mapped_column(
+        String(32),
+        default=GatewayHardwareTier.ECONOMIC.value,
+    )
+    source_modality: Mapped[str] = mapped_column(
+        String(32),
+        default=LocationSourceModality.BLE_RSSI.value,
+    )
+    precision_meters: Mapped[float | None] = mapped_column(Float, nullable=True)
     source_gateway_count: Mapped[int] = mapped_column(Integer)
     source_reading_count: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[datetime] = mapped_column(
@@ -414,6 +516,15 @@ class AssetLocationHistory(Base):
     coordinate_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence_level: Mapped[str] = mapped_column(String(16))
     confidence_score: Mapped[float] = mapped_column(Float)
+    source_tier: Mapped[str] = mapped_column(
+        String(32),
+        default=GatewayHardwareTier.ECONOMIC.value,
+    )
+    source_modality: Mapped[str] = mapped_column(
+        String(32),
+        default=LocationSourceModality.BLE_RSSI.value,
+    )
+    precision_meters: Mapped[float | None] = mapped_column(Float, nullable=True)
     source_gateway_count: Mapped[int] = mapped_column(Integer)
     source_reading_count: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -671,3 +782,166 @@ class AlertNotificationDelivery(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     alert: Mapped[AlertInstance] = relationship()
+
+
+class ExportJob(Base):
+    __tablename__ = "export_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    requested_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    report_kind: Mapped[str] = mapped_column(String(32), index=True)
+    export_format: Mapped[str] = mapped_column(String(16), default=ExportJobFormat.CSV.value)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        default=ExportJobStatus.PENDING.value,
+        index=True,
+    )
+    floor_id: Mapped[str | None] = mapped_column(ForeignKey("floors.id"), nullable=True, index=True)
+    site_id: Mapped[str | None] = mapped_column(ForeignKey("sites.id"), nullable=True, index=True)
+    report_params: Mapped[dict[str, Any]] = mapped_column(JSON)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    storage_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    content_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    row_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        index=True,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+
+    requested_by: Mapped[User] = relationship()
+    floor: Mapped[Floor | None] = relationship()
+    site: Mapped[Site | None] = relationship()
+
+
+class DataLifecycleRun(Base):
+    __tablename__ = "data_lifecycle_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    requested_by_user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16),
+        default=DataLifecycleRunStatus.PENDING.value,
+        index=True,
+    )
+    retention_summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    rollup_summary: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        index=True,
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    requested_by: Mapped[User] = relationship()
+
+
+class AnalyticsHeatmapHourlyRollup(Base):
+    __tablename__ = "analytics_heatmap_hourly_rollups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    asset_category: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    bucket_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    grid_columns: Mapped[int] = mapped_column(Integer)
+    grid_rows: Mapped[int] = mapped_column(Integer)
+    row_index: Mapped[int] = mapped_column(Integer)
+    column_index: Mapped[int] = mapped_column(Integer)
+    sample_count: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    floor: Mapped[Floor] = relationship()
+
+
+class AnalyticsTableSlaHourlyRollup(Base):
+    __tablename__ = "analytics_table_sla_hourly_rollups"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    table_area_id: Mapped[str] = mapped_column(ForeignKey("spatial_areas.id"), index=True)
+    bucket_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    completed_visit_count: Mapped[int] = mapped_column(Integer)
+    breach_count: Mapped[int] = mapped_column(Integer)
+    avg_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    threshold_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+    floor: Mapped[Floor] = relationship()
+    table_area: Mapped[SpatialArea] = relationship()
+
+
+class CalibrationSession(Base):
+    __tablename__ = "calibration_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    submitted_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default=CalibrationSessionStatus.PENDING.value,
+        index=True,
+    )
+    checkpoint_count: Mapped[int] = mapped_column(Integer, default=0)
+    sample_count: Mapped[int] = mapped_column(Integer, default=0)
+    raw_samples: Mapped[dict[str, Any]] = mapped_column(JSON)
+    error_message: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    artifact_id: Mapped[str | None] = mapped_column(
+        ForeignKey("calibration_artifacts.id"),
+        nullable=True,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    processing_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processing_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    floor: Mapped[Floor] = relationship()
+    submitted_by: Mapped[User | None] = relationship()
+    artifact: Mapped[CalibrationArtifact | None] = relationship(back_populates="session")
+
+
+class CalibrationArtifact(Base):
+    __tablename__ = "calibration_artifacts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    floor_id: Mapped[str] = mapped_column(ForeignKey("floors.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default=CalibrationArtifactStatus.PENDING.value,
+        index=True,
+    )
+    radiomap_storage_key: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True
+    )
+    gateway_offsets: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    coverage_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    grid_resolution_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    activated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    floor: Mapped[Floor] = relationship()
+    activated_by: Mapped[User | None] = relationship()
+    session: Mapped[CalibrationSession | None] = relationship(back_populates="artifact")

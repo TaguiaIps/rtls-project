@@ -35,10 +35,13 @@ export interface AuthenticatedUser {
 
 export type SpatialAreaType = "zone" | "table" | "restricted_zone" | "poi";
 export type GatewayHardwareTier = "Economic" | "Premium";
+export type PremiumTelemetryModality = "BLE_AOA" | "UWB";
+export type PremiumCalibrationStatus = "uncalibrated" | "calibrated" | "stale";
 export type AssetUpdateRateProfile = "slow" | "balanced" | "realtime";
 export type AssetBatteryProfile = "long_life" | "standard" | "performance";
 export type AssetLocationType = "point" | "zone";
 export type LocationConfidenceLevel = "high" | "medium" | "low";
+export type LocationSourceModality = "BLE_RSSI" | "BLE_AOA" | "UWB";
 export type GatewayHealthStatus = "healthy" | "stale";
 export type OperationsFeedStatus = "live" | "degraded" | "empty";
 export type OperationsPrioritySeverity = "critical" | "warning";
@@ -46,13 +49,29 @@ export type OperationsPriorityKind =
   | "restricted_zone_asset"
   | "low_confidence_asset"
   | "stale_gateway";
-export type AlertRuleType = "table_sla" | "unauthorized_geofence";
+export type AlertRuleType =
+  | "table_sla"
+  | "unauthorized_geofence"
+  | "gateway_stale"
+  | "gateway_low_battery";
 export type AlertSeverity = "critical" | "warning";
 export type AlertStatus = "open" | "acknowledged" | "resolved" | "cleared";
 export type AlertDeliveryChannel = "in_app" | "email";
 export type AlertDeliveryStatus = "delivered" | "failed" | "skipped";
 export type AlertActionType = "triggered" | "acknowledged" | "resolved" | "cleared";
 export type UnauthorizedGeofenceTrigger = "entry" | "exit";
+export type HealthRiskSeverity = "critical" | "warning";
+export type HealthRiskKind = "stale_gateway" | "low_battery_gateway";
+export type ObservabilityServiceStatus = "baseline" | "healthy";
+export type ExportJobFormat = "csv";
+export type ExportJobStatus = "pending" | "running" | "completed" | "failed" | "expired";
+export type AnalyticsExportReportKind =
+  | "trajectory"
+  | "heatmap"
+  | "dwell"
+  | "round_trip"
+  | "sla";
+export type DataLifecycleRunStatus = "pending" | "running" | "completed" | "failed";
 
 export interface FloorSummary {
   id: string;
@@ -110,7 +129,16 @@ export interface GatewayRecord {
   display_name: string;
   hardware_tier: GatewayHardwareTier;
   placement: SpatialPoint;
+  premium_profile: PremiumGatewayProfile | null;
   notes: string | null;
+}
+
+export interface PremiumGatewayProfile {
+  modality: PremiumTelemetryModality;
+  mounting_label: string;
+  mounting_angle_degrees: number;
+  calibration_status: PremiumCalibrationStatus;
+  calibration_updated_at: string | null;
 }
 
 export interface GatewayHealthRecord {
@@ -182,6 +210,126 @@ export interface AdminSummary {
   managed_roles: UserRole[];
 }
 
+export interface AuditEventRecord {
+  id: string;
+  actor_user_id: string | null;
+  actor_email: string | null;
+  actor_role: string | null;
+  action_category: string;
+  action_type: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface AuditEventListRecord {
+  items: AuditEventRecord[];
+  total_count: number;
+}
+
+export interface HealthRiskRecord {
+  id: string;
+  kind: HealthRiskKind;
+  severity: HealthRiskSeverity;
+  gateway_id: string;
+  gateway_identifier: string;
+  display_name: string;
+  floor_id: string;
+  floor_name: string;
+  summary: string;
+  observed_at: string | null;
+  battery_level_percent: number | null;
+}
+
+export interface ObservabilityGatewayTotalsRecord {
+  total: number;
+  healthy: number;
+  stale: number;
+  low_battery: number;
+  without_heartbeat: number;
+}
+
+export interface ObservabilityTelemetryTotalsRecord {
+  raw_readings: number;
+  premium_measurements: number;
+  heartbeat_snapshots: number;
+}
+
+export interface ObservabilityAlertTotalsRecord {
+  active: number;
+  critical: number;
+  warning: number;
+}
+
+export interface ObservabilityAuditTotalsRecord {
+  total: number;
+  last_24h: number;
+  latest_at: string | null;
+}
+
+export interface ObservabilityServiceRecord {
+  name: RuntimeServiceName;
+  status: ObservabilityServiceStatus;
+  detail: string;
+}
+
+export interface ExportRetentionPolicyRecord {
+  raw_readings_days: number;
+  premium_measurements_days: number;
+  location_history_days: number;
+  exports_days: number;
+}
+
+export interface DataLifecycleRunRecord {
+  id: string;
+  requested_by_user_id: string;
+  requested_by_email: string | null;
+  status: DataLifecycleRunStatus;
+  retention_summary: Record<string, number> | null;
+  rollup_summary: Record<string, number> | null;
+  error_message: string | null;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ObservabilityLifecycleSummaryRecord {
+  policies: ExportRetentionPolicyRecord;
+  latest_run: DataLifecycleRunRecord | null;
+}
+
+export interface ObservabilitySummaryRecord {
+  generated_at: string;
+  gateway_totals: ObservabilityGatewayTotalsRecord;
+  telemetry_totals: ObservabilityTelemetryTotalsRecord;
+  alert_totals: ObservabilityAlertTotalsRecord;
+  audit_totals: ObservabilityAuditTotalsRecord;
+  lifecycle: ObservabilityLifecycleSummaryRecord;
+  risk_items: HealthRiskRecord[];
+  services: ObservabilityServiceRecord[];
+  healthcheck_path: string;
+  metrics_path: string;
+  request_id_header: string;
+  tracing_status: string;
+}
+
+export interface AnalyticsExportJobRecord {
+  id: string;
+  report_kind: AnalyticsExportReportKind;
+  export_format: ExportJobFormat;
+  status: ExportJobStatus;
+  floor_id: string | null;
+  site_id: string | null;
+  file_name: string | null;
+  row_count: number | null;
+  error_message: string | null;
+  requested_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  expires_at: string | null;
+}
+
 export interface AssetLocationRecord {
   asset_tag_id: string;
   tag_identifier: string;
@@ -198,6 +346,9 @@ export interface AssetLocationRecord {
   zone_name: string | null;
   confidence_level: LocationConfidenceLevel;
   confidence_score: number;
+  source_tier: GatewayHardwareTier;
+  source_modality: LocationSourceModality;
+  precision_meters: number | null;
   source_gateway_count: number;
   source_reading_count: number;
 }
@@ -211,11 +362,100 @@ export interface LiveLocationStreamEvent {
   location: AssetLocationRecord;
 }
 
+export interface DerivedZoneTransitionEventRecord {
+  id: string;
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  zone_id: string;
+  zone_name: string;
+  observed_at: string;
+  event_type: "entry" | "exit";
+  transition_boundary_id: string;
+}
+
+export interface DerivedZoneDwellRecord {
+  id: string;
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  zone_id: string;
+  zone_name: string;
+  started_at: string;
+  ended_at: string;
+  duration_seconds: number;
+  closure_reason: "zone_change" | "floor_change" | "resolved_placement_lost";
+}
+
+export interface TableServiceTimerStateRecord {
+  table_area_id: string;
+  table_name: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  status: "active" | "idle";
+  active_visit_count: number;
+  boundary_at: string | null;
+  elapsed_seconds: number;
+  active_since: string | null;
+  last_entry_at: string | null;
+  last_exit_at: string | null;
+  last_visit_started_at: string | null;
+  last_visit_ended_at: string | null;
+  last_visit_duration_seconds: number | null;
+}
+
+export interface RoundTripMeasurementRecord {
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  floor_id: string;
+  floor_name: string;
+  site_id: string;
+  site_name: string;
+  origin_zone_id: string;
+  origin_zone_name: string;
+  destination_zone_id: string;
+  destination_zone_name: string;
+  origin_entered_at: string;
+  destination_entered_at: string;
+  completed_at: string;
+  outbound_seconds: number;
+  return_seconds: number;
+  total_seconds: number;
+}
+
+export interface AlertKpis {
+  total_active: number;
+  critical: number;
+  warning: number;
+}
+
+export interface SlaKpis {
+  breach_count: number;
+  success_rate_pct: number;
+  trend_pct: number | null;
+}
+
 export interface OperationsOverviewKpis {
   active_assets: number;
   low_confidence_assets: number;
   restricted_zone_assets: number;
   stale_gateways: number;
+  alerts: AlertKpis;
+  sla: SlaKpis;
 }
 
 export interface OperationsPriorityItem {
@@ -368,4 +608,134 @@ export interface AlertRuleUpsertPayload {
 
 export interface AlertActionPayload {
   notes?: string | null;
+}
+
+export type AnalyticsThresholdSource = "alert_rule" | "unavailable";
+
+export interface AnalyticsSummaryMetrics {
+  sample_count: number;
+  avg_duration_seconds: number | null;
+  max_duration_seconds: number | null;
+}
+
+export interface AnalyticsHeatmapCellRecord {
+  row: number;
+  column: number;
+  center: SpatialPoint;
+  sample_count: number;
+  intensity: number;
+}
+
+export interface AnalyticsHeatmapRecord {
+  site_id: string;
+  site_name: string;
+  floor_id: string;
+  floor_name: string;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  grid_columns: number;
+  grid_rows: number;
+  total_samples: number;
+  max_density: number;
+  cells: AnalyticsHeatmapCellRecord[];
+}
+
+export interface AnalyticsTrajectoryRecord {
+  asset_tag_id: string;
+  tag_identifier: string;
+  display_name: string;
+  asset_category: string;
+  site_id: string;
+  site_name: string;
+  floor_id: string;
+  floor_name: string;
+  start_at: string;
+  end_at: string;
+  points: AssetLocationHistoryRecord[];
+}
+
+export interface AnalyticsDwellSummaryRecord extends AnalyticsSummaryMetrics {
+  threshold_seconds: number | null;
+  threshold_source: AnalyticsThresholdSource;
+  threshold_breach_count: number;
+}
+
+export interface AnalyticsDwellRecord extends DerivedZoneDwellRecord {
+  threshold_seconds: number | null;
+  threshold_breached: boolean;
+}
+
+export interface AnalyticsDwellReportRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  zone_id: string | null;
+  zone_name: string | null;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  summary: AnalyticsDwellSummaryRecord;
+  records: AnalyticsDwellRecord[];
+}
+
+export interface AnalyticsRoundTripSummaryRecord extends AnalyticsSummaryMetrics {
+  avg_outbound_seconds: number | null;
+  avg_return_seconds: number | null;
+}
+
+export interface AnalyticsRoundTripReportRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  origin_zone_id: string;
+  origin_zone_name: string;
+  destination_zone_id: string;
+  destination_zone_name: string;
+  asset_category: string | null;
+  start_at: string;
+  end_at: string;
+  summary: AnalyticsRoundTripSummaryRecord;
+  records: RoundTripMeasurementRecord[];
+}
+
+export interface AnalyticsSlaTrendBucketRecord {
+  bucket_started_at: string;
+  completed_visit_count: number;
+  breach_count: number;
+  avg_duration_seconds: number | null;
+  max_duration_seconds: number | null;
+}
+
+export interface AnalyticsSlaTrendRecord {
+  site_id: string | null;
+  site_name: string | null;
+  floor_id: string | null;
+  floor_name: string | null;
+  table_area_id: string;
+  table_name: string;
+  start_at: string;
+  end_at: string;
+  bucket_minutes: number;
+  threshold_source: AnalyticsThresholdSource;
+  threshold_seconds: number | null;
+  current_timer: TableServiceTimerStateRecord | null;
+  buckets: AnalyticsSlaTrendBucketRecord[];
+}
+
+export interface AnalyticsExportRequestRecord {
+  report_kind: AnalyticsExportReportKind;
+  export_format: ExportJobFormat;
+  floor_id: string;
+  start_at: string;
+  end_at: string;
+  asset_tag_id?: string | null;
+  asset_category?: string | null;
+  zone_id?: string | null;
+  origin_zone_id?: string | null;
+  destination_zone_id?: string | null;
+  table_area_id?: string | null;
+  bucket_minutes?: number;
 }

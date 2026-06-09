@@ -1,7 +1,7 @@
 # economic-tier-position-estimation Specification
 
 ## Purpose
-TBD - created by archiving change implement-economic-tier-positioning-and-live-location. Update Purpose after archive.
+Derive durable asset locations from BLE RSSI fingerprinting while preserving location history and confidence metadata for downstream monitoring and analytics.
 ## Requirements
 ### Requirement: Economic-tier telemetry produces durable asset locations
 The RTLS Analytics Platform SHALL derive durable asset location outputs from accepted economic-tier BLE raw readings for registered tracked assets on mapped floors.

@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     mqtt_password: str | None = None
     mqtt_keepalive_seconds: int = 60
     mqtt_topic_prefix: str = "rtls"
+    mqtt_tls_enabled: bool = False
+    mqtt_ca_cert: str | None = None
+    mqtt_client_cert: str | None = None
+    mqtt_client_key: str | None = None
     ingestion_dedupe_key_prefix: str = "rtls:ingest:message"
     ingestion_dedupe_ttl_seconds: int = 10
     positioning_recent_window_seconds: int = 20
@@ -33,12 +37,18 @@ class Settings(BaseSettings):
     object_storage_secret_key: str = "minioadmin"
     object_storage_bucket: str = "rtls-floor-plans"
     object_storage_region: str = "us-east-1"
+    raw_reading_retention_days: int = 90
+    premium_measurement_retention_days: int = 90
+    location_history_retention_days: int = 30
+    export_retention_days: int = 7
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None
     smtp_password: str | None = None
     smtp_use_tls: bool = True
     alert_email_from_address: str | None = None
+    calibration_radiomap_cache_ttl_seconds: int = 300
+    sla_threshold_seconds: int = 1800
 
 
 @lru_cache

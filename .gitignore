@@ -70,12 +70,16 @@ apps/web/dist/
 apps/mobile/dist/
 packages/*/dist/
 
+# Generated documentation
+docs/output/
+
 # Expo / React Native
 .expo/
 **/.expo/
 .expo-shared/
 apps/mobile/.expo/
 apps/mobile/.expo-shared/
+apps/mobile/build-*.apk
 
 # Vite and test caches
 .vitest/
