@@ -94,6 +94,22 @@ Default URLs:
 - Implementation plan: [`docs/implementation-plan.md`](./docs/implementation-plan.md)
 - UX specification: [`docs/ux-design.md`](./docs/ux-design.md)
 
+## Market Research Notes
+
+The previous documentation branch included a market-research snapshot of common capabilities offered by competitors:
+
+- Indoor positioning for real-time location in covered spaces
+- Indoor wayfinding for instant route guidance (text and voice)
+- Interactive and tourism-friendly walking maps
+- Waypoint-based guided visits with multiple stops and audio guidance
+- Proximity marketing and geofencing-driven offers
+- Voice assistance for informational and orientation flows
+- People and asset tracking
+- Big-data visitation analytics, including non-app users
+- Information cards, categories, and tag-based classification
+- Map/context switching (indoor-outdoor and multi-floor), multi-language, and multi-site support
+- Flexible delivery through white-label apps or SDK integration into existing apps
+
 ## License
 
 This project is copyrighted to Hugo de Paula and is not licensed for public use. Refer to the LICENSE file when it becomes available.
