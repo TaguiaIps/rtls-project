@@ -1,29 +1,29 @@
 # web-operations-shell Specification
 
 ## Purpose
-TBD - created by archiving change deliver-web-shell-operations-overview-and-live-map. Update Purpose after archive.
+Provide the shared protected monitoring shell with role-aware navigation, operational context propagation, and a consistent layout foundation for all monitoring workspaces.
 ## Requirements
 ### Requirement: Authorized users can open a shared protected monitoring shell
-The RTLS Analytics Platform SHALL provide a shared protected web shell for the currently delivered monitoring routes instead of rendering each monitoring page as an isolated screen.
+The RTLS Analytics Platform SHALL provide a shared protected web shell for the currently delivered monitoring routes that implements the "Command Rail" high-density layout and the "Deep Void" surface hierarchy.
 
 #### Scenario: Authenticated General User opens the operations area
 - **WHEN** an authenticated General User navigates to a delivered monitoring route
-- **THEN** the web application SHALL render the shared operations shell with role-appropriate navigation and current-user context
+- **THEN** the web application SHALL render the shared operations shell with the "Command Rail" sidebar, role-appropriate navigation, and the "Deep Void" background surface hierarchy
 
 #### Scenario: Authenticated Administrator opens a monitoring route
 - **WHEN** an authenticated Administrator navigates to a delivered monitoring route
-- **THEN** the web application SHALL render the same shared shell while preserving access to administrator-only destinations outside the operations area
+- **THEN** the web application SHALL render the same shared shell featuring the "Command Rail" layout while preserving access to administrator-only destinations
 
 ### Requirement: The shell exposes shared operational context
-The RTLS Analytics Platform SHALL surface shared operational context in the web shell so Overview and Live Map can stay aligned on the same site, floor, and live-feed status.
+The RTLS Analytics Platform SHALL surface shared operational context in the web shell so Overview and Live Map can stay aligned on the same site, floor, and live-feed status through an integrated "Live Feed Heartbeat" treatment.
 
 #### Scenario: User loads the shell with an available operational context
 - **WHEN** the web shell loads for an authorized user with accessible site and floor data
-- **THEN** the shell SHALL expose the current site or floor context together with a visible live-feed status treatment
+- **THEN** the shell SHALL expose the current site or floor context together with a visible live-feed status heartbeat animation in the Top Bar
 
 #### Scenario: User changes site or floor context from the shell
 - **WHEN** the user changes the current site or floor context from a shell control or deep link
-- **THEN** the shell SHALL preserve that context across supported monitoring routes
+- **THEN** the shell SHALL preserve that context and update the breadcrumb trail and heartbeat status accordingly
 
 ### Requirement: The shell navigation is role-aware and delivery-aware
 The RTLS Analytics Platform SHALL show only the destinations that are both permitted for the current user and delivered in the current product phase.

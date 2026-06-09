@@ -935,6 +935,42 @@ body {
   border-color: rgba(248, 113, 113, 0.24);
 }
 
+.kpi-card--drilldown {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.kpi-card--drilldown:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.kpi-card--drilldown:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.5);
+  outline-offset: 2px;
+}
+
+.kpi-section-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.trend-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.trend-indicator--positive {
+  color: rgba(34, 211, 238, 0.8);
+}
+
+.trend-indicator--negative {
+  color: rgba(248, 113, 113, 0.8);
+}
+
 .overview-grid {
   display: grid;
   gap: 20px;

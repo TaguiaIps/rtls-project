@@ -1,21 +1,21 @@
 # live-map-workspace Specification
 
 ## Purpose
-TBD - created by archiving change deliver-web-shell-operations-overview-and-live-map. Update Purpose after archive.
+Render floor plans with confidence-aware asset overlays, faceted search and filtering, and interactive inspection within the protected monitoring shell.
 ## Requirements
 ### Requirement: Authorized users can inspect a floor-linked live map workspace
-The RTLS Analytics Platform SHALL provide a Live Map workspace that renders the selected floor's mapped context together with current asset locations.
+The RTLS Analytics Platform SHALL provide a Live Map workspace that renders the selected floor's mapped context using glassmorphism HUD overlays for floor details.
 
 #### Scenario: User opens the Live Map for a mapped floor
 - **WHEN** an authorized user opens the Live Map with a floor that has mapped spatial context
-- **THEN** the workspace SHALL render the floor plan, operational areas, gateways, and current live asset locations for that floor
+- **THEN** the workspace SHALL render the floor plan and assets with floating HUD modules using glassmorphism (backdrop blur) for metadata
 
 ### Requirement: The Live Map supports search and filtering
-The RTLS Analytics Platform SHALL allow users to narrow the visible live-map context with supported search and filter controls.
+The RTLS Analytics Platform SHALL allow users to narrow the visible live-map context using a faceted search system that supports simultaneous combination of category, confidence, and status filters.
 
-#### Scenario: User searches for an asset or applies filters
-- **WHEN** the user submits a supported search term or filter set
-- **THEN** the Live Map SHALL reduce the visible result set and retain the requested filter context
+#### Scenario: User applies multiple filter facets
+- **WHEN** an authorized user selects a specific asset category AND a specific confidence threshold in the search sidebar
+- **THEN** the Live Map SHALL reduce the visible result set to only those assets satisfying BOTH facets simultaneously
 
 ### Requirement: The Live Map visualizes confidence honestly
 The RTLS Analytics Platform SHALL visualize live asset locations according to the confidence semantics already produced by the positioning layer.
@@ -29,11 +29,11 @@ The RTLS Analytics Platform SHALL visualize live asset locations according to th
 - **THEN** the map SHALL render a visibly different degraded-confidence or zone-level treatment instead of implying unchanged point precision
 
 ### Requirement: Users can inspect a selected asset in context
-The RTLS Analytics Platform SHALL provide a selected-asset drawer in the Live Map workspace.
+The RTLS Analytics Platform SHALL provide a selected-asset drawer in the Live Map workspace that follows the high-density, no-border structural layout.
 
 #### Scenario: User selects an asset from the map or search results
 - **WHEN** the user selects a visible asset
-- **THEN** the Live Map SHALL show a detail drawer with the asset's latest known location context, confidence state, and selection-preserving map context
+- **THEN** the Live Map SHALL show a detail drawer with the "Deep Void" surface hierarchy and rigid geometry instead of rounded border-based containers
 
 ### Requirement: The Live Map reflects live updates without a full reload
 The RTLS Analytics Platform SHALL update the Live Map as new accepted live-location results arrive.

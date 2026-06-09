@@ -101,10 +101,7 @@ def get_download_payload(*, db: Session, job: ExportJob, settings: Settings) -> 
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Export artifact not found",
         )
-    if (
-        job.expires_at is not None
-        and ensure_utc(job.expires_at) < datetime.now(timezone.utc)
-    ):
+    if job.expires_at is not None and ensure_utc(job.expires_at) < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="Export artifact expired")
 
     try:
@@ -119,9 +116,7 @@ def get_download_payload(*, db: Session, job: ExportJob, settings: Settings) -> 
 
 def get_accessible_export_job(*, db: Session, job_id: str, current_user: User) -> ExportJob:
     query = (
-        select(ExportJob)
-        .options(joinedload(ExportJob.requested_by))
-        .where(ExportJob.id == job_id)
+        select(ExportJob).options(joinedload(ExportJob.requested_by)).where(ExportJob.id == job_id)
     )
     if current_user.role != UserRole.ADMINISTRATOR.value:
         query = query.where(ExportJob.requested_by_user_id == current_user.id)
@@ -187,8 +182,7 @@ def normalize_export_request(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
-                    "origin_zone_id and destination_zone_id are required "
-                    "for round-trip exports"
+                    "origin_zone_id and destination_zone_id are required for round-trip exports"
                 ),
             )
     elif report_kind == "sla":

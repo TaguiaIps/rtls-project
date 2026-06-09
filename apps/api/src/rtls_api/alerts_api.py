@@ -148,8 +148,7 @@ def read_alerts(
         end_at=end_at,
     )
     payload = [
-        AlertListItemResponse.model_validate(serialize_alert_list_item(alert))
-        for alert in alerts
+        AlertListItemResponse.model_validate(serialize_alert_list_item(alert)) for alert in alerts
     ]
     db.commit()
     return payload

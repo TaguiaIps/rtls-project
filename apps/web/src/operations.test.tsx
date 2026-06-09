@@ -72,7 +72,9 @@ const overviewResponse = {
     active_assets: 4,
     low_confidence_assets: 1,
     restricted_zone_assets: 1,
-    stale_gateways: 1
+    stale_gateways: 1,
+    alerts: { total_active: 2, critical: 1, warning: 1 },
+    sla: { breach_count: 1, success_rate_pct: 85.0, trend_pct: -3.2 }
   },
   priority_items: [
     {
@@ -812,5 +814,53 @@ describe("operations shell", () => {
           String(input).includes("/api/analytics/exports") && (init?.method ?? "GET") === "POST"
       )
     ).toBe(true);
+  });
+
+  it("renders Alert and SLA KPI cards with drilldown navigation", async () => {
+    window.history.pushState({}, "", "/operations?site_id=site-1&floor_id=floor-1");
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      if (url.endsWith("/api/me")) {
+        return jsonResponse({
+          id: "user-1",
+          email: "ops@example.com",
+          display_name: "Carlos",
+          role: "General User",
+          status: "active"
+        });
+      }
+      if (url.endsWith("/api/admin/sites")) {
+        return jsonResponse(sitesResponse);
+      }
+      if (url.includes("/api/alerts/summary")) {
+        return jsonResponse(alertSummaryResponse);
+      }
+      if (url.includes("/api/operations/overview")) {
+        return jsonResponse(overviewResponse);
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Total Active")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Critical")).toBeInTheDocument();
+    expect(screen.getByText("Warning")).toBeInTheDocument();
+    expect(screen.getByText("SLA Breaches")).toBeInTheDocument();
+    expect(screen.getByText(/85%$/)).toBeInTheDocument();
+    expect(screen.getByText("-3.2pp")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Critical"));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/operations/alerts");
+      expect(window.location.search).toContain("severity=critical");
+      expect(window.location.search).toContain("status=unresolved");
+    });
   });
 });

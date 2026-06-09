@@ -117,9 +117,7 @@ def apply_retention_policies(
         )
     ).all()
     location_history = db.scalars(
-        select(AssetLocationHistory).where(
-            AssetLocationHistory.observed_at < location_cutoff
-        )
+        select(AssetLocationHistory).where(AssetLocationHistory.observed_at < location_cutoff)
     ).all()
     expired_exports = db.scalars(
         select(ExportJob).where(
@@ -268,9 +266,7 @@ def _build_sla_rollups(*, db: Session) -> list[AnalyticsTableSlaHourlyRollup]:
                 completed_visit_count=completed_visit_count,
                 breach_count=int(stats["breach_count"]),
                 avg_duration_seconds=(
-                    duration_total / completed_visit_count
-                    if completed_visit_count
-                    else None
+                    duration_total / completed_visit_count if completed_visit_count else None
                 ),
                 max_duration_seconds=(
                     float(stats["max_duration_seconds"])

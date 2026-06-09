@@ -297,8 +297,7 @@ def test_alert_summary_and_list_include_gateway_maintenance_alerts(tmp_path: Pat
         now = datetime.now(timezone.utc)
         with app.state.session_factory() as db:
             gateways = {
-                gateway.gateway_identifier: gateway
-                for gateway in db.scalars(select(Gateway)).all()
+                gateway.gateway_identifier: gateway for gateway in db.scalars(select(Gateway)).all()
             }
             db.add_all(
                 [
@@ -576,7 +575,9 @@ def test_email_delivery_attempts_are_recorded(tmp_path: Path, monkeypatch) -> No
 
         with app.state.session_factory() as db:
             deliveries = db.scalars(
-                select(AlertNotificationDelivery).order_by(AlertNotificationDelivery.created_at.asc())
+                select(AlertNotificationDelivery).order_by(
+                    AlertNotificationDelivery.created_at.asc()
+                )
             ).all()
             assert [delivery.channel for delivery in deliveries] == ["in_app", "email"]
             assert deliveries[1].status == "delivered"

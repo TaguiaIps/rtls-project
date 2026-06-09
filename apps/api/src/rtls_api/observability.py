@@ -163,41 +163,51 @@ def get_observability_summary(
     ).all()
 
     raw_readings_total = db.scalar(select(func.count()).select_from(RawReading)) or 0
-    premium_measurements_total = db.scalar(
-        select(func.count()).select_from(PremiumRawMeasurement)
-    ) or 0
-    heartbeat_snapshots_total = db.scalar(
-        select(func.count()).select_from(GatewayHeartbeat)
-    ) or 0
-    active_alert_count = db.scalar(
-        select(func.count()).select_from(AlertInstance).where(
-            AlertInstance.status.in_(
-                [AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]
+    premium_measurements_total = (
+        db.scalar(select(func.count()).select_from(PremiumRawMeasurement)) or 0
+    )
+    heartbeat_snapshots_total = db.scalar(select(func.count()).select_from(GatewayHeartbeat)) or 0
+    active_alert_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(AlertInstance)
+            .where(
+                AlertInstance.status.in_([AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value])
             )
         )
-    ) or 0
-    active_critical_alert_count = db.scalar(
-        select(func.count()).select_from(AlertInstance).where(
-            AlertInstance.status.in_(
-                [AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]
-            ),
-            AlertInstance.severity == AlertSeverity.CRITICAL.value,
+        or 0
+    )
+    active_critical_alert_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(AlertInstance)
+            .where(
+                AlertInstance.status.in_([AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]),
+                AlertInstance.severity == AlertSeverity.CRITICAL.value,
+            )
         )
-    ) or 0
-    active_warning_alert_count = db.scalar(
-        select(func.count()).select_from(AlertInstance).where(
-            AlertInstance.status.in_(
-                [AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]
-            ),
-            AlertInstance.severity == AlertSeverity.WARNING.value,
+        or 0
+    )
+    active_warning_alert_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(AlertInstance)
+            .where(
+                AlertInstance.status.in_([AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value]),
+                AlertInstance.severity == AlertSeverity.WARNING.value,
+            )
         )
-    ) or 0
+        or 0
+    )
     total_audit_events = db.scalar(select(func.count()).select_from(AuditEvent)) or 0
-    audit_events_last_24h = db.scalar(
-        select(func.count()).select_from(AuditEvent).where(
-            AuditEvent.created_at >= now - timedelta(hours=24)
+    audit_events_last_24h = (
+        db.scalar(
+            select(func.count())
+            .select_from(AuditEvent)
+            .where(AuditEvent.created_at >= now - timedelta(hours=24))
         )
-    ) or 0
+        or 0
+    )
     latest_audit_event_at = db.scalar(select(func.max(AuditEvent.created_at)))
     latest_lifecycle_run = db.scalar(
         select(DataLifecycleRun)
@@ -257,8 +267,7 @@ def get_observability_summary(
         metrics_path="/metrics",
         request_id_header="X-Request-ID",
         tracing_status=(
-            "Request identifiers are attached to every API response "
-            "for operational tracing."
+            "Request identifiers are attached to every API response for operational tracing."
         ),
     )
     db.commit()
@@ -319,7 +328,9 @@ def get_metrics(
         "rtls_gateways_low_battery_total": gateway_summary["low_battery"],
         "rtls_audit_events_total": db.scalar(select(func.count()).select_from(AuditEvent)) or 0,
         "rtls_alert_instances_open_total": db.scalar(
-            select(func.count()).select_from(AlertInstance).where(
+            select(func.count())
+            .select_from(AlertInstance)
+            .where(
                 AlertInstance.status.in_([AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value])
             )
         )

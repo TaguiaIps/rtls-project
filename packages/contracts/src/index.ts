@@ -437,11 +437,25 @@ export interface RoundTripMeasurementRecord {
   total_seconds: number;
 }
 
+export interface AlertKpis {
+  total_active: number;
+  critical: number;
+  warning: number;
+}
+
+export interface SlaKpis {
+  breach_count: number;
+  success_rate_pct: number;
+  trend_pct: number | null;
+}
+
 export interface OperationsOverviewKpis {
   active_assets: number;
   low_confidence_assets: number;
   restricted_zone_assets: number;
   stale_gateways: number;
+  alerts: AlertKpis;
+  sla: SlaKpis;
 }
 
 export interface OperationsPriorityItem {

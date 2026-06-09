@@ -335,7 +335,8 @@ export function OperationsShellLayout() {
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
+          </div>
 
           <div className="top-bar-actions">
             <div className="role-badge">
@@ -420,6 +421,19 @@ export function OperationsOverviewPage() {
     navigate(`/operations/live-map?${nextParams.toString()}`);
   };
 
+  const openAlerts = (severity: string | null) => {
+    const nextParams = new URLSearchParams(shellSearchParams);
+    nextParams.set("status", "unresolved");
+    if (severity) {
+      nextParams.set("severity", severity);
+    }
+    navigate(`/operations/alerts?${nextParams.toString()}`);
+  };
+
+  const openAnalyticsSla = () => {
+    navigate(`/operations/analytics?${shellSearchParams.toString()}`);
+  };
+
   if (loading) {
     return (
       <section className="panel panel--compact">
@@ -470,6 +484,46 @@ export function OperationsOverviewPage() {
           tone="critical"
         />
         <KpiCard label="Stale Gateways" value={summary?.kpis.stale_gateways ?? 0} tone="warning" />
+      </section>
+
+      <section className="overview-kpis">
+        <h3 className="kpi-section-label">Alerts</h3>
+        <AlertKpiCard
+          label="Total Active"
+          value={summary?.kpis.alerts?.total_active ?? 0}
+          tone={summary && summary.kpis.alerts.total_active > 0 ? "warning" : "live"}
+          onClick={() => openAlerts(null)}
+        />
+        <AlertKpiCard
+          label="Critical"
+          value={summary?.kpis.alerts?.critical ?? 0}
+          tone={summary && summary.kpis.alerts.critical > 0 ? "critical" : "live"}
+          onClick={() => openAlerts("critical")}
+        />
+        <AlertKpiCard
+          label="Warning"
+          value={summary?.kpis.alerts?.warning ?? 0}
+          tone={summary && summary.kpis.alerts.warning > 0 ? "warning" : "live"}
+          onClick={() => openAlerts("warning")}
+        />
+      </section>
+
+      <section className="overview-kpis">
+        <h3 className="kpi-section-label">SLA Performance</h3>
+        <SlaKpiCard
+          label="SLA Breaches"
+          value={summary?.kpis.sla?.breach_count ?? 0}
+          tone={summary && summary.kpis.sla.breach_count > 0 ? "critical" : "live"}
+          onClick={() => openAnalyticsSla()}
+        />
+        <SlaKpiCard
+          label="Success Rate"
+          value={summary?.kpis.sla?.success_rate_pct ?? 100}
+          tone={summary && summary.kpis.sla.success_rate_pct >= 95 ? "live" : (summary.kpis.sla.success_rate_pct >= 80 ? "warning" : "critical")}
+          suffix="%"
+          trend={summary?.kpis.sla?.trend_pct ?? null}
+          onClick={() => openAnalyticsSla()}
+        />
       </section>
 
       <div className="overview-grid">
@@ -974,6 +1028,53 @@ function KpiCard({
     <article className={`panel kpi-card kpi-card--${tone}`}>
       <p className="eyebrow">{label}</p>
       <strong>{value}</strong>
+    </article>
+  );
+}
+
+function AlertKpiCard({
+  label,
+  value,
+  tone,
+  onClick
+}: {
+  label: string;
+  value: number;
+  tone: "live" | "warning" | "critical";
+  onClick: () => void;
+}) {
+  return (
+    <article className={`panel kpi-card kpi-card--${tone} kpi-card--drilldown`} onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}>
+      <p className="eyebrow">{label}</p>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function SlaKpiCard({
+  label,
+  value,
+  tone,
+  suffix,
+  trend,
+  onClick
+}: {
+  label: string;
+  value: number;
+  tone: "live" | "warning" | "critical";
+  suffix?: string;
+  trend: number | null;
+  onClick: () => void;
+}) {
+  return (
+    <article className={`panel kpi-card kpi-card--${tone} kpi-card--drilldown`} onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onClick(); }}>
+      <p className="eyebrow">{label}</p>
+      <strong>{value}{suffix ?? ""}</strong>
+      {trend !== null && (
+        <span className={`trend-indicator ${trend >= 0 ? "trend-indicator--positive" : "trend-indicator--negative"}`}>
+          {trend >= 0 ? "+" : ""}{trend}pp
+        </span>
+      )}
     </article>
   );
 }

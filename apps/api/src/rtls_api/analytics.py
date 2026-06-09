@@ -352,10 +352,7 @@ def get_sla_trend_report(
 
     floor = _get_floor(db=db, floor_id=floor_id)
     table_area = _get_zone(db=db, zone_id=table_area_id)
-    if (
-        table_area.area_type != SpatialAreaType.TABLE.value
-        or table_area.sla_eligible is not True
-    ):
+    if table_area.area_type != SpatialAreaType.TABLE.value or table_area.sla_eligible is not True:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Selected area is not an SLA-eligible table",
@@ -435,11 +432,7 @@ def get_sla_trend_report(
             current_bucket += bucket_delta
 
     timer_state = db.get(TableServiceTimerState, table_area_id)
-    serialized_timer = (
-        serialize_table_timer_state(timer_state)
-        if timer_state is not None
-        else None
-    )
+    serialized_timer = serialize_table_timer_state(timer_state) if timer_state is not None else None
     return {
         "site_id": floor.site.id,
         "site_name": floor.site.name,
@@ -458,11 +451,7 @@ def get_sla_trend_report(
 
 
 def _get_floor(*, db: Session, floor_id: str) -> Floor:
-    floor = db.scalar(
-        select(Floor)
-        .options(joinedload(Floor.site))
-        .where(Floor.id == floor_id)
-    )
+    floor = db.scalar(select(Floor).options(joinedload(Floor.site)).where(Floor.id == floor_id))
     if floor is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Floor not found")
     return floor
@@ -540,9 +529,7 @@ def _resolve_table_sla_threshold(
     for rule in rules:
         if rule.site_id is not None and rule.site_id != floor.site_id:
             continue
-        table_area_ids = [
-            str(area_id) for area_id in rule.config.get("table_area_ids", [])
-        ]
+        table_area_ids = [str(area_id) for area_id in rule.config.get("table_area_ids", [])]
         if table_area_id not in table_area_ids:
             continue
         threshold_seconds = rule.config.get("threshold_seconds")

@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint src --ext .ts,.tsx",
-    "test": "vitest run --environment jsdom"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@rtls/config": "*",
     "@rtls/contracts": "*",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "react-router-dom": "^7.6.3"
   }
 }

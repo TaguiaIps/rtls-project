@@ -378,12 +378,8 @@ def get_alert_notification_summary(
                 AlertNotificationDelivery.channel == AlertDeliveryChannel.IN_APP.value,
                 AlertNotificationDelivery.read_at.is_(None),
                 AlertInstance.status.in_(ACTIVE_ALERT_STATUSES),
-                *(
-                    [AlertInstance.site_id == site_id] if site_id is not None else []
-                ),
-                *(
-                    [AlertInstance.floor_id == floor_id] if floor_id is not None else []
-                ),
+                *([AlertInstance.site_id == site_id] if site_id is not None else []),
+                *([AlertInstance.floor_id == floor_id] if floor_id is not None else []),
             )
         )
         or 0
@@ -443,9 +439,11 @@ def sync_gateway_maintenance_alerts(
     if floor_id is not None:
         query = query.where(Gateway.floor_id == floor_id)
 
-    gateways = db.scalars(
-        query.order_by(Gateway.display_name.asc(), Gateway.gateway_identifier.asc())
-    ).unique().all()
+    gateways = (
+        db.scalars(query.order_by(Gateway.display_name.asc(), Gateway.gateway_identifier.asc()))
+        .unique()
+        .all()
+    )
     rule_cache: dict[tuple[str, str], AlertRule] = {}
     for gateway in gateways:
         _sync_gateway_maintenance_alerts_for_gateway(
@@ -757,11 +755,7 @@ def _evaluate_unauthorized_geofence_transition(
     exit_event: DerivedZoneTransitionEvent | None,
     observed_at: datetime,
 ) -> None:
-    floor_ids = {
-        event.floor_id
-        for event in (entry_event, exit_event)
-        if event is not None
-    }
+    floor_ids = {event.floor_id for event in (entry_event, exit_event) if event is not None}
     if not floor_ids:
         return
 

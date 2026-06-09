@@ -123,8 +123,6 @@ def get_round_trip_measurements(
         end_at=end_at,
     )
     return [
-        RoundTripMeasurementResponse.model_validate(
-            serialize_round_trip_measurement(measurement)
-        )
+        RoundTripMeasurementResponse.model_validate(serialize_round_trip_measurement(measurement))
         for measurement in measurements
     ]

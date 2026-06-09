@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from rtls_api.auth import get_current_user
@@ -12,8 +12,12 @@ from rtls_api.config import Settings
 from rtls_api.db import get_db
 from rtls_api.ingestion import ensure_utc, gateway_health_status
 from rtls_api.models import (
+    AlertInstance,
+    AlertSeverity,
+    AlertStatus,
     AssetCurrentLocation,
     AssetTag,
+    DerivedZoneDwellRecord,
     Floor,
     Gateway,
     GatewayHeartbeat,
@@ -23,12 +27,14 @@ from rtls_api.models import (
 )
 from rtls_api.positioning import serialize_asset_current_location
 from rtls_api.schemas import (
+    AlertKpisResponse,
     AssetLocationResponse,
     GatewayHealthResponse,
     OperationsMapPreviewResponse,
     OperationsOverviewKpisResponse,
     OperationsOverviewResponse,
     OperationsPriorityItemResponse,
+    SlaKpisResponse,
 )
 from rtls_api.spatial_admin import serialize_area, serialize_floor_plan, serialize_gateway
 
@@ -96,6 +102,17 @@ def get_operations_overview(
         locations=locations[:6],
     )
 
+    alert_kpis = _query_active_alert_counts(
+        db=db,
+        site_id=context.site_id,
+        floor_id=context.floor_id,
+    )
+    sla_kpis = _query_sla_performance_stats(
+        db=db,
+        floor_id=context.floor_id,
+        settings=settings,
+    )
+
     return OperationsOverviewResponse(
         site_id=context.site_id,
         site_name=context.site_name,
@@ -108,6 +125,8 @@ def get_operations_overview(
             low_confidence_assets=len(low_confidence_assets),
             restricted_zone_assets=len(restricted_zone_assets),
             stale_gateways=len(stale_gateways),
+            alerts=alert_kpis,
+            sla=sla_kpis,
         ),
         priority_items=priority_items[:5],
         gateway_snapshot=stale_gateways[:5],
@@ -124,9 +143,7 @@ def _resolve_operations_context(
     selected_floor: Floor | None = None
     if floor_id is not None:
         selected_floor = db.scalar(
-            select(Floor)
-            .where(Floor.id == floor_id)
-            .options(joinedload(Floor.site))
+            select(Floor).where(Floor.id == floor_id).options(joinedload(Floor.site))
         )
     elif site_id is not None:
         site = db.scalar(
@@ -382,4 +399,94 @@ def _build_map_preview(
             AssetLocationResponse.model_validate(serialize_asset_current_location(location))
             for location in locations
         ],
+    )
+
+
+_ACTIVE_ALERT_STATUSES = (AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value)
+
+
+def _query_active_alert_counts(
+    *,
+    db: Session,
+    site_id: str | None,
+    floor_id: str | None,
+) -> AlertKpisResponse:
+    base = (
+        select(AlertInstance.severity, func.count().label("cnt"))
+        .where(AlertInstance.status.in_(_ACTIVE_ALERT_STATUSES))
+        .group_by(AlertInstance.severity)
+    )
+    if floor_id is not None:
+        base = base.where(AlertInstance.floor_id == floor_id)
+    elif site_id is not None:
+        base = base.where(AlertInstance.site_id == site_id)
+
+    rows = db.execute(base).all()
+    counts = {row.severity: row.cnt for row in rows}
+    total = sum(counts.values())
+    return AlertKpisResponse(
+        total_active=total,
+        critical=counts.get(AlertSeverity.CRITICAL.value, 0),
+        warning=counts.get(AlertSeverity.WARNING.value, 0),
+    )
+
+
+_SLA_WINDOW_MINUTES = 60
+_SLA_DEFAULT_THRESHOLD_SECONDS = 1800  # 30 minutes
+
+
+def _dwell_success_rate_for_window(
+    *,
+    db: Session,
+    floor_id: str | None,
+    window_start: datetime,
+    window_end: datetime,
+    threshold_seconds: float,
+) -> tuple[int, int]:
+    base = select(DerivedZoneDwellRecord).where(
+        DerivedZoneDwellRecord.ended_at >= window_start,
+        DerivedZoneDwellRecord.ended_at < window_end,
+    )
+    if floor_id is not None:
+        base = base.where(DerivedZoneDwellRecord.floor_id == floor_id)
+    records = db.scalars(base).all()
+    total = len(records)
+    breaches = sum(1 for r in records if r.duration_seconds > threshold_seconds)
+    return total, breaches
+
+
+def _query_sla_performance_stats(
+    *,
+    db: Session,
+    floor_id: str | None,
+    settings: Settings,
+) -> SlaKpisResponse:
+    threshold = getattr(settings, "sla_threshold_seconds", _SLA_DEFAULT_THRESHOLD_SECONDS)
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(minutes=_SLA_WINDOW_MINUTES)
+    prev_start = window_start - timedelta(minutes=_SLA_WINDOW_MINUTES)
+
+    total, breaches = _dwell_success_rate_for_window(
+        db=db,
+        floor_id=floor_id,
+        window_start=window_start,
+        window_end=now,
+        threshold_seconds=threshold,
+    )
+    prev_total, prev_breaches = _dwell_success_rate_for_window(
+        db=db,
+        floor_id=floor_id,
+        window_start=prev_start,
+        window_end=window_start,
+        threshold_seconds=threshold,
+    )
+
+    success_rate = ((total - breaches) / total * 100.0) if total > 0 else 100.0
+    prev_success_rate = ((prev_total - prev_breaches) / prev_total * 100.0) if prev_total > 0 else None
+    trend = round(success_rate - prev_success_rate, 1) if prev_success_rate is not None else None
+
+    return SlaKpisResponse(
+        breach_count=breaches,
+        success_rate_pct=round(success_rate, 1),
+        trend_pct=trend,
     )
