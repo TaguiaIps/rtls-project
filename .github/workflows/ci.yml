@@ -31,10 +31,17 @@ jobs:
           source .venv/bin/activate
           uv run --project apps/api --active python -m ruff check apps/api
 
-      - name: Test backend
+      - name: Test backend with coverage
         run: |
           source .venv/bin/activate
           uv run --project apps/api --active python -m pytest apps/api/tests
+
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: apps/api/coverage.xml
+          retention-days: 7
 
       - name: Build backend package
         run: |
@@ -60,6 +67,28 @@ jobs:
 
       - name: Test JavaScript workspaces
         run: npm run test
+
+      - name: Test web with coverage
+        working-directory: apps/web
+        run: npx vitest run --coverage
+
+      - name: Test mobile with coverage
+        working-directory: apps/mobile
+        run: npx vitest run --coverage
+
+      - name: Upload web coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage
+          path: apps/web/coverage/
+          retention-days: 7
+
+      - name: Upload mobile coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-coverage
+          path: apps/mobile/coverage/
+          retention-days: 7
 
       - name: Build JavaScript workspaces
         run: npm run build
